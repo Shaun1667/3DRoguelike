@@ -44,7 +44,18 @@ public class CameraController : MonoBehaviour
 
         pitch = pivot.localEulerAngles.x;
         if (pitch > 180f) pitch -= 360f; // 0~360 범위를 -180~180으로 정규화
+    }
 
+    private void OnEnable()
+    {
+        // Start가 아니라 OnEnable에서 잠근다.
+        // GameManager가 시작 화면 동안 이 컴포넌트를 껐다가 게임 시작 때 다시 켜는데,
+        // Start는 처음 한 번만 실행되므로 거기서 잠그면 다시 켜졌을 때 커서가 그대로 보인다.
+        LockCursor();
+    }
+
+    private void LockCursor()
+    {
         if (lockCursor)
         {
             Cursor.lockState = CursorLockMode.Locked;
@@ -54,6 +65,13 @@ public class CameraController : MonoBehaviour
 
     private void LateUpdate()
     {
+        // 에디터에서 Esc로 잠금이 풀린 뒤 게임 화면을 다시 클릭하면 다시 잠근다
+        if (lockCursor && Cursor.lockState != CursorLockMode.Locked
+            && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            LockCursor();
+        }
+
         // 1) 위치는 플레이어를 그대로 따라간다 (회전은 따라가지 않음)
         if (target != null)
         {

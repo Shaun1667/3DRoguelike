@@ -7,6 +7,8 @@ using UnityEngine.InputSystem;
 /// - 캐릭터는 항상 "카메라가 보는 방향"을 그대로 바라본다 (faceCameraDirection = true).
 /// - W/S는 카메라 정면/후면, A/D는 카메라 기준 좌/우로 이동한다.
 /// - 즉 A만 누르면 캐릭터는 정면을 바라본 채로 옆으로 스트레이프(strafe) 이동한다.
+/// - Left Shift로 짧게 대시한다. 대시 중에는 무적이라 보스 공격을 피하는 데 쓴다.
+/// - 공격 동작 중(PlayerAttack.IsAttacking)에는 이동·대시·점프를 받지 않는다.
 ///
 /// CameraController.cs의 GetFlatForward() / GetFlatRight()를 그대로 사용한다.
 /// Player 오브젝트에는 Character Controller 컴포넌트가 필요하다.
@@ -26,21 +28,59 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("점프 시 도달하는 최대 높이 (미터)")]
     [SerializeField] private float jumpHeight = 1.2f;
 
+    [Header("대시 설정")]
+    [SerializeField] private float dashSpeed = 22f;
+    [SerializeField] private float dashDuration = 0.18f;
+    [SerializeField] private float dashCooldown = 0.7f;
+
     [Header("회전 설정")]
     [Tooltip("true면 캐릭터가 항상 카메라 방향을 바라본다 (A/D는 옆으로 스트레이프).")]
     [SerializeField] private bool faceCameraDirection = true;
 
+    /// <summary>이번 프레임에 이동 입력이 있었는지</summary>
+    public bool IsMoving { get; private set; }
+
+    /// <summary>
+    /// 캐릭터 기준 이동 입력 (x: 왼쪽 -1 ~ 오른쪽 +1, y: 뒤 -1 ~ 앞 +1).
+    /// 캐릭터가 항상 카메라 방향을 보므로 WASD 입력이 그대로 캐릭터 기준 방향이 된다 → 방향별 걷기 애니메이션에 사용
+    /// </summary>
+    public Vector2 MoveInput { get; private set; }
+    public bool IsDashing => dashTimer > 0f;
+
+    /// <summary>바닥에서 뛰어오른 순간 (점프 애니메이션 재생용)</summary>
+    public event System.Action Jumped;
+
     private CharacterController controller;
+    private Health health;
+    private PlayerAttack attack;
     private float verticalVelocity;
+    private float dashTimer;
+    private float nextDashTime;
+    private Vector3 dashDirection;
 
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
+        health = GetComponent<Health>(); // 없어도 동작은 하고, 있으면 대시 무적에 사용
+        attack = GetComponent<PlayerAttack>(); // 있으면 공격 동작 중에 조작을 막는다
+    }
+
+    private void OnDisable()
+    {
+        // 대시 도중 게임이 끝나 컴포넌트가 꺼져도 무적이 남지 않도록 정리
+        dashTimer = 0f;
+        IsMoving = false;
+        MoveInput = Vector2.zero;
+        if (health != null) health.SetForcedInvincible(false);
     }
 
     private void Update()
     {
-        Vector2 input = ReadMoveInput();
+        // 공격 동작 중에는 이동·대시·점프 입력을 받지 않는다 (중력은 계속 적용)
+        bool locked = attack != null && attack.IsAttacking;
+
+        Vector2 input = locked ? Vector2.zero : ReadMoveInput();
+        MoveInput = input.sqrMagnitude > 1f ? input.normalized : input;
 
         // 1) 카메라 기준 수평 forward/right 벡터를 가져온다 (y성분 제거된 상태)
         Vector3 camForward = cameraController.GetFlatForward();
@@ -52,6 +92,7 @@ public class PlayerMovement : MonoBehaviour
         {
             moveDir.Normalize();
         }
+        IsMoving = moveDir.sqrMagnitude > 0.01f;
 
         // 3) 캐릭터를 카메라가 보는 방향으로 정렬 (이동 입력과 무관하게 항상 적용 -> 스트레이프 이동)
         if (faceCameraDirection)
@@ -59,7 +100,27 @@ public class PlayerMovement : MonoBehaviour
             transform.rotation = Quaternion.Euler(0f, cameraController.transform.eulerAngles.y, 0f);
         }
 
-        // 4) 중력 & 점프 처리
+        // 4) 대시: 입력 방향(없으면 정면)으로 짧게 빠르게 이동, 그동안 무적
+        if (!locked && ReadDashPressed() && Time.time >= nextDashTime)
+        {
+            dashDirection = IsMoving ? moveDir.normalized : camForward;
+            dashTimer = dashDuration;
+            nextDashTime = Time.time + dashCooldown;
+            if (health != null) health.SetForcedInvincible(true);
+        }
+
+        Vector3 horizontal = moveDir * moveSpeed;
+        if (dashTimer > 0f)
+        {
+            horizontal = dashDirection * dashSpeed;
+            dashTimer -= Time.deltaTime;
+            if (dashTimer <= 0f && health != null)
+            {
+                health.SetForcedInvincible(false);
+            }
+        }
+
+        // 5) 중력 & 점프 처리
         bool isGrounded = controller.isGrounded;
 
         if (isGrounded && verticalVelocity < 0f)
@@ -68,16 +129,17 @@ public class PlayerMovement : MonoBehaviour
         }
 
         // 바닥에 닿아있을 때만 스페이스바로 점프 (공중 점프 방지)
-        if (isGrounded && ReadJumpPressed())
+        if (!locked && isGrounded && ReadJumpPressed())
         {
             // v = sqrt(h * -2 * g) : 원하는 최대 높이(jumpHeight)에 도달하는 데 필요한 초기 속도
             verticalVelocity = Mathf.Sqrt(jumpHeight * -2f * gravity);
+            Jumped?.Invoke();
         }
 
         verticalVelocity += gravity * Time.deltaTime;
 
-        // 5) 최종 이동 적용
-        Vector3 velocity = moveDir * moveSpeed;
+        // 6) 최종 이동 적용
+        Vector3 velocity = horizontal;
         velocity.y = verticalVelocity;
 
         controller.Move(velocity * Time.deltaTime);
@@ -112,5 +174,13 @@ public class PlayerMovement : MonoBehaviour
         if (kb == null) return false;
 
         return kb.spaceKey.wasPressedThisFrame;
+    }
+
+    private bool ReadDashPressed()
+    {
+        Keyboard kb = Keyboard.current;
+        if (kb == null) return false;
+
+        return kb.leftShiftKey.wasPressedThisFrame;
     }
 }
