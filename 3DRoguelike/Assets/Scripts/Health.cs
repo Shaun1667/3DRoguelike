@@ -72,7 +72,7 @@ public class Health : MonoBehaviour
     }
 
     /// <summary>
-    /// 대시처럼 "일정 구간 동안 무조건 무적"이 필요할 때 켜고 끈다.
+    /// 구르기처럼 "일정 구간 동안 무조건 무적"이 필요할 때 켜고 끈다.
     /// </summary>
     public void SetForcedInvincible(bool value)
     {

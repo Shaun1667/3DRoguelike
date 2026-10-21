@@ -9,6 +9,7 @@ using UnityEngine;
 ///      (0, 1) 앞으로 걷기 / (-1, 0) 왼쪽 걷기 / (1, 0) 오른쪽 걷기 / (0, -1) 뒤로 걷기 / (0, 0) 대기
 ///  - Attack (trigger) + AttackLeft (bool): 공격이 나간 순간 → 오른손/왼손(좌우 반전) 공격 재생 후 이동 블렌드 트리로 복귀
 ///  - Jump (trigger): 바닥에서 뛰어오른 순간 → 점프 재생 후 이동 블렌드 트리로 복귀
+///  - Roll (trigger): 구르기를 시작한 순간 → 구르기 재생 후 이동 블렌드 트리로 복귀
 /// Player 루트에 붙이고, animator에는 고라니 모델(Visual)의 Animator를 연결한다.
 /// </summary>
 public class PlayerAnimator : MonoBehaviour
@@ -25,6 +26,7 @@ public class PlayerAnimator : MonoBehaviour
     private static readonly int AttackId = Animator.StringToHash("Attack");
     private static readonly int AttackLeftId = Animator.StringToHash("AttackLeft");
     private static readonly int JumpId = Animator.StringToHash("Jump");
+    private static readonly int RollId = Animator.StringToHash("Roll");
 
     private Vector2 blend;
 
@@ -32,17 +34,24 @@ public class PlayerAnimator : MonoBehaviour
     {
         if (attack != null) attack.Attacked += OnAttacked;
         if (movement != null) movement.Jumped += OnJumped;
+        if (movement != null) movement.Rolled += OnRolled;
     }
 
     private void OnDisable()
     {
         if (attack != null) attack.Attacked -= OnAttacked;
         if (movement != null) movement.Jumped -= OnJumped;
+        if (movement != null) movement.Rolled -= OnRolled;
     }
 
     private void OnJumped()
     {
         if (animator != null) animator.SetTrigger(JumpId);
+    }
+
+    private void OnRolled()
+    {
+        if (animator != null) animator.SetTrigger(RollId);
     }
 
     private void Update()

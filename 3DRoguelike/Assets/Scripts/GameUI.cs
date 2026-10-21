@@ -71,7 +71,7 @@ public class GameUI : MonoBehaviour
         centerTitle.text = "까치 대장의 둥지";
         centerBody.text = "보물을 지키는 까치 대장을 쓰러뜨리세요!\n\n"
                         + "WASD 이동   마우스 시점   좌클릭 공격\n"
-                        + "Space 점프   Shift 대시(무적)\n\n"
+                        + "Space 점프   Shift 구르기(무적)\n\n"
                         + "클릭 또는 Enter로 시작";
     }
 

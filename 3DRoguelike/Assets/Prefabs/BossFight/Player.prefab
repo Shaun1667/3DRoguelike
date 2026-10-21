@@ -95,9 +95,9 @@ MonoBehaviour:
   moveSpeed: 9
   gravity: -20
   jumpHeight: 1.6
-  dashSpeed: 24
-  dashDuration: 0.18
-  dashCooldown: 0.7
+  rollSpeed: 12
+  rollDuration: 0.8
+  rollCooldown: 0.9
   faceCameraDirection: 1
 --- !u!114 &8042009823754234669
 MonoBehaviour:
@@ -115,8 +115,10 @@ MonoBehaviour:
   attackPoint: {fileID: 2635765804294931790}
   hitboxDuration: 0.2
   hitDelay: 0.35
+  clawEffect: {fileID: 6366276276271905385, guid: f5ae42b812239034b8eb862cb3c66e5a, type: 3}
   damage: 10
   attackCooldown: 0.4
+  actionLockTime: 0.75
 --- !u!114 &4690203030513894873
 MonoBehaviour:
   m_ObjectHideFlags: 0

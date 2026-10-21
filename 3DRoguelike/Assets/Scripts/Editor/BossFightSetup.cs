@@ -41,7 +41,6 @@ public static class BossFightSetup
         EnsureFolder("Assets/Materials", "BossFight");
 
         Material telegraphMat = TransparentUnlit("Telegraph_Mat", new Color(1f, 0.15f, 0.1f, 0.35f));
-        Material slashMat = TransparentUnlit("Slash_Mat", new Color(0.8f, 0.95f, 1f, 0.35f));
         Material featherMat = OpaqueUnlit("Feather_Mat", new Color(0.35f, 0.9f, 1f, 1f));
 
         // 예고 원: 지름 1짜리 납작한 원기둥. 보스가 루트 스케일을 (지름, 1, 지름)으로 맞춘다
@@ -54,30 +53,30 @@ public static class BossFightSetup
         AddVisual(line.transform, PrimitiveType.Cube, Vector3.zero, Quaternion.identity, new Vector3(1f, 0.02f, 1f), telegraphMat);
         GameObject linePrefab = SavePrefab(line);
 
-        // 깃털 투사체: 진행 방향(z)으로 길쭉한 캡슐
+        // 깃털 투사체: Varco3D 깃털 모델 (모델이 없으면 진행 방향(z)으로 길쭉한 캡슐)
         GameObject feather = new GameObject("Feather_Projectile");
         feather.AddComponent<BossProjectile>();
-        AddVisual(feather.transform, PrimitiveType.Capsule, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), new Vector3(0.45f, 0.9f, 0.2f), featherMat);
+        if (!AddFeatherModel(feather.transform))
+            AddVisual(feather.transform, PrimitiveType.Capsule, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), new Vector3(0.45f, 0.9f, 0.2f), featherMat);
         GameObject featherPrefab = SavePrefab(feather);
 
-        // 플레이어 공격 히트박스: 트리거 박스 + 잠깐 보이는 반투명 베기 효과
+        // 플레이어 공격 히트박스: 보이지 않는 트리거 박스 (보이는 효과는 할퀴기 이펙트가 담당)
         GameObject slash = new GameObject("Player_SlashHitbox");
         BoxCollider box = slash.AddComponent<BoxCollider>();
         box.isTrigger = true;
         box.center = new Vector3(0f, 0f, 1.2f);
         box.size = new Vector3(3.2f, 2.6f, 3.6f);
         slash.AddComponent<AttackHitbox>();
-        AddVisual(slash.transform, PrimitiveType.Sphere, new Vector3(0f, 0f, 1.2f), Quaternion.identity, new Vector3(3.2f, 0.12f, 3.6f), slashMat);
         GameObject slashPrefab = SavePrefab(slash);
 
-        BuildPlayerPrefab(slashPrefab);
+        BuildPlayerPrefab(slashPrefab, BuildClawEffect());
         BuildBossPrefab(featherPrefab, circlePrefab, linePrefab);
 
         AssetDatabase.SaveAssets();
         Debug.Log("[BossFightSetup] 프리팹 생성 완료: " + PrefabDir);
     }
 
-    private static void BuildPlayerPrefab(GameObject slashPrefab)
+    private static void BuildPlayerPrefab(GameObject slashPrefab, GameObject clawPrefab)
     {
         GameObject player = new GameObject("Player");
 
@@ -90,7 +89,7 @@ public static class BossFightSetup
         SetFields(health, ("team", (int)Team.Player), ("maxHealth", 5), ("invincibleTimeAfterHit", 1.0f));
 
         PlayerMovement movement = player.AddComponent<PlayerMovement>();
-        SetFields(movement, ("moveSpeed", 9f), ("gravity", -20f), ("jumpHeight", 1.6f), ("dashSpeed", 24f));
+        SetFields(movement, ("moveSpeed", 9f), ("gravity", -20f), ("jumpHeight", 1.6f));
 
         GameObject attackPoint = new GameObject("AttackPoint");
         attackPoint.transform.SetParent(player.transform, false);
@@ -98,6 +97,7 @@ public static class BossFightSetup
 
         PlayerAttack attack = player.AddComponent<PlayerAttack>();
         attack.attack1 = slashPrefab;
+        attack.clawEffect = clawPrefab;
         attack.attackPoint = attackPoint.transform;
         attack.damage = 10;
         attack.attackCooldown = 0.4f;
@@ -130,11 +130,233 @@ public static class BossFightSetup
         SavePrefab(player);
     }
 
+    // ───────────────────────── 깃털 투사체 모델 ─────────────────────────
+
+    // 곧고 좌우 대칭인 깃털을 대각선으로 놓고 뽑은 모델 (똑바로 세워 뽑으면 끝과 깃대가 뭉개짐)
+    private const string FeatherTextureDir = "Assets/Resources/VARCO/Feather/Feather_Diag0";
+    private const string FeatherModelPath = FeatherTextureDir + "/Feather_Diag0.fbx";
+    private const string FeatherMaterialPath = FeatherTextureDir + "/Feather_Mat.mat";
+    private const float FeatherLength = 2.2f; // 투사체 길이 (m). 예전 캡슐(1.8m)보다 조금 길게
+
+    /// <summary>
+    /// 이미 만든 깃털 투사체 프리팹의 겉모습만 Varco3D 깃털 모델로 바꾼다 (판정·속도는 그대로). 여러 번 실행해도 같은 결과.
+    /// </summary>
+    [MenuItem("Tools/Boss Fight/Use Feather Model")]
+    private static void UseFeatherModelMenu()
+    {
+        string path = PrefabDir + "/Feather_Projectile.prefab";
+        GameObject root = PrefabUtility.LoadPrefabContents(path);
+        Transform old = root.transform.Find("Visual");
+        if (old != null) Object.DestroyImmediate(old.gameObject);
+        bool ok = AddFeatherModel(root.transform);
+        PrefabUtility.SaveAsPrefabAsset(root, path);
+        PrefabUtility.UnloadPrefabContents(root);
+        AssetDatabase.SaveAssets();
+        Debug.Log(ok ? "[BossFightSetup] 깃털 투사체에 Varco3D 깃털 모델 적용 완료" : "[BossFightSetup] 깃털 모델이 없습니다: " + FeatherModelPath);
+    }
+
+    /// <summary>
+    /// 깃털 모델을 "Visual"로 붙인다. 모델의 긴 축을 진행 방향(+z)으로, 얇은 축을 위(+y)로 눕히고,
+    /// 깃대(흰 줄기) 쪽이 뒤로 가도록 깃털 끝을 앞으로 돌린다. 모델이 없으면 false
+    /// </summary>
+    private static bool AddFeatherModel(Transform parent)
+    {
+        GameObject asset = AssetDatabase.LoadAssetAtPath<GameObject>(FeatherModelPath);
+        if (asset == null) return false;
+
+        GameObject visual = new GameObject("Visual");
+        visual.transform.SetParent(parent, false);
+        GameObject model = (GameObject)PrefabUtility.InstantiatePrefab(asset);
+        model.transform.SetParent(visual.transform, false);
+
+        Material mat = FeatherMaterial();
+        var points = new List<Vector3>();
+        foreach (MeshRenderer r in model.GetComponentsInChildren<MeshRenderer>())
+        {
+            r.sharedMaterial = mat;
+            r.shadowCastingMode = ShadowCastingMode.Off; // 작은 투사체 여러 개라 그림자는 생략
+            MeshFilter mf = r.GetComponent<MeshFilter>();
+            Matrix4x4 toVisual = visual.transform.worldToLocalMatrix * mf.transform.localToWorldMatrix;
+            foreach (Vector3 v in mf.sharedMesh.vertices) points.Add(toVisual.MultiplyPoint3x4(v));
+        }
+        foreach (Collider c in model.GetComponentsInChildren<Collider>()) Object.DestroyImmediate(c);
+
+        // 깃털은 판처럼 얇으므로 가장 얇은 축 = 판의 법선. 판 안에서 정점이 가장 길게 퍼진 방향 = 깃털 길이 방향
+        // (Varco3D 모델은 깃털이 대각선으로 놓여 있을 수 있어 축 방향 대신 정점 분포로 찾는다)
+        Bounds b = new Bounds(points[0], Vector3.zero);
+        foreach (Vector3 p in points) b.Encapsulate(p);
+        Vector3 upDir = Vector3.zero; upDir[MinAxis(b.size)] = 1f;
+        Vector3 center = Vector3.zero;
+        foreach (Vector3 p in points) center += p;
+        center /= points.Count;
+        Vector3 longDir = PrincipalDirection(points, center, upDir);
+        Vector3 sideDir = Vector3.Cross(upDir, longDir);
+
+        float lo = float.MaxValue, hi = float.MinValue;
+        foreach (Vector3 p in points)
+        {
+            float t = Vector3.Dot(p - center, longDir);
+            lo = Mathf.Min(lo, t); hi = Mathf.Max(hi, t);
+        }
+        float len = hi - lo;
+
+        // 끝에서 12~25% 구간의 폭을 비교: 깃대 쪽은 깃가지가 막 시작해 좁고, 깃털 끝 쪽은 넓다
+        float widthLo = 0f, widthHi = 0f;
+        foreach (Vector3 p in points)
+        {
+            float t = (Vector3.Dot(p - center, longDir) - lo) / len;
+            float w = Mathf.Abs(Vector3.Dot(p - center, sideDir));
+            if (t > 0.12f && t < 0.25f) widthLo = Mathf.Max(widthLo, w);
+            else if (t > 0.75f && t < 0.88f) widthHi = Mathf.Max(widthHi, w);
+        }
+        Vector3 tipDir = widthHi >= widthLo ? longDir : -longDir;
+        Vector3 mid = center + longDir * ((lo + hi) * 0.5f); // 길이 방향 가운데
+
+        Quaternion toForward = Quaternion.Inverse(Quaternion.LookRotation(tipDir, upDir));
+        float scale = FeatherLength / len;
+        model.transform.localPosition = toForward * (-mid * scale);
+        model.transform.localRotation = toForward * model.transform.localRotation;
+        model.transform.localScale = model.transform.localScale * scale;
+        return true;
+    }
+
+    /// <summary>normal에 수직인 평면에서 점들이 가장 길게 퍼진 방향 (2차원 공분산의 주축)</summary>
+    private static Vector3 PrincipalDirection(List<Vector3> points, Vector3 center, Vector3 normal)
+    {
+        Vector3 a = Vector3.Cross(normal, Mathf.Abs(normal.y) < 0.9f ? Vector3.up : Vector3.right).normalized;
+        Vector3 c = Vector3.Cross(normal, a);
+        float xx = 0f, xy = 0f, yy = 0f;
+        foreach (Vector3 p in points)
+        {
+            float x = Vector3.Dot(p - center, a), y = Vector3.Dot(p - center, c);
+            xx += x * x; xy += x * y; yy += y * y;
+        }
+        float angle = 0.5f * Mathf.Atan2(2f * xy, xx - yy);
+        return (a * Mathf.Cos(angle) + c * Mathf.Sin(angle)).normalized;
+    }
+
+    private static int MinAxis(Vector3 v) => v.x <= v.y && v.x <= v.z ? 0 : (v.y <= v.z ? 1 : 2);
+
+    /// <summary>깃털 텍스처(색·노멀)를 쓰는 URP Lit 재질. 모델에서 뽑아 둔 텍스처를 쓴다</summary>
+    private static Material FeatherMaterial()
+    {
+        Material m = AssetDatabase.LoadAssetAtPath<Material>(FeatherMaterialPath);
+        if (m == null)
+        {
+            m = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            AssetDatabase.CreateAsset(m, FeatherMaterialPath);
+        }
+        Texture2D baseTex = AssetDatabase.LoadAssetAtPath<Texture2D>(FeatherTextureDir + "/base_color.png");
+        string normalPath = FeatherTextureDir + "/normal.png";
+        if (AssetImporter.GetAtPath(normalPath) is TextureImporter ni && ni.textureType != TextureImporterType.NormalMap)
+        {
+            ni.textureType = TextureImporterType.NormalMap;
+            ni.SaveAndReimport();
+        }
+        Texture2D normalTex = AssetDatabase.LoadAssetAtPath<Texture2D>(normalPath);
+        m.SetTexture("_BaseMap", baseTex);
+        m.SetColor("_BaseColor", Color.white);
+        if (normalTex != null)
+        {
+            m.SetTexture("_BumpMap", normalTex);
+            m.EnableKeyword("_NORMALMAP");
+        }
+        m.SetFloat("_Smoothness", 0.55f); // 깃털 광택
+        m.SetFloat("_Cull", (float)CullMode.Off); // 얇은 판이라 뒷면도 보이게
+        EditorUtility.SetDirty(m);
+        return m;
+    }
+
+    // ───────────────────────── 할퀴기 이펙트 ─────────────────────────
+
+    // Slash Effects FREE(Matthew Guz)의 가는 베기 줄 텍스처. 패키지 재질은 기본 렌더 파이프라인용이라 URP 재질을 새로 만든다
+    private const string ClawTexturePath = "Assets/AssetStore/Matthew Guz/Slash Effects FREE/Textures/5-Slash S.png";
+    private const float ClawLength = 3.4f;   // 가운데 줄 길이 (플레이어 스케일 전, m). 뒤에서 봐도 몸 밖으로 삐져나오게
+    private const float ClawWidth = 1.6f;    // 텍스처 한 장의 세로 폭 (보이는 줄 굵기는 그중 가운데 일부)
+    private const float ClawSpacing = 0.36f; // 줄 사이 간격
+    private const float ClawForward = 1.2f;  // attackPoint보다 앞으로 (몸에 가려지지 않게)
+    private const float ClawUp = 0.35f;      // attackPoint(가슴)보다 위로, 뒤에서 볼 때 어깨 위로 보이게
+
+    /// <summary>
+    /// 할퀴기 이펙트를 다시 만들고 플레이어(프리팹·씬)에 연결한다. 예전 반투명 원판 베기 효과는 지운다.
+    /// 여러 번 실행해도 같은 결과.
+    /// </summary>
+    [MenuItem("Tools/Boss Fight/Build Claw Slash Effect")]
+    private static void BuildClawEffectMenu()
+    {
+        GameObject claw = BuildClawEffect();
+
+        string playerPath = PrefabDir + "/Player.prefab";
+        GameObject player = PrefabUtility.LoadPrefabContents(playerPath);
+        player.GetComponent<PlayerAttack>().clawEffect = claw;
+        PrefabUtility.SaveAsPrefabAsset(player, playerPath);
+        PrefabUtility.UnloadPrefabContents(player);
+        foreach (PlayerAttack a in Object.FindObjectsByType<PlayerAttack>(FindObjectsInactive.Include))
+        {
+            Undo.RecordObject(a, "Assign Claw Effect");
+            a.clawEffect = claw;
+            EditorUtility.SetDirty(a);
+        }
+
+        string hitboxPath = PrefabDir + "/Player_SlashHitbox.prefab";
+        GameObject hitbox = PrefabUtility.LoadPrefabContents(hitboxPath);
+        Transform oldVisual = hitbox.transform.Find("Visual");
+        if (oldVisual != null) Object.DestroyImmediate(oldVisual.gameObject);
+        PrefabUtility.SaveAsPrefabAsset(hitbox, hitboxPath);
+        PrefabUtility.UnloadPrefabContents(hitbox);
+
+        AssetDatabase.SaveAssets();
+        Debug.Log("[BossFightSetup] 할퀴기 이펙트 생성·연결 완료");
+    }
+
+    /// <summary>
+    /// 세 줄 할퀴기: 오른손 기준으로 오른쪽 위에서 왼쪽 아래로 나란히 그어진다 (오른손 공격이 오른쪽→왼쪽으로 휘두름).
+    /// 줄마다 피벗을 시작점에 두고 +x가 긋는 방향이 되게 돌려, ClawSlashEffect가 x 스케일로 그린다.
+    /// </summary>
+    public static GameObject BuildClawEffect()
+    {
+        EnsureFolder("Assets/Prefabs", "BossFight");
+        EnsureFolder("Assets", "Materials");
+        EnsureFolder("Assets/Materials", "BossFight");
+        Material mat = AdditiveTextured("ClawSlash_Mat", AssetDatabase.LoadAssetAtPath<Texture2D>(ClawTexturePath));
+
+        GameObject root = new GameObject("Player_ClawSlash");
+        ClawSlashEffect effect = root.AddComponent<ClawSlashEffect>();
+        Vector3 dir = new Vector3(-1f, -0.45f, 0f).normalized;
+        Vector3 across = new Vector3(-dir.y, dir.x, 0f);
+        var pivots = new Object[3];
+        for (int i = 0; i < 3; i++)
+        {
+            float length = ClawLength * (i == 1 ? 1f : 0.85f); // 가운데 줄이 가장 길다
+            Vector3 center = new Vector3(0f, ClawUp, ClawForward) + across * ((i - 1) * ClawSpacing);
+
+            GameObject pivot = new GameObject("Line" + (i + 1));
+            pivot.transform.SetParent(root.transform, false);
+            pivot.transform.localPosition = center - dir * (length * 0.5f);
+            pivot.transform.localRotation = Quaternion.FromToRotation(Vector3.right, dir);
+
+            GameObject quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            quad.name = "Visual";
+            Object.DestroyImmediate(quad.GetComponent<Collider>());
+            quad.transform.SetParent(pivot.transform, false);
+            quad.transform.localPosition = new Vector3(length * 0.5f, 0f, 0f);
+            quad.transform.localScale = new Vector3(-length, ClawWidth, 1f); // 텍스처의 뾰족한 머리가 긋는 끝(+x)에 오게 뒤집음
+            MeshRenderer mr = quad.GetComponent<MeshRenderer>();
+            mr.sharedMaterial = mat;
+            mr.shadowCastingMode = ShadowCastingMode.Off;
+            mr.receiveShadows = false;
+            pivots[i] = pivot.transform;
+        }
+        SetArray(effect, "lines", pivots);
+        return SavePrefab(root);
+    }
+
     /// <summary>
     /// 고라니 Animator 컨트롤러.
     ///  - Locomotion (2D 방향 블렌드 트리, MoveX/MoveY): 대기 / 앞 걷기 / 뒤로 걷기 / 왼쪽 걷기 / 오른쪽 걷기
     ///  - 어느 상태에서든 Attack(trigger) → AttackLeft(bool)에 따라 오른손/왼손 공격 → 끝나면 Locomotion으로 복귀
     ///  - 어느 상태에서든 Jump(trigger) → 점프 → 끝나면 Locomotion으로 복귀
+    ///  - 어느 상태에서든 Roll(trigger) → 구르기 → 끝나면 Locomotion으로 복귀
     /// 이미 있으면 같은 에셋(GUID 유지) 안의 상태만 다시 만든다.
     /// </summary>
     [MenuItem("Tools/Boss Fight/Build Gorani Animator")]
@@ -162,6 +384,7 @@ public static class BossFightSetup
         ctrl.AddParameter("Attack", AnimatorControllerParameterType.Trigger);
         ctrl.AddParameter("AttackLeft", AnimatorControllerParameterType.Bool);
         ctrl.AddParameter("Jump", AnimatorControllerParameterType.Trigger);
+        ctrl.AddParameter("Roll", AnimatorControllerParameterType.Trigger);
 
         // 이동: 입력 방향(MoveX, MoveY)에 따라 다섯 동작을 섞는다
         AnimatorState locomotion = ctrl.CreateBlendTreeInController("Locomotion", out BlendTree tree, 0);
@@ -194,6 +417,21 @@ public static class BossFightSetup
         jumpBack.hasExitTime = true;
         jumpBack.exitTime = 0.9f;
         jumpBack.duration = 0.1f;
+
+        // 구르기: 클립 앞의 준비 동작(0~0.36초)은 건너뛰고 구르기~일어나기(0.36~2.0초)만 구르기 시간에 맞춰 재생
+        AnimatorState rollState = sm.AddState("Roll");
+        rollState.motion = LoadClip(AnimationDir + "/Stand To Roll.fbx");
+        rollState.speed = RollPlaybackSpeed;
+        AnimatorStateTransition toRoll = sm.AddAnyStateTransition(rollState);
+        toRoll.hasExitTime = false;
+        toRoll.duration = 0.05f;
+        toRoll.offset = RollClipStart;
+        toRoll.canTransitionToSelf = false;
+        toRoll.AddCondition(AnimatorConditionMode.If, 0f, "Roll");
+        AnimatorStateTransition rollBack = rollState.AddTransition(locomotion);
+        rollBack.hasExitTime = true;
+        rollBack.exitTime = RollClipEnd;
+        rollBack.duration = 0.1f;
 
         // 공격: 오른손(원본) / 왼손(같은 클립을 좌우 반전). AttackLeft 값으로 어느 손인지 고른다
         AnimationClip attackClip = LoadClip(AnimationDir + "/Attack.fbx");
@@ -230,6 +468,11 @@ public static class BossFightSetup
     // 1초짜리 점프 클립을 체공 시간(점프 높이 1.6m, 중력 -20 → 0.8초)에 맞춤
     private const float JumpPlaybackSpeed = 1.25f;
 
+    // 2.37초짜리 구르기 클립 중 0.36~2.0초 구간(정규화 0.15~0.85)을 구르기 시간 0.8초(PlayerMovement.rollDuration)에 맞춤
+    private const float RollClipStart = 0.15f;
+    private const float RollClipEnd = 0.85f;
+    private const float RollPlaybackSpeed = 2.07f;
+
     /// <summary>
     /// Mixamo 애니메이션 FBX를 Humanoid로 임포트하고 클립 설정(반복, 제자리)을 맞춘다.
     /// 애니메이션 FBX는 고라니와 뼈 계층이 달라(Armature 상위 오브젝트 없음) 각 파일에서 아바타를 만든다.
@@ -245,6 +488,7 @@ public static class BossFightSetup
             ("Right Strafe Walking", "Gorani_StrafeRight", true),
             ("Attack", "Gorani_Attack", false),
             ("Jump", "Gorani_Jump", false),
+            ("Stand To Roll", "Gorani_Roll", false),
         };
         foreach (var (file, clipName, loop) in clips)
         {
@@ -542,7 +786,7 @@ public static class BossFightSetup
         Text banner = MakeText("Banner", hud, "", 36, TextAnchor.MiddleCenter, new Color(1f, 0.7f, 0.3f));
         Place(banner.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -170f), new Vector2(1400f, 60f));
 
-        Text hint = MakeText("ControlsHint", hud, "WASD 이동 · 마우스 시점 · 좌클릭 공격 · Space 점프 · Shift 대시", 22,
+        Text hint = MakeText("ControlsHint", hud, "WASD 이동 · 마우스 시점 · 좌클릭 공격 · Space 점프 · Shift 구르기", 22,
             TextAnchor.MiddleRight, new Color(1f, 1f, 1f, 0.7f));
         Place(hint.rectTransform, new Vector2(1f, 0f), new Vector2(-460f, 50f), new Vector2(860f, 40f));
 
@@ -672,6 +916,27 @@ public static class BossFightSetup
         m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
         m.renderQueue = (int)RenderQueue.Transparent;
         m.SetColor("_BaseColor", color);
+        EditorUtility.SetDirty(m);
+        return m;
+    }
+
+    /// <summary>더해서 빛나는 반투명 재질 (앞뒤 모두 보임). 색과 알파는 MaterialPropertyBlock(_BaseColor)으로 바꾼다</summary>
+    private static Material AdditiveTextured(string name, Texture texture)
+    {
+        Material m = LoadOrCreateMaterial(name, "Universal Render Pipeline/Unlit");
+        m.SetTexture("_BaseMap", texture);
+        m.SetFloat("_Surface", 1f);
+        m.SetFloat("_Blend", 2f);
+        m.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+        m.SetFloat("_DstBlend", (float)BlendMode.One);
+        m.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
+        m.SetFloat("_DstBlendAlpha", (float)BlendMode.One);
+        m.SetFloat("_ZWrite", 0f);
+        m.SetFloat("_Cull", (float)CullMode.Off);
+        m.SetOverrideTag("RenderType", "Transparent");
+        m.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        m.renderQueue = (int)RenderQueue.Transparent;
+        m.SetColor("_BaseColor", Color.white);
         EditorUtility.SetDirty(m);
         return m;
     }

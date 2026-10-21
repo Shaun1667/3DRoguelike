@@ -39,7 +39,7 @@ public class BossProjectile : MonoBehaviour
             Vector3 center = target.transform.position + Vector3.up * targetCenterHeight;
             if ((center - transform.position).sqrMagnitude <= hitRadius * hitRadius)
             {
-                // 대시 무적 중이면 TakeDamage가 false를 반환 -> 깃털은 그대로 통과한다
+                // 구르기 무적 중이면 TakeDamage가 false를 반환 -> 깃털은 그대로 통과한다
                 if (target.TakeDamage(damage))
                 {
                     Destroy(gameObject);

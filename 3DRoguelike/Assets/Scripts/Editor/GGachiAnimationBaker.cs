@@ -12,6 +12,7 @@ using Object = UnityEngine.Object;
 ///
 /// Tools > Boss Fight > 4. Build GGachi Hover Idle   : 공중에 떠서 날갯짓 (Idle 상태)
 /// Tools > Boss Fight > 5. Build GGachi Slam Dive    : 내려찍기 때 발부터 내리꽂는 자세 (SlamDive 상태)
+/// Tools > Boss Fight > 6. Build GGachi Charge       : 돌진 출발 자세 (ChargeReady) + 비행 (Charge, 몸통은 Flying.fbx)
 ///
 /// 만드는 방법:
 ///  1) 몸통/날개 모델을 임시로 만들고
@@ -35,6 +36,11 @@ public static class GGachiAnimationBaker
     private const string BodyDivePath = AnimDir + "/GGachi_SlamDive.anim";
     private const string WingsHoverPath = AnimDir + "/GGachi_Wings_Hover.anim";
     private const string WingsDivePath = AnimDir + "/GGachi_Wings_SlamDive.anim";
+    private const string BodyChargeReadyPath = AnimDir + "/GGachi_ChargeReady.anim";
+    private const string WingsChargeReadyPath = AnimDir + "/GGachi_Wings_ChargeReady.anim";
+    private const string WingsFlyingPath = AnimDir + "/GGachi_Wings_Flying.anim";
+    // 돌진 비행 몸통 동작: 까치 몸통에 Mixamo로 입힌 Flying (몸을 수평으로 눕혀 나는 자세)
+    private const string FlyingModelPath = "Assets/Resources/Animation/Flying.fbx";
     private const int Fps = 30;
 
     // ── 호버링 Idle ──
@@ -50,6 +56,10 @@ public static class GGachiAnimationBaker
     // ── 하강 찍기 ──
     private const float DiveClipLength = 1f;
     private const float DiveTremblePeriod = 0.25f; // 낙하 바람에 날개 끝·꼬리가 떨리는 주기
+
+    // ── 돌진 ──
+    private const float ChargeReadyClipLength = 1f;  // 준비 자세에서 숨 고르듯 들썩이는 주기
+    private const float WingsFlyingClipLength = 0.5f; // 비행 중 날개 끝이 바람에 떨리는 주기
 
     /// <summary>자세를 만들 때 쓰는 뼈 묶음 (몸통 또는 날개 모델 하나)</summary>
     private class Rig
@@ -84,6 +94,19 @@ public static class GGachiAnimationBaker
             if (!bones.TryGetValue(bone, out Transform b)) return;
             b.rotation = Quaternion.AngleAxis(degrees, axis) * b.rotation;
         }
+
+        /// <summary>보스 기준 방향 (x: 오른쪽, y: 위, z: 앞)을 월드 방향으로</summary>
+        public Vector3 Dir(float x, float y, float z) => (right * x + up * y + forward * z).normalized;
+
+        /// <summary>뼈(bone)에서 자식 뼈(child)로 향하는 방향이 dir이 되도록 뼈를 돌린다</summary>
+        public void Aim(string bone, string child, Vector3 dir)
+        {
+            if (!bones.TryGetValue(bone, out Transform b) || !bones.TryGetValue(child, out Transform c)) return;
+            b.rotation = Quaternion.FromToRotation(c.position - b.position, dir) * b.rotation;
+        }
+
+        /// <summary>보스 기준 높이 (루트에서 위로 몇 m)</summary>
+        public float Height(string bone) => bones.TryGetValue(bone, out Transform b) ? Vector3.Dot(b.position - root.position, up) : float.MaxValue;
     }
 
     // ───────────────────────── 메뉴 ─────────────────────────
@@ -104,6 +127,17 @@ public static class GGachiAnimationBaker
         BakeWings(WingsDivePath, "GGachi_Wings_SlamDive", DiveClipLength, DiveWings);
         SetupControllers();
         Debug.Log("[GGachiAnimationBaker] 하강 찍기 생성 완료");
+    }
+
+    [MenuItem("Tools/Boss Fight/6. Build GGachi Charge")]
+    public static void BuildCharge()
+    {
+        BakeBody(BodyChargeReadyPath, "GGachi_ChargeReady", ChargeReadyClipLength, ChargeReadyBody, ChargeReadyGroundBones);
+        BakeWings(WingsChargeReadyPath, "GGachi_Wings_ChargeReady", ChargeReadyClipLength, ChargeReadyWings);
+        BakeWings(WingsFlyingPath, "GGachi_Wings_Flying", WingsFlyingClipLength, FlyingWings);
+        ImportFlyingClip();
+        SetupControllers();
+        Debug.Log("[GGachiAnimationBaker] 돌진 준비·비행 생성 완료");
     }
 
     // ───────────────────────── 자세: 호버링 ─────────────────────────
@@ -195,11 +229,118 @@ public static class GGachiAnimationBaker
         r.Rotate("wing_hand.R", r.forward, 15f - 6f * tremble);
     }
 
+    // ───────────────────────── 자세: 돌진 ─────────────────────────
+
+    /// <summary>
+    /// 몸통: 단거리 출발 자세 ("차렷… 준비!")
+    ///  - 상체를 앞으로 거의 수평으로 숙이고 고개는 들어 앞(플레이어)을 노려봄
+    ///  - 두 팔은 어깨 아래로 곧게 내려 바닥을 짚음
+    ///  - 왼다리는 앞으로 내딛어 무릎을 접고, 오른다리는 뒤로 빼서 무릎이 바닥 가까이
+    ///  - 숨 고르듯 살짝 들썩임. 발·손·무릎 중 가장 낮은 곳이 바닥에 닿게 하는 것은 BakeBody(groundBones)가 맡음
+    /// </summary>
+    private static void ChargeReadyBody(Rig r, float time)
+    {
+        float breath = Mathf.Sin(time / ChargeReadyClipLength * Mathf.PI * 2f);
+
+        // 골반째 앞으로 기울임 (휴머노이드 허리 근육은 마디당 약 40°까지만 굽어서 허리만으로는 수평이 안 됨)
+        r.Rotate("Hips", r.right, 40f);
+
+        // 다리 (엉덩이 기준 아래쪽): 앞다리는 허벅지를 거의 수평으로 들어 무릎을 깊게 접고, 뒷다리는 무릎이 바닥 가까이
+        r.Aim("LeftUpLeg", "LeftLeg", r.Dir(0f, -0.3f, 1f));
+        r.Aim("LeftLeg", "LeftFoot", r.Dir(0f, -1f, -0.25f));
+        r.Aim("LeftFoot", "LeftToeBase", r.Dir(0f, -0.2f, 1f));
+        r.Aim("RightUpLeg", "RightLeg", r.Dir(0f, -1f, -0.35f));
+        r.Aim("RightLeg", "RightFoot", r.Dir(0f, -0.15f, -1f));
+        r.Aim("RightFoot", "RightToeBase", r.Dir(0f, -0.9f, -0.45f));
+
+        // 상체: 허리부터 앞으로 숙여 거의 수평, 고개는 들어 앞을 봄
+        r.Aim("Spine", "Spine1", r.Dir(0f, 0.35f, 1f));
+        r.Aim("Spine1", "Spine2", r.Dir(0f, 0.25f + 0.03f * breath, 1f));
+        r.Aim("Spine2", "Neck", r.Dir(0f, 0.2f, 1f));
+        r.Aim("Neck", "Head", r.Dir(0f, 0.6f, 1f));
+        r.Rotate("Head", r.right, -35f);
+
+        // 팔: 어깨에서 바닥으로 곧게, 어깨너비로 살짝 벌림
+        float sideL = Mathf.Sign(Vector3.Dot(r["LeftArm"].position - r["Spine2"].position, r.right));
+        r.Aim("LeftArm", "LeftForeArm", r.Dir(0.12f * sideL, -1f, 0.15f));
+        r.Aim("LeftForeArm", "LeftHand", r.Dir(0.05f * sideL, -1f, 0.1f));
+        r.Aim("RightArm", "RightForeArm", r.Dir(-0.12f * sideL, -1f, 0.15f));
+        r.Aim("RightForeArm", "RightHand", r.Dir(-0.05f * sideL, -1f, 0.1f));
+
+        // 숨 고르듯 살짝 들썩임 (바닥에 닿게 내리는 것은 BakeBody가 근육 한계를 적용한 뒤에 한다)
+        r["Hips"].position += r.up * (0.01f * r.height * (1f + breath));
+    }
+
+    /// <summary>출발 자세에서 바닥에 닿아야 하는 곳 (발끝·손·뒷무릎)</summary>
+    private static readonly string[] ChargeReadyGroundBones = { "LeftToeBase", "RightToeBase", "LeftFoot", "RightFoot", "LeftHand", "RightHand", "RightLeg" };
+
+    /// <summary>날개: 위로 들어 뒤로 젖혀 접어 둠 (박차고 나가기 직전)</summary>
+    private static void ChargeReadyWings(Rig r, float time)
+    {
+        float breath = Mathf.Sin(time / ChargeReadyClipLength * Mathf.PI * 2f);
+        r.Rotate("wing_upper.L", r.forward, -35f - 3f * breath);
+        r.Rotate("wing_upper.L", r.up, -40f);
+        r.Rotate("wing_fore.L", r.forward, -30f);
+        r.Rotate("wing_hand.L", r.forward, -20f);
+        r.Rotate("wing_upper.R", r.forward, 35f + 3f * breath);
+        r.Rotate("wing_upper.R", r.up, 40f);
+        r.Rotate("wing_fore.R", r.forward, 30f);
+        r.Rotate("wing_hand.R", r.forward, 20f);
+    }
+
+    /// <summary>날개: 비행 중 뒤로 쭉 젖혀 펼치고(up 축), 끝은 바람에 떨림</summary>
+    private static void FlyingWings(Rig r, float time)
+    {
+        float tremble = Mathf.Sin(time / WingsFlyingClipLength * Mathf.PI * 2f);
+        r.Rotate("wing_upper.L", r.up, -55f);
+        r.Rotate("wing_upper.L", r.forward, -8f);
+        r.Rotate("wing_fore.L", r.forward, -6f + 4f * tremble);
+        r.Rotate("wing_hand.L", r.forward, 6f * tremble);
+        r.Rotate("wing_upper.R", r.up, 55f);
+        r.Rotate("wing_upper.R", r.forward, 8f);
+        r.Rotate("wing_fore.R", r.forward, 6f - 4f * tremble);
+        r.Rotate("wing_hand.R", r.forward, -6f * tremble);
+    }
+
+    /// <summary>
+    /// Flying 클립 가져오기 설정: Humanoid로 반복 재생.
+    /// 몸을 눕힌 방향·높이는 자세에 굽고, 앞으로 날아가는 이동(약 100m)은 버린다 (돌진 이동은 BossController가 맡음)
+    /// </summary>
+    private static void ImportFlyingClip()
+    {
+        var imp = (ModelImporter)AssetImporter.GetAtPath(FlyingModelPath);
+        if (imp == null) throw new Exception("[GGachiAnimationBaker] Flying 파일이 없습니다: " + FlyingModelPath);
+        imp.animationType = ModelImporterAnimationType.Human;
+        imp.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+        ModelImporterClipAnimation[] clips = imp.clipAnimations.Length > 0 ? imp.clipAnimations : imp.defaultClipAnimations;
+        foreach (ModelImporterClipAnimation c in clips)
+        {
+            c.name = "GGachi_Flying";
+            c.loopTime = true;
+            c.loopPose = true;
+            c.lockRootRotation = true; c.keepOriginalOrientation = true;
+            c.lockRootHeightY = true; c.keepOriginalPositionY = true;
+            c.lockRootPositionXZ = false;
+        }
+        imp.clipAnimations = clips;
+        imp.SaveAndReimport();
+    }
+
+    private static AnimationClip LoadModelClip(string modelPath)
+    {
+        foreach (Object o in AssetDatabase.LoadAllAssetsAtPath(modelPath))
+        {
+            if (o is AnimationClip c && !c.name.StartsWith("__preview")) return c;
+        }
+        return null;
+    }
+
     // ───────────────────────── 굽기: 몸통 (Humanoid) ─────────────────────────
 
     private static readonly string[] BodyExtraBones = { "tail_1", "tail_2", "tail_3" };
 
-    private static void BakeBody(string path, string clipName, float length, Action<Rig, float> pose)
+    /// <param name="groundBones">주면 근육 한계를 적용한 실제 자세에서 이 뼈들 중 가장 낮은 곳이 쉬는 자세의 발바닥 높이에 닿도록 몸 높이를 맞춘다</param>
+    private static void BakeBody(string path, string clipName, float length, Action<Rig, float> pose, string[] groundBones = null)
     {
         GameObject model = Spawn(BodyModelPath);
         try
@@ -230,6 +371,10 @@ public static class GGachiAnimationBaker
             foreach (string b in extras) extraCurves[b] = NewCurves(4);
             var lastRot = new Dictionary<string, Quaternion>();
 
+            float restGround = float.MaxValue;
+            if (groundBones != null)
+                foreach (string b in groundBones) restGround = Mathf.Min(restGround, r.Height(b));
+
             int frames = Mathf.RoundToInt(length * Fps);
             for (int f = 0; f <= frames; f++)
             {
@@ -239,6 +384,7 @@ public static class GGachiAnimationBaker
                 pose(r, time);
 
                 handler.GetHumanPose(ref humanPose);
+                if (groundBones != null) GroundPose(handler, ref humanPose, r, groundBones, restGround);
                 foreach (int i in muscleIndices) muscleCurves[i].AddKey(time, humanPose.muscles[i]);
                 rootT[0].AddKey(time, humanPose.bodyPosition.x);
                 rootT[1].AddKey(time, humanPose.bodyPosition.y);
@@ -270,6 +416,29 @@ public static class GGachiAnimationBaker
         {
             Object.DestroyImmediate(model);
         }
+    }
+
+    /// <summary>
+    /// 근육 한계가 적용된 실제 자세를 모델에 입혀 보고, 가장 낮은 뼈가 바닥(restGround)에 닿도록 몸 높이(bodyPosition)를 옮긴다.
+    /// bodyPosition 단위가 모델 크기와 달라서 한 번 옮겨 본 비율로 다시 맞춘다
+    /// </summary>
+    private static void GroundPose(HumanPoseHandler handler, ref HumanPose pose, Rig r, string[] groundBones, float restGround)
+    {
+        float Low()
+        {
+            float low = float.MaxValue;
+            foreach (string b in groundBones) low = Mathf.Min(low, r.Height(b));
+            return low;
+        }
+        Vector3 bodyUp = Vector3.up;
+        handler.SetHumanPose(ref pose);
+        float low0 = Low();
+        pose.bodyPosition += bodyUp * 0.1f;
+        handler.SetHumanPose(ref pose);
+        float perUnit = (Low() - low0) / 0.1f;
+        if (Mathf.Abs(perUnit) < 1e-5f) { pose.bodyPosition -= bodyUp * 0.1f; return; }
+        pose.bodyPosition += bodyUp * ((restGround - low0) / perUnit - 0.1f);
+        handler.SetHumanPose(ref pose);
     }
 
     // ───────────────────────── 굽기: 날개 (Generic) ─────────────────────────
@@ -319,14 +488,17 @@ public static class GGachiAnimationBaker
     /// <summary>
     /// 몸통·날개 컨트롤러를 같은 구조로 만든다 (여러 번 실행해도 같은 결과):
     ///  - Idle(기본) = 호버링, 어느 상태에서든 Dive(trigger) → SlamDive, Land(trigger) → Idle
+    ///  - 어느 상태에서든 ChargeReady(trigger) → ChargeReady(출발 자세), Charge(trigger) → Charge(비행), Land(trigger) → Idle
     /// </summary>
     private static void SetupControllers()
     {
-        SetupController(BodyControllerPath, BodyHoverPath, BodyDivePath);
-        SetupController(WingsControllerPath, WingsHoverPath, WingsDivePath);
+        SetupController(BodyControllerPath, BodyHoverPath, BodyDivePath,
+            AssetDatabase.LoadAssetAtPath<AnimationClip>(BodyChargeReadyPath), LoadModelClip(FlyingModelPath));
+        SetupController(WingsControllerPath, WingsHoverPath, WingsDivePath,
+            AssetDatabase.LoadAssetAtPath<AnimationClip>(WingsChargeReadyPath), AssetDatabase.LoadAssetAtPath<AnimationClip>(WingsFlyingPath));
     }
 
-    private static void SetupController(string controllerPath, string hoverPath, string divePath)
+    private static void SetupController(string controllerPath, string hoverPath, string divePath, AnimationClip chargeReady, AnimationClip flying)
     {
         AnimatorController ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(controllerPath);
         if (ctrl == null) ctrl = AnimatorController.CreateAnimatorControllerAtPath(controllerPath);
@@ -368,6 +540,43 @@ public static class GGachiAnimationBaker
         toIdle.hasExitTime = false;
         toIdle.duration = 0.3f;           // 착지 후 날개를 펴며 호버링으로 돌아감
         toIdle.AddCondition(AnimatorConditionMode.If, 0f, "Land");
+
+        // 돌진: 출발 자세 → 비행 → (도착하면 Land) 호버링
+        foreach (string name in new[] { "ChargeReady", "Charge" })
+        {
+            AnimatorState s = FindState(sm, name);
+            if (s != null) sm.RemoveState(s);
+        }
+        foreach (AnimatorStateTransition t in sm.anyStateTransitions)
+        {
+            if (t.destinationState == null) sm.RemoveAnyStateTransition(t);
+        }
+        if (chargeReady != null && flying != null)
+        {
+            EnsureParameter(ctrl, "ChargeReady", AnimatorControllerParameterType.Trigger);
+            EnsureParameter(ctrl, "Charge", AnimatorControllerParameterType.Trigger);
+
+            AnimatorState readyState = sm.AddState("ChargeReady");
+            readyState.motion = chargeReady;
+            AnimatorStateTransition toReady = sm.AddAnyStateTransition(readyState);
+            toReady.hasExitTime = false;
+            toReady.duration = 0.25f;     // 떠 있다가 땅에 내려앉아 웅크림
+            toReady.canTransitionToSelf = false;
+            toReady.AddCondition(AnimatorConditionMode.If, 0f, "ChargeReady");
+
+            AnimatorState chargeState = sm.AddState("Charge");
+            chargeState.motion = flying;
+            AnimatorStateTransition toCharge = sm.AddAnyStateTransition(chargeState);
+            toCharge.hasExitTime = false;
+            toCharge.duration = 0.12f;    // 박차고 나가는 순간 빠르게 몸을 눕힘
+            toCharge.canTransitionToSelf = false;
+            toCharge.AddCondition(AnimatorConditionMode.If, 0f, "Charge");
+
+            AnimatorStateTransition chargeToIdle = chargeState.AddTransition(idle);
+            chargeToIdle.hasExitTime = false;
+            chargeToIdle.duration = 0.35f;
+            chargeToIdle.AddCondition(AnimatorConditionMode.If, 0f, "Land");
+        }
 
         EditorUtility.SetDirty(ctrl);
         AssetDatabase.SaveAssets();

@@ -80,6 +80,8 @@ public class BossController : MonoBehaviour
     // 애니메이터 신호 (GGachi.controller: Dive → SlamDive 자세, Land → Idle 호버링)
     private static readonly int DiveId = Animator.StringToHash("Dive");
     private static readonly int LandId = Animator.StringToHash("Land");
+    private static readonly int ChargeReadyId = Animator.StringToHash("ChargeReady");
+    private static readonly int ChargeId = Animator.StringToHash("Charge");
 
     public bool IsPhase2 { get; private set; }
 
@@ -131,6 +133,8 @@ public class BossController : MonoBehaviour
         {
             a.ResetTrigger(DiveId);
             a.ResetTrigger(LandId);
+            a.ResetTrigger(ChargeReadyId);
+            a.ResetTrigger(ChargeId);
             if (!health.IsDead) a.CrossFade("Idle", 0.3f);
         }
     }
@@ -187,8 +191,10 @@ public class BossController : MonoBehaviour
             Quaternion.LookRotation(dir),
             new Vector3(chargeLineWidth, 1f, length));
 
+        SetAnimTrigger(ChargeReadyId); // 땅에 웅크린 출발 자세
         yield return Shake(chargeWindup, 0.15f);
         ClearTelegraph();
+        SetAnimTrigger(ChargeId);      // 박차고 날아감
 
         float speed = IsPhase2 ? chargeSpeed * 1.25f : chargeSpeed;
         while (Vector3.Distance(Flat(transform.position), Flat(end)) > 0.1f)
@@ -198,6 +204,7 @@ public class BossController : MonoBehaviour
             CheckContact(chargeDamage, bodyRadius * 1.1f);
             yield return null;
         }
+        SetAnimTrigger(LandId);        // 도착하면 호버링으로 복귀
 
         yield return Idle(0.4f); // 돌진 후 빈틈 = 플레이어가 때릴 기회
     }
