@@ -104,6 +104,9 @@ public class BossController : MonoBehaviour
         groundY = transform.position.y;
         health.HealthChanged += OnHealthChanged;
         health.Died += OnDied;
+
+        // 비어 있으면 경기장 경계 계산이 모두 꺼져 돌진·내려찍기가 경기장 밖으로 나간다
+        if (arenaCenter == null) Debug.LogWarning("BossController: arenaCenter가 비어 있어 경기장 경계가 적용되지 않습니다.", this);
     }
 
     private void OnDestroy()
@@ -182,8 +185,10 @@ public class BossController : MonoBehaviour
     {
         Vector3 start = transform.position;
         Vector3 dir = FlatDirectionToPlayer();
-        Vector3 end = ClampToArena(start + dir * chargeDistance);
-        float length = Vector3.Distance(Flat(start), Flat(end));
+        // 끝점을 경기장 중심 쪽으로 잘라내면(ClampToArena) 예고선과 다른 방향으로 꺾여 날아간다.
+        // 예고선 위에서 경기장 경계와 만나는 지점까지만 가도록 거리를 줄인다.
+        float length = DistanceToArenaEdge(start, dir, chargeDistance);
+        Vector3 end = start + dir * length;
 
         // 예고: 돌진 경로를 바닥에 길게 표시 (이후 경로는 바뀌지 않음)
         transform.rotation = Quaternion.LookRotation(dir);
@@ -435,6 +440,21 @@ public class BossController : MonoBehaviour
         float max = arenaRadius - bodyRadius;
         if (offset.magnitude > max) offset = offset.normalized * max;
         return new Vector3(c.x + offset.x, p.y, c.z + offset.z);
+    }
+
+    /// <summary>
+    /// start에서 dir(수평 단위 벡터)로 곧게 갈 때 경기장 경계(보스 몸통 반경만큼 여유)에 닿기까지의 거리. 최대 maxDistance.
+    /// 원과 반직선의 교점: |o + t·dir| = r 을 t에 대해 푼다 (o = 경기장 중심에서 본 출발점).
+    /// </summary>
+    private float DistanceToArenaEdge(Vector3 start, Vector3 dir, float maxDistance)
+    {
+        if (arenaCenter == null) return maxDistance;
+        Vector3 o = Flat(start) - Flat(arenaCenter.position);
+        float r = arenaRadius - bodyRadius;
+        float b = Vector3.Dot(o, dir);
+        float disc = b * b - (o.sqrMagnitude - r * r);
+        if (disc < 0f) return 0f;  // 경기장 밖에서 바깥쪽을 향함
+        return Mathf.Clamp(-b + Mathf.Sqrt(disc), 0f, maxDistance);
     }
 
     private static Vector3 Flat(Vector3 v) => new Vector3(v.x, 0f, v.z);
