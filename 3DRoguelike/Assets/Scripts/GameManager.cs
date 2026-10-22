@@ -40,24 +40,16 @@ public class GameManager : MonoBehaviour
     [Tooltip("플레이어가 이 높이 아래로 떨어지면 패배")]
     [SerializeField] private float fallDeathY = -15f;
 
-    [Header("점수")]
-    [SerializeField] private int clearBaseScore = 10000;
-    [SerializeField] private int scorePenaltyPerSecond = 20;
-    [SerializeField] private int scorePenaltyPerHit = 500;
-    [SerializeField] private int scorePerBossDamage = 10;
-
     public GameState State { get; private set; } = GameState.Ready;
 
     private float elapsedTime;
     private int hitsTaken;
-    private int damageDealt;
 
     private void Start()
     {
         playerHealth.Died += OnPlayerDied;
         playerHealth.Damaged += OnPlayerDamaged;
         bossHealth.Died += OnBossDied;
-        bossHealth.Damaged += OnBossDamaged;
         boss.PhaseChanged += OnBossPhaseChanged;
         ui.StartClicked += StartGame;
         ui.QuitClicked += QuitGame;
@@ -78,7 +70,6 @@ public class GameManager : MonoBehaviour
         if (bossHealth != null)
         {
             bossHealth.Died -= OnBossDied;
-            bossHealth.Damaged -= OnBossDamaged;
         }
         if (boss != null) boss.PhaseChanged -= OnBossPhaseChanged;
         if (ui != null)
@@ -202,11 +193,7 @@ public class GameManager : MonoBehaviour
         SetControls(false);
         if (!victory) boss.StopFight();
 
-        int score = victory
-            ? Mathf.Max(0, clearBaseScore - Mathf.RoundToInt(elapsedTime) * scorePenaltyPerSecond - hitsTaken * scorePenaltyPerHit)
-            : damageDealt * scorePerBossDamage;
-
-        ui.ShowResult(victory, reason, elapsedTime, hitsTaken, score);
+        ui.ShowResult(victory, reason, elapsedTime, hitsTaken);
     }
 
     private void SetControls(bool enabled)
@@ -217,9 +204,8 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void OnPlayerDied() => EndGame(false, "토끼가 쓰러졌습니다");
+    private void OnPlayerDied() => EndGame(false, "쓰러졌습니다");
     private void OnBossDied() => EndGame(true, "까치 대장을 물리쳤습니다!");
     private void OnPlayerDamaged(int amount) => hitsTaken++;
-    private void OnBossDamaged(int amount) => damageDealt += amount;
     private void OnBossPhaseChanged() => ui.ShowBanner("까치 대장이 분노했다! 공격이 빨라집니다");
 }

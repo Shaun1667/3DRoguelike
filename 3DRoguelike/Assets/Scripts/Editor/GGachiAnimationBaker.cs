@@ -14,6 +14,7 @@ using Object = UnityEngine.Object;
 /// Tools > Boss Fight > 5. Build GGachi Slam Dive    : 내려찍기 때 발부터 내리꽂는 자세 (SlamDive 상태)
 /// Tools > Boss Fight > 6. Build GGachi Charge       : 돌진 출발 자세 (ChargeReady) + 비행 (Charge, 몸통은 Flying.fbx)
 /// Tools > Boss Fight > 7. Build GGachi Stomp        : 등장 연출에서 다리를 들어 발로 찍어 누르는 동작 (Stomp 상태, 반복 없음)
+/// Tools > Boss Fight > Add Death Animation          : Mixamo "Death From Right"를 고라니 게임오버 / 까치 쓰러짐(Death 상태)으로
 ///
 /// 만드는 방법:
 ///  1) 몸통/날개 모델을 임시로 만들고
@@ -44,6 +45,8 @@ public static class GGachiAnimationBaker
     private const string WingsStompPath = AnimDir + "/GGachi_Wings_Stomp.anim";
     // 돌진 비행 몸통 동작: 까치 몸통에 Mixamo로 입힌 Flying (몸을 수평으로 눕혀 나는 자세)
     private const string FlyingModelPath = "Assets/Resources/Animation/Flying.fbx";
+    // 쓰러짐: 고라니와 같은 Mixamo 클립 (임포트 설정은 BossFightSetup.ImportGoraniClips가 맡음). 몸통만 쓰고 날개는 멈춰서 몸을 따라감
+    private const string DeathModelPath = "Assets/Resources/Animation/Death From Right.fbx";
     private const int Fps = 30;
 
     // ── 호버링 Idle ──
@@ -155,6 +158,14 @@ public static class GGachiAnimationBaker
         BakeWings(WingsStompPath, "GGachi_Wings_Stomp", StompClipLength, StompWings, loop: false);
         SetupControllers();
         Debug.Log("[GGachiAnimationBaker] 밟기 생성 완료");
+    }
+
+    [MenuItem("Tools/Boss Fight/Add Death Animation (Player + Boss)")]
+    public static void AddDeathAnimation()
+    {
+        BossFightSetup.BuildGoraniController(); // Death From Right 임포트(Humanoid) + 고라니 Death 상태
+        SetupControllers();                     // 까치 몸통 Death 상태
+        Debug.Log("[GGachiAnimationBaker] 쓰러짐 동작 연결 완료 (고라니 / 까치)");
     }
 
     // ───────────────────────── 자세: 호버링 ─────────────────────────
@@ -571,18 +582,21 @@ public static class GGachiAnimationBaker
     ///  - Idle(기본) = 호버링, 어느 상태에서든 Dive(trigger) → SlamDive, Land(trigger) → Idle
     ///  - 어느 상태에서든 ChargeReady(trigger) → ChargeReady(출발 자세), Charge(trigger) → Charge(비행), Land(trigger) → Idle
     ///  - 어느 상태에서든 Stomp(trigger) → Stomp(밟기, 등장 연출 전용), Land(trigger) → Idle
+    ///  - (몸통만) 어느 상태에서든 Die(trigger) → Death(쓰러짐, 돌아가지 않음)
     /// </summary>
     private static void SetupControllers()
     {
+        AnimationClip death = LoadModelClip(DeathModelPath);
+        if (death != null && !death.humanMotion) death = null; // 아직 Humanoid로 임포트되지 않았으면 연결하지 않음 (Add Death Animation 메뉴가 임포트)
         SetupController(BodyControllerPath, BodyHoverPath, BodyDivePath,
             AssetDatabase.LoadAssetAtPath<AnimationClip>(BodyChargeReadyPath), LoadModelClip(FlyingModelPath),
-            AssetDatabase.LoadAssetAtPath<AnimationClip>(BodyStompPath));
+            AssetDatabase.LoadAssetAtPath<AnimationClip>(BodyStompPath), death);
         SetupController(WingsControllerPath, WingsHoverPath, WingsDivePath,
             AssetDatabase.LoadAssetAtPath<AnimationClip>(WingsChargeReadyPath), AssetDatabase.LoadAssetAtPath<AnimationClip>(WingsFlyingPath),
-            AssetDatabase.LoadAssetAtPath<AnimationClip>(WingsStompPath));
+            AssetDatabase.LoadAssetAtPath<AnimationClip>(WingsStompPath), null);
     }
 
-    private static void SetupController(string controllerPath, string hoverPath, string divePath, AnimationClip chargeReady, AnimationClip flying, AnimationClip stomp)
+    private static void SetupController(string controllerPath, string hoverPath, string divePath, AnimationClip chargeReady, AnimationClip flying, AnimationClip stomp, AnimationClip death)
     {
         AnimatorController ctrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(controllerPath);
         if (ctrl == null) ctrl = AnimatorController.CreateAnimatorControllerAtPath(controllerPath);
@@ -685,6 +699,26 @@ public static class GGachiAnimationBaker
             stompToIdle.hasExitTime = false;
             stompToIdle.duration = 0.3f;  // 할퀴기에 맞고 주춤하며 떠오름
             stompToIdle.AddCondition(AnimatorConditionMode.If, 0f, "Land");
+        }
+
+        // 쓰러짐: 어느 상태에서든 Die → 한 번 쓰러지고 그대로 (돌아가는 전환 없음)
+        AnimatorState oldDeath = FindState(sm, "Death");
+        if (oldDeath != null) sm.RemoveState(oldDeath);
+        foreach (AnimatorStateTransition t in sm.anyStateTransitions)
+        {
+            if (t.destinationState == null) sm.RemoveAnyStateTransition(t);
+        }
+        if (death != null)
+        {
+            EnsureParameter(ctrl, "Die", AnimatorControllerParameterType.Trigger);
+
+            AnimatorState deathState = sm.AddState("Death");
+            deathState.motion = death;
+            AnimatorStateTransition toDeath = sm.AddAnyStateTransition(deathState);
+            toDeath.hasExitTime = false;
+            toDeath.duration = 0.2f;
+            toDeath.canTransitionToSelf = false;
+            toDeath.AddCondition(AnimatorConditionMode.If, 0f, "Die");
         }
 
         EditorUtility.SetDirty(ctrl);

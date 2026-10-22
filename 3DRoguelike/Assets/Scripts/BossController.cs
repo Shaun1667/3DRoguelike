@@ -82,6 +82,7 @@ public class BossController : MonoBehaviour
     private static readonly int LandId = Animator.StringToHash("Land");
     private static readonly int ChargeReadyId = Animator.StringToHash("ChargeReady");
     private static readonly int ChargeId = Animator.StringToHash("Charge");
+    private static readonly int DieId = Animator.StringToHash("Die"); // 몸통만: Death (쓰러짐)
 
     public bool IsPhase2 { get; private set; }
 
@@ -336,24 +337,41 @@ public class BossController : MonoBehaviour
         StartCoroutine(DeathRoutine());
     }
 
-    /// <summary>쓰러지는 연출: 옆으로 기울어지며 바닥으로 내려앉는다.</summary>
+    /// <summary>
+    /// 쓰러지는 연출: 몸통은 쓰러지는 동작(Death From Right)을 재생하고, 가슴 뼈에 붙은 날개는 그 자리에서 멈춘 채 몸을 따라간다.
+    /// 내려찍기 도중처럼 공중에서 죽으면 바닥으로 내려앉는다.
+    /// 컨트롤러에 Die가 없으면(Add Death Animation 메뉴를 안 돌린 경우) 예전처럼 옆으로 기울어진다.
+    /// </summary>
     private IEnumerator DeathRoutine()
     {
-        if (animator != null) animator.speed = 0f;
+        bool hasDeathAnim = animator != null && HasParameter(animator, DieId);
+        if (hasDeathAnim) animator.SetTrigger(DieId);
+        else if (animator != null) animator.speed = 0f;
         if (wingAnimator != null) wingAnimator.speed = 0f;
 
         Quaternion startRot = transform.rotation;
-        Quaternion endRot = startRot * Quaternion.Euler(0f, 0f, 80f);
+        Quaternion endRot = hasDeathAnim ? startRot : startRot * Quaternion.Euler(0f, 0f, 80f);
         Vector3 startPos = transform.position;
         Vector3 endPos = new Vector3(startPos.x, groundY, startPos.z);
+        float duration = hasDeathAnim ? 0.5f : 1.2f;
 
-        for (float t = 0f; t < 1.2f; t += Time.deltaTime)
+        for (float t = 0f; t < duration; t += Time.deltaTime)
         {
-            float k = t / 1.2f;
+            float k = t / duration;
             transform.rotation = Quaternion.Slerp(startRot, endRot, k * k);
             transform.position = Vector3.Lerp(startPos, endPos, k);
             yield return null;
         }
+        transform.SetPositionAndRotation(endPos, endRot);
+    }
+
+    private static bool HasParameter(Animator a, int id)
+    {
+        foreach (AnimatorControllerParameter p in a.parameters)
+        {
+            if (p.nameHash == id) return true;
+        }
+        return false;
     }
 
     private void SetAnimTrigger(int id)

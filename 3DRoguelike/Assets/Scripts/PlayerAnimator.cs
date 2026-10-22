@@ -10,6 +10,7 @@ using UnityEngine;
 ///  - Attack (trigger) + AttackLeft (bool): 공격이 나간 순간 → 오른손/왼손(좌우 반전) 공격 재생 후 이동 블렌드 트리로 복귀
 ///  - Jump (trigger): 바닥에서 뛰어오른 순간 → 점프 재생 후 이동 블렌드 트리로 복귀
 ///  - Roll (trigger): 구르기를 시작한 순간 → 구르기 재생 후 이동 블렌드 트리로 복귀
+///  - Die (trigger): 체력이 0이 된 순간 → 쓰러지는 동작(Death From Right) 후 그대로 (게임오버)
 /// Player 루트에 붙이고, animator에는 고라니 모델(Visual)의 Animator를 연결한다.
 /// </summary>
 public class PlayerAnimator : MonoBehaviour
@@ -27,14 +28,22 @@ public class PlayerAnimator : MonoBehaviour
     private static readonly int AttackLeftId = Animator.StringToHash("AttackLeft");
     private static readonly int JumpId = Animator.StringToHash("Jump");
     private static readonly int RollId = Animator.StringToHash("Roll");
+    private static readonly int DieId = Animator.StringToHash("Die");
 
     private Vector2 blend;
+    private Health health;
+
+    private void Awake()
+    {
+        health = GetComponent<Health>();
+    }
 
     private void OnEnable()
     {
         if (attack != null) attack.Attacked += OnAttacked;
         if (movement != null) movement.Jumped += OnJumped;
         if (movement != null) movement.Rolled += OnRolled;
+        if (health != null) health.Died += OnDied;
     }
 
     private void OnDisable()
@@ -42,6 +51,12 @@ public class PlayerAnimator : MonoBehaviour
         if (attack != null) attack.Attacked -= OnAttacked;
         if (movement != null) movement.Jumped -= OnJumped;
         if (movement != null) movement.Rolled -= OnRolled;
+        if (health != null) health.Died -= OnDied;
+    }
+
+    private void OnDied()
+    {
+        if (animator != null) animator.SetTrigger(DieId);
     }
 
     private void OnJumped()

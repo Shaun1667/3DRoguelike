@@ -154,7 +154,7 @@ public class GameUI : MonoBehaviour
         bannerHideTime = Time.unscaledTime + bannerDuration;
     }
 
-    public void ShowResult(bool victory, string reason, float seconds, int hitsTaken, int score)
+    public void ShowResult(bool victory, string reason, float seconds, int hitsTaken)
     {
         centerPanel.SetActive(true);
         SetCenterBackground(resultBackgroundAlpha);
@@ -166,8 +166,7 @@ public class GameUI : MonoBehaviour
         int s = (int)(seconds % 60f);
         centerBody.text = $"{reason}\n\n"
                         + $"전투 시간  {m:00}:{s:00}\n"
-                        + $"맞은 횟수  {hitsTaken}\n"
-                        + $"점수  {score:N0}\n\n"
+                        + $"맞은 횟수  {hitsTaken}\n\n"
                         + "R 키로 다시 시작";
     }
 

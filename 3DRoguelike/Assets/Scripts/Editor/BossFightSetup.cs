@@ -385,6 +385,7 @@ public static class BossFightSetup
         ctrl.AddParameter("AttackLeft", AnimatorControllerParameterType.Bool);
         ctrl.AddParameter("Jump", AnimatorControllerParameterType.Trigger);
         ctrl.AddParameter("Roll", AnimatorControllerParameterType.Trigger);
+        ctrl.AddParameter("Die", AnimatorControllerParameterType.Trigger);
 
         // 이동: 입력 방향(MoveX, MoveY)에 따라 다섯 동작을 섞는다
         AnimatorState locomotion = ctrl.CreateBlendTreeInController("Locomotion", out BlendTree tree, 0);
@@ -455,6 +456,15 @@ public static class BossFightSetup
             back.duration = 0.15f;
         }
 
+        // 게임오버: 쓰러지는 동작을 한 번 재생하고 쓰러진 자세로 멈춘다 (돌아가는 전환 없음)
+        AnimatorState deathState = sm.AddState("Death");
+        deathState.motion = LoadClip(AnimationDir + "/Death From Right.fbx");
+        AnimatorStateTransition toDeath = sm.AddAnyStateTransition(deathState);
+        toDeath.hasExitTime = false;
+        toDeath.duration = 0.1f;
+        toDeath.canTransitionToSelf = false;
+        toDeath.AddCondition(AnimatorConditionMode.If, 0f, "Die");
+
         EditorUtility.SetDirty(ctrl);
         AssetDatabase.SaveAssets();
         return ctrl;
@@ -489,11 +499,14 @@ public static class BossFightSetup
             ("Attack", "Gorani_Attack", false),
             ("Jump", "Gorani_Jump", false),
             ("Stand To Roll", "Gorani_Roll", false),
+            ("Death From Right", "Death_FromRight", false), // 고라니 게임오버 + 까치 쓰러짐 (GGachiAnimationBaker도 사용)
         };
         foreach (var (file, clipName, loop) in clips)
         {
             // 점프 높이는 PlayerMovement(CharacterController)가 정하므로, 점프 클립의 몸 오르내림은 버린다
             bool keepHeightInPose = file != "Jump";
+            // 쓰러지며 옆으로 밀려나는 이동은 루트 모션을 쓰지 않으므로 자세에 굽는다 (안 그러면 제자리에서 쓰러짐)
+            bool keepTravelInPose = file == "Death From Right";
             string path = $"{AnimationDir}/{file}.fbx";
             ModelImporter imp = AssetImporter.GetAtPath(path) as ModelImporter;
             if (imp == null)
@@ -518,6 +531,8 @@ public static class BossFightSetup
                 settings[i].keepOriginalOrientation = true;
                 settings[i].lockRootHeightY = keepHeightInPose; // 발이 바닥에서 뜨지 않게
                 settings[i].keepOriginalPositionY = true;
+                settings[i].lockRootPositionXZ = keepTravelInPose;
+                if (keepTravelInPose) settings[i].keepOriginalPositionXZ = true;
             }
             imp.clipAnimations = settings;
             imp.SaveAndReimport();
