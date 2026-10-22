@@ -813,6 +813,7 @@ public static class BossFightSetup
             ("centerPanel", panel.gameObject),
             ("centerTitle", title),
             ("centerBody", body));
+        BossMenuSetup.Build(ui); // 시작 화면 버튼 / 일시정지 화면 / EventSystem
         return ui;
     }
 

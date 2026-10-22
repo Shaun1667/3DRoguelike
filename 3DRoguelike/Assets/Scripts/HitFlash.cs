@@ -36,7 +36,10 @@ public class HitFlash : MonoBehaviour
         }
     }
 
-    private void OnDamaged(int amount)
+    private void OnDamaged(int amount) => Flash();
+
+    /// <summary>데미지 없이 번쩍임만 보여준다 (등장 연출에서 할퀴기에 맞는 장면 등)</summary>
+    public void Flash()
     {
         // 결과 화면 등에서 시간이 멈춰도 원래 색으로 돌아오도록 unscaledTime 사용
         flashUntil = Time.unscaledTime + flashTime;
