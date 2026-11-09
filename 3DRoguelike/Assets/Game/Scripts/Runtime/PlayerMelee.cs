@@ -19,6 +19,7 @@ namespace Game
 
         [SerializeField] private PlayerTuning tuning;
         [SerializeField] private Animator animator;
+        [SerializeField] private PlayerGun gun;
 
         private readonly Collider[] overlaps = new Collider[MaxOverlaps];
         private readonly HashSet<IDamageable> hitThisSwing = new HashSet<IDamageable>();
@@ -40,7 +41,7 @@ namespace Game
 
         private void Update()
         {
-            if (attackAction.WasPressedThisFrame()) TryAttack();
+            if (attackAction.WasPressedThisFrame() && !gun.IsAiming) TryAttack();
 
             if (hitPending && Time.time >= hitTime)
             {

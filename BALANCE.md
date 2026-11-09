@@ -28,3 +28,18 @@
 | 재생 배속 `meleePlaybackSpeed` | 3 | 까치 보스전에서 사용자가 고른 값 |
 | 명중 시점 `meleeHitDelay` | 0.35 초 | 손이 가장 앞인 클립 1.05초 ÷ 배속 3 |
 | 잠금 `meleeLockTime` | 0.75 초 | 까치 보스전 값 |
+## 3. 권총 · 조준
+값을 바꾸면 `PlayerTuningTests`도 함께 고친다. 전부 재미 검증 전 첫 시도 값이다.
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 피해 `pistolDamage` | 6 | 근접 10보다 약하고 멀리서 안전 |
+| 발사 간격 `pistolFireInterval` | 0.22 초 | 초당 약 4.5발, 초당 피해 27 (근접은 10 ÷ 0.75 = 약 13) |
+| 탄창 `pistolMagazine` | 12 | 탄창 한 번에 피해 72 |
+| 재장전 `pistolReloadTime` | 1.2 초 | 탄창 소모 2.6초 + 재장전 → 평균 초당 약 19 |
+| 사거리 `pistolRange` | 40 m | 방 크기보다 김 |
+| 탄도 선 `tracerTime` | 0.05 초 | 첫 시도 |
+| 조준 중 이동 `aimMoveMultiplier` | 0.6 | 사용자 결정 2026-11-09 |
+| 카메라 거리 `cameraDistance` · `aimCameraDistance` | 3 → 1.7 m | 첫 시도 |
+| 조준 전환 `aimBlendSpeed` | 6 /초 | 약 0.17초 |
+| 조준 팔 길이 `aimArmLength` | 0.55 m | 고라니 팔 길이 |

@@ -17,6 +17,7 @@ namespace Game
         [SerializeField] private Transform cameraTarget;
         [SerializeField] private Animator animator;
         [SerializeField] private PlayerMelee melee;
+        [SerializeField] private PlayerGun gun;
 
         private CharacterController controller;
         private InputAction moveAction;
@@ -48,6 +49,7 @@ namespace Game
         {
             Look(lookAction.ReadValue<Vector2>());
             Vector2 input = melee.IsAttacking ? Vector2.zero : Vector2.ClampMagnitude(moveAction.ReadValue<Vector2>(), 1f);
+            if (gun.IsAiming) input *= tuning.aimMoveMultiplier;
             Move(input);
             Animate(input);
         }

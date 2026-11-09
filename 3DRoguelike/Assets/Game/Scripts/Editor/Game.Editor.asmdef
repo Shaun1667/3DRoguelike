@@ -4,7 +4,8 @@
     "references": [
         "Game.Rules",
         "Game.Runtime",
-        "Unity.Cinemachine"
+        "Unity.Cinemachine",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [
         "Editor"

@@ -25,3 +25,14 @@ MonoBehaviour:
   meleeHitDelay: 0.35
   meleeLockTime: 0.75
   meleePlaybackSpeed: 3
+  pistolDamage: 6
+  pistolFireInterval: 0.22
+  pistolMagazine: 12
+  pistolReloadTime: 1.2
+  pistolRange: 40
+  tracerTime: 0.05
+  aimMoveMultiplier: 0.6
+  cameraDistance: 3
+  aimCameraDistance: 1.7
+  aimBlendSpeed: 6
+  aimArmLength: 0.55

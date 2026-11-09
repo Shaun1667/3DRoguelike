@@ -19,6 +19,7 @@ namespace Game.EditorTools
         private const string GoraniPrefabPath = "Assets/Game/Prefabs/Gorani.prefab";
         private const string PlayerPrefabPath = "Assets/Game/Prefabs/Player.prefab";
         private const string ScenePath = "Assets/Game/Scenes/TestRoom.unity";
+        private const string TracerMaterialPath = "Assets/Game/Art/Tracer.mat";
 
         private const float RoomSize = 24f;
         private const float WallHeight = 4f;
@@ -83,6 +84,9 @@ namespace Game.EditorTools
             };
             EditorUtility.SetDirty(tree);
             AddAttackStates(controller, machine, tuning);
+            AnimatorControllerLayer[] layers = controller.layers;
+            layers[0].iKPass = true; // 조준 중 오른팔 IK
+            controller.layers = layers;
             EditorUtility.SetDirty(controller);
             return controller;
         }
@@ -162,10 +166,29 @@ namespace Game.EditorTools
             cameraTarget.localPosition = new Vector3(0f, 1.5f, 0f);
 
             var melee = root.AddComponent<PlayerMelee>();
+            var gun = root.AddComponent<PlayerGun>();
+            BuildPistol(root.transform, out Transform pistol, out Transform muzzle, out LineRenderer tracer);
+
             var meleeFields = new SerializedObject(melee);
             meleeFields.FindProperty("tuning").objectReferenceValue = tuning;
             meleeFields.FindProperty("animator").objectReferenceValue = animator;
+            meleeFields.FindProperty("gun").objectReferenceValue = gun;
             meleeFields.ApplyModifiedPropertiesWithoutUndo();
+
+            var gunFields = new SerializedObject(gun);
+            gunFields.FindProperty("tuning").objectReferenceValue = tuning;
+            gunFields.FindProperty("melee").objectReferenceValue = melee;
+            gunFields.FindProperty("animator").objectReferenceValue = animator;
+            gunFields.FindProperty("pistol").objectReferenceValue = pistol;
+            gunFields.FindProperty("muzzle").objectReferenceValue = muzzle;
+            gunFields.FindProperty("tracer").objectReferenceValue = tracer;
+            gunFields.ApplyModifiedPropertiesWithoutUndo();
+
+            var aimIK = visual.AddComponent<PlayerAimIK>();
+            var ikFields = new SerializedObject(aimIK);
+            ikFields.FindProperty("tuning").objectReferenceValue = tuning;
+            ikFields.FindProperty("gun").objectReferenceValue = gun;
+            ikFields.ApplyModifiedPropertiesWithoutUndo();
 
             var player = root.AddComponent<PlayerController>();
             var fields = new SerializedObject(player);
@@ -173,11 +196,47 @@ namespace Game.EditorTools
             fields.FindProperty("cameraTarget").objectReferenceValue = cameraTarget;
             fields.FindProperty("animator").objectReferenceValue = animator;
             fields.FindProperty("melee").objectReferenceValue = melee;
+            fields.FindProperty("gun").objectReferenceValue = gun;
             fields.ApplyModifiedPropertiesWithoutUndo();
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             Object.DestroyImmediate(root);
             return prefab;
+        }
+
+        /// <summary>회색 도형 권총과 탄도 선.</summary>
+        private static void BuildPistol(Transform root, out Transform pistol, out Transform muzzle, out LineRenderer tracer)
+        {
+            var body = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.DestroyImmediate(body.GetComponent<Collider>());
+            body.name = "PistolBody";
+            pistol = new GameObject("Pistol").transform;
+            pistol.SetParent(root, false);
+            body.transform.SetParent(pistol, false);
+            body.transform.localPosition = new Vector3(0f, -0.02f, 0.14f);
+            body.transform.localScale = new Vector3(0.04f, 0.07f, 0.2f);
+
+            muzzle = new GameObject("Muzzle").transform;
+            muzzle.SetParent(pistol, false);
+            muzzle.localPosition = new Vector3(0f, -0.01f, 0.25f);
+
+            tracer = new GameObject("Tracer").AddComponent<LineRenderer>();
+            tracer.transform.SetParent(root, false);
+            tracer.useWorldSpace = true;
+            tracer.positionCount = 2;
+            tracer.widthMultiplier = 0.02f;
+            tracer.shadowCastingMode = ShadowCastingMode.Off;
+            tracer.sharedMaterial = LoadOrCreateTracerMaterial();
+        }
+
+        private static Material LoadOrCreateTracerMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(TracerMaterialPath);
+            if (material != null) return material;
+            material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            material.SetColor("_BaseColor", new Color(1f, 0.85f, 0.4f));
+            AssetDatabase.CreateAsset(material, TracerMaterialPath);
+            return material;
         }
 
         private static void BuildScene(GameObject playerPrefab)
@@ -195,7 +254,7 @@ namespace Game.EditorTools
 
             var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab);
             player.transform.position = new Vector3(0f, 0.1f, -6f);
-            BuildCamera(player.transform.Find("CameraTarget"));
+            BuildCamera(player);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
         }
@@ -228,8 +287,9 @@ namespace Game.EditorTools
             block.transform.localScale = size;
         }
 
-        private static void BuildCamera(Transform target)
+        private static void BuildCamera(GameObject player)
         {
+            Transform target = player.transform.Find("CameraTarget");
             var main = new GameObject("Main Camera") { tag = "MainCamera" };
             var camera = main.AddComponent<Camera>();
             camera.nearClipPlane = 0.1f;
@@ -242,12 +302,35 @@ namespace Game.EditorTools
             thirdPerson.ShoulderOffset = new Vector3(0.5f, 0f, 0f);
             thirdPerson.VerticalArmLength = 0f;
             thirdPerson.CameraSide = 1f;
-            thirdPerson.CameraDistance = 3f;
+            PlayerTuning tuning = AssetDatabase.LoadAssetAtPath<PlayerTuning>(TuningPath);
+            thirdPerson.CameraDistance = tuning.cameraDistance;
             thirdPerson.Damping = new Vector3(0.1f, 0.2f, 0.2f);
             thirdPerson.AvoidObstacles.Enabled = true;
             thirdPerson.AvoidObstacles.CollisionFilter = ~0;
             thirdPerson.AvoidObstacles.IgnoreTag = "Player";
             thirdPerson.AvoidObstacles.CameraRadius = 0.2f;
+
+            var zoom = follow.gameObject.AddComponent<AimCameraZoom>();
+            var fields = new SerializedObject(zoom);
+            fields.FindProperty("tuning").objectReferenceValue = tuning;
+            fields.FindProperty("gun").objectReferenceValue = player.GetComponent<PlayerGun>();
+            fields.FindProperty("follow").objectReferenceValue = thirdPerson;
+            fields.FindProperty("crosshair").objectReferenceValue = BuildCrosshair();
+            fields.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>화면 중앙 조준점. 조준할 때만 켠다.</summary>
+        private static GameObject BuildCrosshair()
+        {
+            var canvas = new GameObject("HUD", typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler)).GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+            var dot = new GameObject("Crosshair", typeof(UnityEngine.UI.Image));
+            dot.transform.SetParent(canvas.transform, false);
+            var rect = (RectTransform)dot.transform;
+            rect.sizeDelta = new Vector2(6f, 6f);
+            dot.SetActive(false);
+            return dot;
         }
     }
 }

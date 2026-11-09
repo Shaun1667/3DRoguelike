@@ -28,5 +28,24 @@ namespace Game
         [Min(0f)] public float meleeLockTime = 0.75f;
         [Tooltip("공격 동작 재생 배속. Setup 메뉴가 컨트롤러에 넣는다")]
         [Min(0f)] public float meleePlaybackSpeed = 3f;
+
+        [Header("권총")]
+        [Min(0)] public int pistolDamage = 6;
+        [Tooltip("다음 발까지 최소 간격(초)")]
+        [Min(0f)] public float pistolFireInterval = 0.22f;
+        [Min(1)] public int pistolMagazine = 12;
+        [Min(0f)] public float pistolReloadTime = 1.2f;
+        [Min(0f)] public float pistolRange = 40f;
+        [Tooltip("탄도 선이 보이는 시간(초)")]
+        [Min(0f)] public float tracerTime = 0.05f;
+
+        [Header("조준")]
+        [Range(0f, 1f)] public float aimMoveMultiplier = 0.6f;
+        [Min(0f)] public float cameraDistance = 3f;
+        [Min(0f)] public float aimCameraDistance = 1.7f;
+        [Tooltip("조준 카메라와 오른팔이 따라가는 속도 (전환 1회 = 1 / 이 값 초)")]
+        [Min(0f)] public float aimBlendSpeed = 6f;
+        [Tooltip("어깨에서 손까지 거리")]
+        [Min(0f)] public float aimArmLength = 0.55f;
     }
 }

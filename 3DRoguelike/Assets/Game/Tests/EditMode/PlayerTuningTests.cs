@@ -25,6 +25,17 @@ namespace Game.Tests
             Assert.That(tuning.meleeHitDelay, Is.EqualTo(0.35f));
             Assert.That(tuning.meleeLockTime, Is.EqualTo(0.75f));
             Assert.That(tuning.meleePlaybackSpeed, Is.EqualTo(3f));
+            Assert.That(tuning.pistolDamage, Is.EqualTo(6));
+            Assert.That(tuning.pistolFireInterval, Is.EqualTo(0.22f));
+            Assert.That(tuning.pistolMagazine, Is.EqualTo(12));
+            Assert.That(tuning.pistolReloadTime, Is.EqualTo(1.2f));
+            Assert.That(tuning.pistolRange, Is.EqualTo(40f));
+            Assert.That(tuning.tracerTime, Is.EqualTo(0.05f));
+            Assert.That(tuning.aimMoveMultiplier, Is.EqualTo(0.6f));
+            Assert.That(tuning.cameraDistance, Is.EqualTo(3f));
+            Assert.That(tuning.aimCameraDistance, Is.EqualTo(1.7f));
+            Assert.That(tuning.aimBlendSpeed, Is.EqualTo(6f));
+            Assert.That(tuning.aimArmLength, Is.EqualTo(0.55f));
         }
     }
 }
