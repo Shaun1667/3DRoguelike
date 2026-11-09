@@ -59,6 +59,7 @@
 - 난수는 주입하고 용도별로 나눈다 (맵 ≠ 보상 ≠ 전투 ≠ 연출).
 - 결합은 이벤트로, "바뀐 것만" 알린다. Find/GetComponent는 캐시한다.
 - 모델 표시용 프리팹은 `ModelPrefabSetup` 한 곳(메뉴 `Tools/Game/Setup Model Prefabs`), 새 모델 = `Models` 표 한 줄 + 메뉴 다시 실행.
+- 플레이어 이동 · 시점은 `PlayerController` 한 곳, 데이터 `Data/PlayerTuning.asset`. 시험 방 · 플레이어 프리팹 · 컨트롤러는 `TestRoomSetup`(메뉴 `Tools/Game/Setup Test Room`)이 만든다.
 - (시스템이 생길 때마다 "이 시스템은 `클래스` 한 곳, 데이터는 `에셋`, 새 항목 = 표 한 줄"로 한 줄씩 더한다)
 
 ## 핵심 설계 규칙 (변경 금지)

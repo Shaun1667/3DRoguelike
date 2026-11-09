@@ -1,7 +1,7 @@
 # TASKS.md
 
 ## 진행 요약 (2026-11-09 기준 — 새 세션은 여기부터 읽는다)
-**최신 (2026-11-09): 0-3 고라니 가져오기 끝, Phase 0 완료 — 브랜치 `phase0-setup`(10b853a에서 시작), main 병합 전, 테스트 1개(실행 안 함), 플레이 확인 대기 없음. 다음: 1-1 TPS 이동 · 카메라.**
+**최신 (2026-11-09): 1-1 TPS 이동 · 카메라 구현 — 브랜치 `phase1-controls`(`phase0-setup` 위), main 병합 전, 테스트 2개(실행 안 함), 플레이 확인 대기: 1-1. 다음: 1-1 플레이 확인 후 1-2 맨몸 근접.**
 
 기존 까치 보스전은 `main`(2adecb2)에 그대로 있다. 제출물 저장소는 별도(GGachi).
 
@@ -28,7 +28,15 @@
   - 확인 방법: Project 창 `Assets/Game/Prefabs/Gorani.prefab` 선택 → Inspector 미리 보기에서 옷 색이 보이고, 프리팹을 씬에 끌어다 놓으면 T자 자세로 서 있으면 정상
 
 ## Phase 1. 핵심 조작 (회색 방 하나)
-- [ ] 1-1. TPS 이동 · 카메라
+- [x] **1-1. TPS 이동 · 카메라** (2026-11-09 사용자 "1-1 진행") — 플레이 확인 대기
+  - 결정 (2026-11-09, 사용자): 몸은 항상 카메라 방향 — 가져온 방향별 걷기 동작과 맞고 총을 쏘며 움직이기 좋음. 카메라는 Cinemachine 3인칭 따라가기 — 벽 충돌 피하기가 기본 기능. 달리기 동작 없이 걷기 동작을 빠르게 재생 — 전투 속도가 정해지면 교체
+  - 구현: `PlayerController`(입력 · 이동 · 시점 · 동작 값) · `PlayerTuning` 에셋 `Data/PlayerTuning.asset` · 메뉴 `Tools/Game/Setup Test Room`(`TestRoomSetup`)이 컨트롤러 · `Prefabs/Player.prefab` · `Scenes/TestRoom.unity` 생성. 패키지 `com.unity.cinemachine` 6.6.0 추가
+  - 정한 것 (Claude, 확인 필요): 입력은 프로젝트 기본 `InputSystem_Actions`의 Player/Move · Look 사용. 카메라 어깨 오른쪽 0.5m · 거리 3m · 눈높이 1.5m. 브랜치 `phase1-controls`를 `phase0-setup` 끝에서 시작
+  - 수치: BALANCE 1번
+  - 확인: 컴파일 오류 0 · 콘솔 오류 0 · 플레이 모드 진입 시 바닥에 서고 커서 잠김 · 카메라 위치 정상(캡처) · 메뉴 2회 실행 시 프리팹 · 컨트롤러 · 수치 에셋 파일 동일, 씬은 내용이 같아도 내부 ID가 달라 파일이 바뀜
+  - 확인 못 함: **WASD 이동 · 마우스 시점 · 벽 앞 카메라 · 걷기 동작 재생을 실제로 못 봄.** Unity 창이 비활성이면 입력이 게임으로 가지 않고, 코드로 넣은 키 입력도 이동 입력에 전달되지 않았음. 조작감도 플레이 필요
+  - 테스트 작성, 실행 안 함: `PlayerTuningTests`
+  - 확인 방법: `Assets/Game/Scenes/TestRoom` 열기 → Play → Game 창 클릭 → WASD로 이동(A/D 옆걸음 · S 뒷걸음), 마우스로 시점 회전, 기둥과 벽 사이로 뒷걸음쳐 카메라가 벽을 뚫지 않으면 정상. 바닥에서 발이 미끄러지면 BALANCE 1번 조정
 - [ ] 1-2. 맨몸 근접
 - [ ] 1-3. 권총 (조준 · 사격)
 - [ ] 1-4. 회피

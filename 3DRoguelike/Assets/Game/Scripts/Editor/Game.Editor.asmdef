@@ -3,7 +3,8 @@
     "rootNamespace": "Game.EditorTools",
     "references": [
         "Game.Rules",
-        "Game.Runtime"
+        "Game.Runtime",
+        "Unity.Cinemachine"
     ],
     "includePlatforms": [
         "Editor"
