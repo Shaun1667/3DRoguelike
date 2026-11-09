@@ -16,5 +16,17 @@ namespace Game
         [Min(0f)] public float animationBlendSpeed = 8f;
         [Tooltip("걷기 동작 재생 배속. Setup 메뉴가 컨트롤러에 넣는다")]
         [Min(0f)] public float walkPlaybackSpeed = 2.4f;
+
+        [Header("맨몸 근접")]
+        [Min(0)] public int meleeDamage = 10;
+        [Min(0f)] public float meleeRange = 2.2f;
+        [Tooltip("정면 기준 전체 각도")]
+        [Range(0f, 360f)] public float meleeAngle = 110f;
+        [Tooltip("공격 시작부터 손이 가장 앞으로 뻗는 순간까지. 동작의 그 시점(1.05초) ÷ 재생 배속")]
+        [Min(0f)] public float meleeHitDelay = 0.35f;
+        [Tooltip("공격 시작부터 다시 움직이거나 공격할 수 있을 때까지")]
+        [Min(0f)] public float meleeLockTime = 0.75f;
+        [Tooltip("공격 동작 재생 배속. Setup 메뉴가 컨트롤러에 넣는다")]
+        [Min(0f)] public float meleePlaybackSpeed = 3f;
     }
 }

@@ -38,7 +38,11 @@ namespace Game.EditorTools
         private static PlayerTuning LoadOrCreateTuning()
         {
             var tuning = AssetDatabase.LoadAssetAtPath<PlayerTuning>(TuningPath);
-            if (tuning != null) return tuning;
+            if (tuning != null)
+            {
+                EditorUtility.SetDirty(tuning); // 새로 생긴 필드를 파일에 남긴다
+                return tuning;
+            }
             tuning = ScriptableObject.CreateInstance<PlayerTuning>();
             AssetDatabase.CreateAsset(tuning, TuningPath);
             return tuning;
@@ -58,15 +62,11 @@ namespace Game.EditorTools
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
             if (controller == null) controller = AnimatorController.CreateAnimatorControllerAtPath(ControllerPath);
 
-            EnsureFloat(controller, "MoveX");
-            EnsureFloat(controller, "MoveY");
+            EnsureParameter(controller, "MoveX", AnimatorControllerParameterType.Float);
+            EnsureParameter(controller, "MoveY", AnimatorControllerParameterType.Float);
 
             AnimatorStateMachine machine = controller.layers[0].stateMachine;
-            BlendTree tree = null;
-            foreach (ChildAnimatorState child in machine.states)
-            {
-                if (child.state.name == "Move") tree = child.state.motion as BlendTree;
-            }
+            BlendTree tree = FindState(machine, "Move")?.motion as BlendTree;
             if (tree == null) controller.CreateBlendTreeInController("Move", out tree, 0);
 
             tree.blendType = BlendTreeType.FreeformDirectional2D;
@@ -82,8 +82,51 @@ namespace Game.EditorTools
                 Child("Right Strafe Walking", 1f, 0f, walk),
             };
             EditorUtility.SetDirty(tree);
+            AddAttackStates(controller, machine, tuning);
             EditorUtility.SetDirty(controller);
             return controller;
+        }
+
+        /// <summary>오른손 공격과 왼손 공격(같은 동작 좌우 반전). 끝나면 이동으로 돌아간다.</summary>
+        private static void AddAttackStates(AnimatorController controller, AnimatorStateMachine machine, PlayerTuning tuning)
+        {
+            EnsureParameter(controller, "Attack", AnimatorControllerParameterType.Trigger);
+            EnsureParameter(controller, "AttackLeft", AnimatorControllerParameterType.Bool);
+
+            AnimatorState move = FindState(machine, "Move");
+            machine.anyStateTransitions = new AnimatorStateTransition[0];
+            AddAttackState(machine, move, "AttackRight", false, AnimatorConditionMode.IfNot, tuning);
+            AddAttackState(machine, move, "AttackLeft", true, AnimatorConditionMode.If, tuning);
+        }
+
+        private static void AddAttackState(AnimatorStateMachine machine, AnimatorState move, string name, bool mirror, AnimatorConditionMode leftCondition, PlayerTuning tuning)
+        {
+            AnimatorState state = FindState(machine, name) ?? machine.AddState(name);
+            state.motion = LoadClip("Attack");
+            state.mirror = mirror;
+            state.speed = tuning.meleePlaybackSpeed;
+
+            AnimatorStateTransition enter = machine.AddAnyStateTransition(state);
+            enter.hasExitTime = false;
+            enter.duration = 0.05f;
+            enter.canTransitionToSelf = true;
+            enter.AddCondition(AnimatorConditionMode.If, 0f, "Attack");
+            enter.AddCondition(leftCondition, 0f, "AttackLeft");
+
+            state.transitions = new AnimatorStateTransition[0];
+            AnimatorStateTransition exit = state.AddTransition(move);
+            exit.hasExitTime = true;
+            exit.exitTime = tuning.meleeLockTime * tuning.meleePlaybackSpeed / state.motion.averageDuration;
+            exit.duration = 0.1f;
+        }
+
+        private static AnimatorState FindState(AnimatorStateMachine machine, string name)
+        {
+            foreach (ChildAnimatorState child in machine.states)
+            {
+                if (child.state.name == name) return child.state;
+            }
+            return null;
         }
 
         private static ChildMotion Child(string clip, float x, float y, float speed)
@@ -91,13 +134,13 @@ namespace Game.EditorTools
             return new ChildMotion { motion = LoadClip(clip), position = new Vector2(x, y), timeScale = speed };
         }
 
-        private static void EnsureFloat(AnimatorController controller, string name)
+        private static void EnsureParameter(AnimatorController controller, string name, AnimatorControllerParameterType type)
         {
             foreach (AnimatorControllerParameter parameter in controller.parameters)
             {
                 if (parameter.name == name) return;
             }
-            controller.AddParameter(name, AnimatorControllerParameterType.Float);
+            controller.AddParameter(name, type);
         }
 
         private static GameObject BuildPlayerPrefab(PlayerTuning tuning, AnimatorController controller)
@@ -118,11 +161,18 @@ namespace Game.EditorTools
             cameraTarget.SetParent(root.transform, false);
             cameraTarget.localPosition = new Vector3(0f, 1.5f, 0f);
 
+            var melee = root.AddComponent<PlayerMelee>();
+            var meleeFields = new SerializedObject(melee);
+            meleeFields.FindProperty("tuning").objectReferenceValue = tuning;
+            meleeFields.FindProperty("animator").objectReferenceValue = animator;
+            meleeFields.ApplyModifiedPropertiesWithoutUndo();
+
             var player = root.AddComponent<PlayerController>();
             var fields = new SerializedObject(player);
             fields.FindProperty("tuning").objectReferenceValue = tuning;
             fields.FindProperty("cameraTarget").objectReferenceValue = cameraTarget;
             fields.FindProperty("animator").objectReferenceValue = animator;
+            fields.FindProperty("melee").objectReferenceValue = melee;
             fields.ApplyModifiedPropertiesWithoutUndo();
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);

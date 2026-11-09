@@ -16,3 +16,15 @@
 | 시점 위아래 `minPitch` · `maxPitch` | -30 ~ 60 도 | 첫 시도 |
 | 동작 전환 `animationBlendSpeed` | 8 /초 | 까치 보스전 값 |
 | 걷기 배속 `walkPlaybackSpeed` | 2.4 | 까치 보스전 2배에서 이동 속도 증가만큼 올림 |
+
+## 2. 맨몸 근접
+값을 바꾸면 `PlayerTuningTests`도 함께 고친다. 재생 배속 · 잠금 시간은 바꾼 뒤 `Tools/Game/Setup Test Room`을 다시 실행한다.
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 피해 `meleeDamage` | 10 | 까치 보스전 값 |
+| 사거리 `meleeRange` | 2.2 m | 캐릭터 키 1.85m 기준 첫 시도 |
+| 각도 `meleeAngle` | 110 도 | 첫 시도 |
+| 재생 배속 `meleePlaybackSpeed` | 3 | 까치 보스전에서 사용자가 고른 값 |
+| 명중 시점 `meleeHitDelay` | 0.35 초 | 손이 가장 앞인 클립 1.05초 ÷ 배속 3 |
+| 잠금 `meleeLockTime` | 0.75 초 | 까치 보스전 값 |

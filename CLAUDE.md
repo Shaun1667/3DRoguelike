@@ -60,6 +60,7 @@
 - 결합은 이벤트로, "바뀐 것만" 알린다. Find/GetComponent는 캐시한다.
 - 모델 표시용 프리팹은 `ModelPrefabSetup` 한 곳(메뉴 `Tools/Game/Setup Model Prefabs`), 새 모델 = `Models` 표 한 줄 + 메뉴 다시 실행.
 - 플레이어 이동 · 시점은 `PlayerController` 한 곳, 데이터 `Data/PlayerTuning.asset`. 시험 방 · 플레이어 프리팹 · 컨트롤러는 `TestRoomSetup`(메뉴 `Tools/Game/Setup Test Room`)이 만든다.
+- 맨몸 근접은 `PlayerMelee` 한 곳, 수치는 `PlayerTuning`. 맞을 수 있는 대상은 `IDamageable`을 구현한다.
 - (시스템이 생길 때마다 "이 시스템은 `클래스` 한 곳, 데이터는 `에셋`, 새 항목 = 표 한 줄"로 한 줄씩 더한다)
 
 ## 핵심 설계 규칙 (변경 금지)
