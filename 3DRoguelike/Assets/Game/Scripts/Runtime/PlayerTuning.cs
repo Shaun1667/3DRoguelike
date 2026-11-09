@@ -17,6 +17,12 @@ namespace Game
         [Tooltip("걷기 동작 재생 배속. Setup 메뉴가 컨트롤러에 넣는다")]
         [Min(0f)] public float walkPlaybackSpeed = 2.4f;
 
+        [Header("체력")]
+        [Min(1)] public int playerMaxHealth = 100;
+        [Tooltip("맞은 뒤 무적 시간(초)")]
+        [Min(0f)] public float hitInvulnerableTime = 0.5f;
+        [Min(0f)] public float hitFlashTime = 0.08f;
+
         [Header("맨몸 근접")]
         [Min(0)] public int meleeDamage = 10;
         [Min(0f)] public float meleeRange = 2.2f;

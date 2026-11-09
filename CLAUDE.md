@@ -63,6 +63,7 @@
 - 맨몸 근접은 `PlayerMelee` 한 곳, 수치는 `PlayerTuning`. 맞을 수 있는 대상은 `IDamageable`을 구현한다.
 - 권총 · 조준은 `PlayerGun` 한 곳(디버그 `DebugForceAim`), 팔은 `PlayerAimIK`, 카메라 줌 · 조준점은 `AimCameraZoom`. 키는 `InputSystem_Actions`의 Player 맵. 코드로 넣은 키 입력은 전달되지 않으니 확인은 공개 메서드(`TryAttack` · `TryFire`)와 `EditorApplication.Step`으로 한다.
 - 구르기 · 무적 판정은 `PlayerRoll` 한 곳(`TryRoll`, `IsInvulnerable`).
+- 체력 계산은 `HealthPool`(Game.Rules), 무적 시간 · 이벤트는 `Health`, 맞은 표시는 `HitFlash`. 플레이어 사망 · 재시작은 `PlayerVitals`. 시험용 표적은 `TargetEnemy`(데이터 `TargetEnemyTuning.asset`) — 진짜 적이 생기면 지운다.
 - (시스템이 생길 때마다 "이 시스템은 `클래스` 한 곳, 데이터는 `에셋`, 새 항목 = 표 한 줄"로 한 줄씩 더한다)
 
 ## 핵심 설계 규칙 (변경 금지)

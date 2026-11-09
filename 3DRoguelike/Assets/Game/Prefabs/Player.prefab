@@ -156,6 +156,9 @@ GameObject:
   - component: {fileID: 572567484739481581}
   - component: {fileID: 3657653419441435848}
   - component: {fileID: 838950622098275462}
+  - component: {fileID: 5577743127398903433}
+  - component: {fileID: 6936733172004137802}
+  - component: {fileID: 5143879646021000587}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -275,6 +278,50 @@ MonoBehaviour:
   melee: {fileID: 7495211212829386323}
   gun: {fileID: 572567484739481581}
   roll: {fileID: 3657653419441435848}
+--- !u!114 &5577743127398903433
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4007715559002320204}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6cc4eff6d0401849b1d135b14a7dcaa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.Health
+--- !u!114 &6936733172004137802
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4007715559002320204}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d59d98b51f91bca4d9344c79bc920a31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.HitFlash
+--- !u!114 &5143879646021000587
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4007715559002320204}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6413fdd99830d243a83fb7a9541ac2f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.PlayerVitals
+  tuning: {fileID: 11400000, guid: dc741f5697118f84c91092858d24fa57, type: 2}
+  health: {fileID: 5577743127398903433}
+  flash: {fileID: 6936733172004137802}
+  controller: {fileID: 838950622098275462}
+  melee: {fileID: 7495211212829386323}
+  gun: {fileID: 572567484739481581}
+  roll: {fileID: 3657653419441435848}
+  animator: {fileID: 3083816923440732194}
 --- !u!1 &5821493286120222906
 GameObject:
   m_ObjectHideFlags: 0

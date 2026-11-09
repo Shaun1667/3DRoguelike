@@ -19,6 +19,9 @@ MonoBehaviour:
   maxPitch: 60
   animationBlendSpeed: 8
   walkPlaybackSpeed: 2.4
+  playerMaxHealth: 100
+  hitInvulnerableTime: 0.5
+  hitFlashTime: 0.08
   meleeDamage: 10
   meleeRange: 2.2
   meleeAngle: 110

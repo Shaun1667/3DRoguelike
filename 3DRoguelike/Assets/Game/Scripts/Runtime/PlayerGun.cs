@@ -57,6 +57,11 @@ namespace Game
             pistol.gameObject.SetActive(false);
         }
 
+        private void OnDisable()
+        {
+            SetAiming(false);
+        }
+
         private void Update()
         {
             SetAiming((aimAction.IsPressed() || DebugForceAim) && !melee.IsAttacking && !roll.IsRolling);

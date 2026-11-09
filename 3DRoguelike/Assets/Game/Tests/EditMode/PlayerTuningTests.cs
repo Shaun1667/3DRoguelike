@@ -19,6 +19,9 @@ namespace Game.Tests
             Assert.That(tuning.maxPitch, Is.EqualTo(60f));
             Assert.That(tuning.animationBlendSpeed, Is.EqualTo(8f));
             Assert.That(tuning.walkPlaybackSpeed, Is.EqualTo(2.4f));
+            Assert.That(tuning.playerMaxHealth, Is.EqualTo(100));
+            Assert.That(tuning.hitInvulnerableTime, Is.EqualTo(0.5f));
+            Assert.That(tuning.hitFlashTime, Is.EqualTo(0.08f));
             Assert.That(tuning.meleeDamage, Is.EqualTo(10));
             Assert.That(tuning.meleeRange, Is.EqualTo(2.2f));
             Assert.That(tuning.meleeAngle, Is.EqualTo(110f));
@@ -40,6 +43,21 @@ namespace Game.Tests
             Assert.That(tuning.aimCameraDistance, Is.EqualTo(1.7f));
             Assert.That(tuning.aimBlendSpeed, Is.EqualTo(6f));
             Assert.That(tuning.aimArmLength, Is.EqualTo(0.55f));
+        }
+
+        [Test]
+        public void TargetEnemyTuning_MatchesBalance()
+        {
+            var tuning = AssetDatabase.LoadAssetAtPath<TargetEnemyTuning>("Assets/Game/Data/TargetEnemyTuning.asset");
+
+            Assert.That(tuning, Is.Not.Null);
+            Assert.That(tuning.maxHealth, Is.EqualTo(60));
+            Assert.That(tuning.shockwaveDamage, Is.EqualTo(15));
+            Assert.That(tuning.attackInterval, Is.EqualTo(3f));
+            Assert.That(tuning.warningTime, Is.EqualTo(0.8f));
+            Assert.That(tuning.shockwaveRadius, Is.EqualTo(3.5f));
+            Assert.That(tuning.respawnTime, Is.EqualTo(2f));
+            Assert.That(tuning.hitFlashTime, Is.EqualTo(0.08f));
         }
     }
 }

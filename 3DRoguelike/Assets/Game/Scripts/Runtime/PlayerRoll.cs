@@ -39,6 +39,13 @@ namespace Game
             visual = animator.transform;
         }
 
+        private void OnDisable()
+        {
+            rolling = false;
+            invulnerableEndTime = 0f;
+            visual.localRotation = Quaternion.identity;
+        }
+
         private void Update()
         {
             if (rollAction.WasPressedThisFrame()) TryRoll(moveAction.ReadValue<Vector2>());

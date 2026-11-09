@@ -9,7 +9,7 @@ namespace Game.Tests
         [Test]
         public void RulesAssembly_DoesNotReferenceUnity()
         {
-            var unityReferences = typeof(RulesAssembly).Assembly.GetReferencedAssemblies()
+            var unityReferences = typeof(HealthPool).Assembly.GetReferencedAssemblies()
                 .Select(reference => reference.Name)
                 .Where(name => name.StartsWith("Unity"))
                 .ToArray();

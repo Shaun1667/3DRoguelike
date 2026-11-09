@@ -3,7 +3,8 @@
 ## 0. 데이터 에셋 위치
 | 번호 | 에셋 | 클래스 |
 |---|---|---|
-| 1 | `Assets/Game/Data/PlayerTuning.asset` | `PlayerTuning` |
+| 1~5 | `Assets/Game/Data/PlayerTuning.asset` | `PlayerTuning` |
+| 6 | `Assets/Game/Data/TargetEnemyTuning.asset` | `TargetEnemyTuning` |
 
 ## 1. 플레이어 조작
 재미 검증 전 출발값이다. 값을 바꾸면 `PlayerTuningTests`도 함께 고친다. 걷기 배속은 바꾼 뒤 `Tools/Game/Setup Test Room`을 다시 실행해야 컨트롤러에 들어간다.
@@ -53,3 +54,25 @@
 | 시간 `rollDuration` | 0.8 초 | 까치 보스전에서 사용자가 늘린 길이 |
 | 재사용 `rollCooldown` | 1 초 | 시작 기준, 끝나고 0.2초 뒤 가능 |
 | 무적 비율 `rollInvulnerableRatio` | 0.5 | 사용자 결정 2026-11-09 — 앞쪽 0.4초 |
+
+## 5. 플레이어 체력
+값을 바꾸면 `PlayerTuningTests`도 함께 고친다.
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 최대 체력 `playerMaxHealth` | 100 | 사용자 결정 2026-11-09 — 강화로 올리기 쉬운 크기 |
+| 맞은 뒤 무적 `hitInvulnerableTime` | 0.5 초 | 사용자 결정 2026-11-09 |
+| 번쩍임 `hitFlashTime` | 0.08 초 | 첫 시도 |
+
+## 6. 표적 적 (시험용)
+진짜 적이 생기면 없어진다. 값을 바꾸면 `PlayerTuningTests`도 함께 고치고, 범위를 바꾸면 Setup 메뉴를 다시 실행한다.
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 체력 `maxHealth` | 60 | 근접 6대, 권총 10발 |
+| 충격파 피해 `shockwaveDamage` | 15 | 사용자 결정 2026-11-09 — 플레이어 7대 |
+| 대기 `attackInterval` | 3 초 | 사용자 결정 2026-11-09 |
+| 예고 `warningTime` | 0.8 초 | 구르기 무적 0.4초를 맞출 시간 |
+| 범위 `shockwaveRadius` | 3.5 m | 근접 사거리 2.2m보다 넓어 근접은 위험을 짐 |
+| 다시 나타남 `respawnTime` | 2 초 | 첫 시도 |
+| 번쩍임 `hitFlashTime` | 0.08 초 | 첫 시도 |

@@ -20,6 +20,11 @@ namespace Game.EditorTools
         private const string PlayerPrefabPath = "Assets/Game/Prefabs/Player.prefab";
         private const string ScenePath = "Assets/Game/Scenes/TestRoom.unity";
         private const string TracerMaterialPath = "Assets/Game/Art/Tracer.mat";
+        private const string EnemyMaterialPath = "Assets/Game/Art/TargetEnemy.mat";
+        private const string WarningMaterialPath = "Assets/Game/Art/Warning.mat";
+        private const string GoraniMaterialPath = "Assets/Game/Art/Gorani/Gorani_Mat.mat";
+        private const string EnemyTuningPath = "Assets/Game/Data/TargetEnemyTuning.asset";
+        private const string EnemyPrefabPath = "Assets/Game/Prefabs/TargetEnemy.prefab";
 
         private const float RoomSize = 24f;
         private const float WallHeight = 4f;
@@ -29,10 +34,15 @@ namespace Game.EditorTools
         public static void Run()
         {
             ModelPrefabSetup.Run();
+            EnableFlash(AssetDatabase.LoadAssetAtPath<Material>(GoraniMaterialPath));
             PlayerTuning tuning = LoadOrCreateTuning();
+            TargetEnemyTuning enemyTuning = LoadOrCreateEnemyTuning();
             AnimatorController controller = BuildController(tuning);
             GameObject playerPrefab = BuildPlayerPrefab(tuning, controller);
-            BuildScene(playerPrefab);
+            GameObject enemyPrefab = BuildEnemyPrefab(enemyTuning);
+            BuildScene(playerPrefab, enemyPrefab);
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            AssetDatabase.SaveAssets();
             Debug.Log("[TestRoomSetup] 시험 방 생성: " + ScenePath);
         }
 
@@ -47,6 +57,44 @@ namespace Game.EditorTools
             tuning = ScriptableObject.CreateInstance<PlayerTuning>();
             AssetDatabase.CreateAsset(tuning, TuningPath);
             return tuning;
+        }
+
+        private static TargetEnemyTuning LoadOrCreateEnemyTuning()
+        {
+            var tuning = AssetDatabase.LoadAssetAtPath<TargetEnemyTuning>(EnemyTuningPath);
+            if (tuning != null) return tuning;
+            tuning = ScriptableObject.CreateInstance<TargetEnemyTuning>();
+            AssetDatabase.CreateAsset(tuning, EnemyTuningPath);
+            return tuning;
+        }
+
+        /// <summary>HitFlash가 프로퍼티 블록으로 켤 수 있도록 발광을 검은색으로 켜 둔다.</summary>
+        private static void EnableFlash(Material material)
+        {
+            material.EnableKeyword("_EMISSION");
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            material.SetColor("_EmissionColor", Color.black);
+            EditorUtility.SetDirty(material);
+        }
+
+        private static Material LoadOrCreateLit(string path, Color color)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null) return material;
+            material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+            material.SetColor("_BaseColor", color);
+            AssetDatabase.CreateAsset(material, path);
+            return material;
+        }
+
+        private static Material LoadOrCreateUnlit(string path, Color color)
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material != null) return material;
+            material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+            material.SetColor("_BaseColor", color);
+            AssetDatabase.CreateAsset(material, path);
+            return material;
         }
 
         private static AnimationClip LoadClip(string fileName)
@@ -85,6 +133,7 @@ namespace Game.EditorTools
             EditorUtility.SetDirty(tree);
             AddAttackStates(controller, machine, tuning);
             AddRollState(controller, machine, move: FindState(machine, "Move"), tuning);
+            AddDeathState(controller, machine);
             AnimatorControllerLayer[] layers = controller.layers;
             layers[0].iKPass = true; // 조준 중 오른팔 IK
             controller.layers = layers;
@@ -148,6 +197,20 @@ namespace Game.EditorTools
             exit.hasExitTime = true;
             exit.exitTime = clipEnd;
             exit.duration = 0.1f;
+        }
+
+        /// <summary>사망. 한 번 쓰러지고 그대로 멈춘다.</summary>
+        private static void AddDeathState(AnimatorController controller, AnimatorStateMachine machine)
+        {
+            EnsureParameter(controller, "Die", AnimatorControllerParameterType.Trigger);
+            AnimatorState state = FindState(machine, "Death") ?? machine.AddState("Death");
+            state.motion = LoadClip("Death From Right");
+
+            AnimatorStateTransition enter = machine.AddAnyStateTransition(state);
+            enter.hasExitTime = false;
+            enter.duration = 0.1f;
+            enter.canTransitionToSelf = false;
+            enter.AddCondition(AnimatorConditionMode.If, 0f, "Die");
         }
 
         private static AnimatorState FindState(AnimatorStateMachine machine, string name)
@@ -235,7 +298,62 @@ namespace Game.EditorTools
             fields.FindProperty("roll").objectReferenceValue = roll;
             fields.ApplyModifiedPropertiesWithoutUndo();
 
+            var health = root.AddComponent<Health>();
+            var flash = root.AddComponent<HitFlash>();
+            var vitals = new SerializedObject(root.AddComponent<PlayerVitals>());
+            vitals.FindProperty("tuning").objectReferenceValue = tuning;
+            vitals.FindProperty("health").objectReferenceValue = health;
+            vitals.FindProperty("flash").objectReferenceValue = flash;
+            vitals.FindProperty("controller").objectReferenceValue = player;
+            vitals.FindProperty("melee").objectReferenceValue = melee;
+            vitals.FindProperty("gun").objectReferenceValue = gun;
+            vitals.FindProperty("roll").objectReferenceValue = roll;
+            vitals.FindProperty("animator").objectReferenceValue = animator;
+            vitals.ApplyModifiedPropertiesWithoutUndo();
+
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        /// <summary>회색 캡슐 표적과 바닥 예고 원.</summary>
+        private static GameObject BuildEnemyPrefab(TargetEnemyTuning tuning)
+        {
+            Material bodyMaterial = LoadOrCreateLit(EnemyMaterialPath, new Color(0.35f, 0.35f, 0.4f));
+            EnableFlash(bodyMaterial);
+
+            var root = new GameObject("TargetEnemy");
+            var capsule = root.AddComponent<CapsuleCollider>();
+            capsule.height = 2f;
+            capsule.radius = 0.5f;
+
+            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            Object.DestroyImmediate(body.GetComponent<Collider>());
+            body.name = "Body";
+            body.transform.SetParent(root.transform, false);
+            body.GetComponent<Renderer>().sharedMaterial = bodyMaterial;
+
+            var warning = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            Object.DestroyImmediate(warning.GetComponent<Collider>());
+            warning.name = "Warning";
+            warning.transform.SetParent(root.transform, false);
+            warning.transform.localPosition = new Vector3(0f, -0.98f, 0f);
+            float diameter = tuning.shockwaveRadius * 2f;
+            warning.transform.localScale = new Vector3(diameter, 0.005f, diameter);
+            warning.GetComponent<Renderer>().sharedMaterial = LoadOrCreateUnlit(WarningMaterialPath, new Color(0.8f, 0.15f, 0.1f));
+            warning.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+
+            var health = root.AddComponent<Health>();
+            var flash = root.AddComponent<HitFlash>();
+            var fields = new SerializedObject(root.AddComponent<TargetEnemy>());
+            fields.FindProperty("tuning").objectReferenceValue = tuning;
+            fields.FindProperty("health").objectReferenceValue = health;
+            fields.FindProperty("flash").objectReferenceValue = flash;
+            fields.FindProperty("warning").objectReferenceValue = warning;
+            fields.FindProperty("body").objectReferenceValue = body;
+            fields.ApplyModifiedPropertiesWithoutUndo();
+
+            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, EnemyPrefabPath);
             Object.DestroyImmediate(root);
             return prefab;
         }
@@ -267,15 +385,10 @@ namespace Game.EditorTools
 
         private static Material LoadOrCreateTracerMaterial()
         {
-            var material = AssetDatabase.LoadAssetAtPath<Material>(TracerMaterialPath);
-            if (material != null) return material;
-            material = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-            material.SetColor("_BaseColor", new Color(1f, 0.85f, 0.4f));
-            AssetDatabase.CreateAsset(material, TracerMaterialPath);
-            return material;
+            return LoadOrCreateUnlit(TracerMaterialPath, new Color(1f, 0.85f, 0.4f));
         }
 
-        private static void BuildScene(GameObject playerPrefab)
+        private static void BuildScene(GameObject playerPrefab, GameObject enemyPrefab)
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -291,6 +404,9 @@ namespace Game.EditorTools
             var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab);
             player.transform.position = new Vector3(0f, 0.1f, -6f);
             BuildCamera(player);
+
+            var enemy = (GameObject)PrefabUtility.InstantiatePrefab(enemyPrefab);
+            enemy.transform.position = new Vector3(0f, 1f, 0f);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
         }
