@@ -154,6 +154,7 @@ GameObject:
   - component: {fileID: 3719436511522166079}
   - component: {fileID: 7495211212829386323}
   - component: {fileID: 572567484739481581}
+  - component: {fileID: 3657653419441435848}
   - component: {fileID: 838950622098275462}
   m_Layer: 0
   m_Name: Player
@@ -221,6 +222,7 @@ MonoBehaviour:
   tuning: {fileID: 11400000, guid: dc741f5697118f84c91092858d24fa57, type: 2}
   animator: {fileID: 3083816923440732194}
   gun: {fileID: 572567484739481581}
+  roll: {fileID: 3657653419441435848}
 --- !u!114 &572567484739481581
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -235,10 +237,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::Game.PlayerGun
   tuning: {fileID: 11400000, guid: dc741f5697118f84c91092858d24fa57, type: 2}
   melee: {fileID: 7495211212829386323}
+  roll: {fileID: 3657653419441435848}
   animator: {fileID: 3083816923440732194}
   pistol: {fileID: 2500546099080261992}
   muzzle: {fileID: 53408956723722070}
   tracer: {fileID: 4163832183296720993}
+--- !u!114 &3657653419441435848
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4007715559002320204}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4d64cd820bd91a47a5230832aeac5f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.PlayerRoll
+  tuning: {fileID: 11400000, guid: dc741f5697118f84c91092858d24fa57, type: 2}
+  melee: {fileID: 7495211212829386323}
+  animator: {fileID: 3083816923440732194}
 --- !u!114 &838950622098275462
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -256,6 +274,7 @@ MonoBehaviour:
   animator: {fileID: 3083816923440732194}
   melee: {fileID: 7495211212829386323}
   gun: {fileID: 572567484739481581}
+  roll: {fileID: 3657653419441435848}
 --- !u!1 &5821493286120222906
 GameObject:
   m_ObjectHideFlags: 0

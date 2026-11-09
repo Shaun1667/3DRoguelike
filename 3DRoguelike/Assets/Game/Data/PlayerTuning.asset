@@ -31,6 +31,10 @@ MonoBehaviour:
   pistolReloadTime: 1.2
   pistolRange: 40
   tracerTime: 0.05
+  rollSpeed: 6
+  rollDuration: 0.8
+  rollCooldown: 1
+  rollInvulnerableRatio: 0.5
   aimMoveMultiplier: 0.6
   cameraDistance: 3
   aimCameraDistance: 1.7

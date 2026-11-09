@@ -31,6 +31,10 @@ namespace Game.Tests
             Assert.That(tuning.pistolReloadTime, Is.EqualTo(1.2f));
             Assert.That(tuning.pistolRange, Is.EqualTo(40f));
             Assert.That(tuning.tracerTime, Is.EqualTo(0.05f));
+            Assert.That(tuning.rollSpeed, Is.EqualTo(6f));
+            Assert.That(tuning.rollDuration, Is.EqualTo(0.8f));
+            Assert.That(tuning.rollCooldown, Is.EqualTo(1f));
+            Assert.That(tuning.rollInvulnerableRatio, Is.EqualTo(0.5f));
             Assert.That(tuning.aimMoveMultiplier, Is.EqualTo(0.6f));
             Assert.That(tuning.cameraDistance, Is.EqualTo(3f));
             Assert.That(tuning.aimCameraDistance, Is.EqualTo(1.7f));

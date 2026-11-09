@@ -39,6 +39,15 @@ namespace Game
         [Tooltip("탄도 선이 보이는 시간(초)")]
         [Min(0f)] public float tracerTime = 0.05f;
 
+        [Header("구르기")]
+        [Min(0f)] public float rollSpeed = 6f;
+        [Tooltip("구르는 시간(초). Setup 메뉴가 동작 재생 배속을 이 길이에 맞춘다")]
+        [Min(0.01f)] public float rollDuration = 0.8f;
+        [Tooltip("구르기 시작부터 다음 구르기까지(초)")]
+        [Min(0f)] public float rollCooldown = 1f;
+        [Tooltip("구르는 시간 중 앞쪽 몇 %가 무적인가")]
+        [Range(0f, 1f)] public float rollInvulnerableRatio = 0.5f;
+
         [Header("조준")]
         [Range(0f, 1f)] public float aimMoveMultiplier = 0.6f;
         [Min(0f)] public float cameraDistance = 3f;

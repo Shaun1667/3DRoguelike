@@ -43,3 +43,13 @@
 | 카메라 거리 `cameraDistance` · `aimCameraDistance` | 3 → 1.7 m | 첫 시도 |
 | 조준 전환 `aimBlendSpeed` | 6 /초 | 약 0.17초 |
 | 조준 팔 길이 `aimArmLength` | 0.55 m | 고라니 팔 길이 |
+
+## 4. 구르기
+값을 바꾸면 `PlayerTuningTests`도 함께 고친다. 구르는 시간을 바꾸면 `Tools/Game/Setup Test Room`을 다시 실행한다.
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 속도 `rollSpeed` | 6 m/s | 달리기 4 m/s보다 빠름, 한 번에 4.8m |
+| 시간 `rollDuration` | 0.8 초 | 까치 보스전에서 사용자가 늘린 길이 |
+| 재사용 `rollCooldown` | 1 초 | 시작 기준, 끝나고 0.2초 뒤 가능 |
+| 무적 비율 `rollInvulnerableRatio` | 0.5 | 사용자 결정 2026-11-09 — 앞쪽 0.4초 |

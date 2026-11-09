@@ -18,6 +18,7 @@ namespace Game
         [SerializeField] private Animator animator;
         [SerializeField] private PlayerMelee melee;
         [SerializeField] private PlayerGun gun;
+        [SerializeField] private PlayerRoll roll;
 
         private CharacterController controller;
         private InputAction moveAction;
@@ -48,7 +49,8 @@ namespace Game
         private void Update()
         {
             Look(lookAction.ReadValue<Vector2>());
-            Vector2 input = melee.IsAttacking ? Vector2.zero : Vector2.ClampMagnitude(moveAction.ReadValue<Vector2>(), 1f);
+            bool locked = melee.IsAttacking || roll.IsRolling;
+            Vector2 input = locked ? Vector2.zero : Vector2.ClampMagnitude(moveAction.ReadValue<Vector2>(), 1f);
             if (gun.IsAiming) input *= tuning.aimMoveMultiplier;
             Move(input);
             Animate(input);
@@ -64,7 +66,7 @@ namespace Game
         private void Move(Vector2 input)
         {
             verticalVelocity = controller.isGrounded ? -1f : verticalVelocity + tuning.gravity * Time.deltaTime;
-            Vector3 horizontal = (transform.right * input.x + transform.forward * input.y) * tuning.moveSpeed;
+            Vector3 horizontal = (transform.right * input.x + transform.forward * input.y) * tuning.moveSpeed + roll.Velocity;
             controller.Move((horizontal + Vector3.up * verticalVelocity) * Time.deltaTime);
         }
 

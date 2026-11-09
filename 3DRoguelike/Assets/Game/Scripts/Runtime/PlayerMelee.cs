@@ -20,6 +20,7 @@ namespace Game
         [SerializeField] private PlayerTuning tuning;
         [SerializeField] private Animator animator;
         [SerializeField] private PlayerGun gun;
+        [SerializeField] private PlayerRoll roll;
 
         private readonly Collider[] overlaps = new Collider[MaxOverlaps];
         private readonly HashSet<IDamageable> hitThisSwing = new HashSet<IDamageable>();
@@ -52,7 +53,7 @@ namespace Game
 
         public bool TryAttack()
         {
-            if (IsAttacking) return false;
+            if (IsAttacking || roll.IsRolling) return false;
 
             lockEndTime = Time.time + tuning.meleeLockTime;
             hitTime = Time.time + tuning.meleeHitDelay;

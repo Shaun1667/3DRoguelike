@@ -14,6 +14,7 @@ namespace Game
 
         [SerializeField] private PlayerTuning tuning;
         [SerializeField] private PlayerMelee melee;
+        [SerializeField] private PlayerRoll roll;
         [SerializeField] private Animator animator;
         [SerializeField] private Transform pistol;
         [SerializeField] private Transform muzzle;
@@ -58,7 +59,7 @@ namespace Game
 
         private void Update()
         {
-            SetAiming((aimAction.IsPressed() || DebugForceAim) && !melee.IsAttacking);
+            SetAiming((aimAction.IsPressed() || DebugForceAim) && !melee.IsAttacking && !roll.IsRolling);
             UpdateAimPoint();
 
             if (reloadAction.WasPressedThisFrame()) StartReload();

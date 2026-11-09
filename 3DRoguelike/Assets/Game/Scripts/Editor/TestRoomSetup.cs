@@ -84,6 +84,7 @@ namespace Game.EditorTools
             };
             EditorUtility.SetDirty(tree);
             AddAttackStates(controller, machine, tuning);
+            AddRollState(controller, machine, move: FindState(machine, "Move"), tuning);
             AnimatorControllerLayer[] layers = controller.layers;
             layers[0].iKPass = true; // 조준 중 오른팔 IK
             controller.layers = layers;
@@ -121,6 +122,31 @@ namespace Game.EditorTools
             AnimatorStateTransition exit = state.AddTransition(move);
             exit.hasExitTime = true;
             exit.exitTime = tuning.meleeLockTime * tuning.meleePlaybackSpeed / state.motion.averageDuration;
+            exit.duration = 0.1f;
+        }
+
+        /// <summary>구르기. 클립 앞뒤의 서기 동작을 빼고 구르는 구간만 구르는 시간에 맞춰 재생한다.</summary>
+        private static void AddRollState(AnimatorController controller, AnimatorStateMachine machine, AnimatorState move, PlayerTuning tuning)
+        {
+            const float clipStart = 0.15f;
+            const float clipEnd = 0.85f;
+
+            EnsureParameter(controller, "Roll", AnimatorControllerParameterType.Trigger);
+            AnimatorState state = FindState(machine, "Roll") ?? machine.AddState("Roll");
+            state.motion = LoadClip("Stand To Roll");
+            state.speed = state.motion.averageDuration * (clipEnd - clipStart) / tuning.rollDuration;
+
+            AnimatorStateTransition enter = machine.AddAnyStateTransition(state);
+            enter.hasExitTime = false;
+            enter.duration = 0.05f;
+            enter.offset = clipStart;
+            enter.canTransitionToSelf = false;
+            enter.AddCondition(AnimatorConditionMode.If, 0f, "Roll");
+
+            state.transitions = new AnimatorStateTransition[0];
+            AnimatorStateTransition exit = state.AddTransition(move);
+            exit.hasExitTime = true;
+            exit.exitTime = clipEnd;
             exit.duration = 0.1f;
         }
 
@@ -167,22 +193,31 @@ namespace Game.EditorTools
 
             var melee = root.AddComponent<PlayerMelee>();
             var gun = root.AddComponent<PlayerGun>();
+            var roll = root.AddComponent<PlayerRoll>();
             BuildPistol(root.transform, out Transform pistol, out Transform muzzle, out LineRenderer tracer);
 
             var meleeFields = new SerializedObject(melee);
             meleeFields.FindProperty("tuning").objectReferenceValue = tuning;
             meleeFields.FindProperty("animator").objectReferenceValue = animator;
             meleeFields.FindProperty("gun").objectReferenceValue = gun;
+            meleeFields.FindProperty("roll").objectReferenceValue = roll;
             meleeFields.ApplyModifiedPropertiesWithoutUndo();
 
             var gunFields = new SerializedObject(gun);
             gunFields.FindProperty("tuning").objectReferenceValue = tuning;
             gunFields.FindProperty("melee").objectReferenceValue = melee;
+            gunFields.FindProperty("roll").objectReferenceValue = roll;
             gunFields.FindProperty("animator").objectReferenceValue = animator;
             gunFields.FindProperty("pistol").objectReferenceValue = pistol;
             gunFields.FindProperty("muzzle").objectReferenceValue = muzzle;
             gunFields.FindProperty("tracer").objectReferenceValue = tracer;
             gunFields.ApplyModifiedPropertiesWithoutUndo();
+
+            var rollFields = new SerializedObject(roll);
+            rollFields.FindProperty("tuning").objectReferenceValue = tuning;
+            rollFields.FindProperty("melee").objectReferenceValue = melee;
+            rollFields.FindProperty("animator").objectReferenceValue = animator;
+            rollFields.ApplyModifiedPropertiesWithoutUndo();
 
             var aimIK = visual.AddComponent<PlayerAimIK>();
             var ikFields = new SerializedObject(aimIK);
@@ -197,6 +232,7 @@ namespace Game.EditorTools
             fields.FindProperty("animator").objectReferenceValue = animator;
             fields.FindProperty("melee").objectReferenceValue = melee;
             fields.FindProperty("gun").objectReferenceValue = gun;
+            fields.FindProperty("roll").objectReferenceValue = roll;
             fields.ApplyModifiedPropertiesWithoutUndo();
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
