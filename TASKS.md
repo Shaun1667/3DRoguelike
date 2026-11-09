@@ -1,7 +1,7 @@
 # TASKS.md
 
 ## 진행 요약 (2026-11-09 기준 — 새 세션은 여기부터 읽는다)
-**최신 (2026-11-09): 0-2 첫날 구조 세팅 끝 — 브랜치 `phase0-setup`(10b853a에서 시작), main 병합 전, 테스트 1개(실행 안 함). 다음: 0-3 고라니 가져오기.**
+**최신 (2026-11-09): 0-3 고라니 가져오기 끝, Phase 0 완료 — 브랜치 `phase0-setup`(10b853a에서 시작), main 병합 전, 테스트 1개(실행 안 함), 플레이 확인 대기 없음. 다음: 1-1 TPS 이동 · 카메라.**
 
 기존 까치 보스전은 `main`(2adecb2)에 그대로 있다. 제출물 저장소는 별도(GGachi).
 
@@ -20,7 +20,12 @@
   - 확인 못 함: 저장소를 새로 받았을 때 Unity가 경고 없이 열리는지
   - 테스트 작성, 실행 안 함: `RulesAssemblyTests`
   - 확인 방법: Unity에서 Window ▸ General ▸ Test Runner ▸ EditMode → `RulesAssembly_DoesNotReferenceUnity` 실행 → 통과하면 정상
-- [ ] **0-3. 고라니 가져오기** — 다음 작업. main에서 모델 · 동작만, Humanoid 설정 확인
+- [x] **0-3. 고라니 가져오기** (2026-11-09 사용자 "0-3 진행")
+  - 구현: main에서 `Gorani.fbx` · 재질 · 텍스처 3장 · 동작 9개(Idle · Walk · Walking Backward · 좌우 Strafe · Attack · Jump · Stand To Roll · Death From Right)를 메타째 `Art/Gorani/`로 가져옴. 메뉴 `Tools/Game/Setup Model Prefabs`(`ModelPrefabSetup`)가 `Prefabs/Gorani.prefab` 생성
+  - 정한 것 (Claude, 확인 필요): 까치용 `Flying.fbx`와 예전 `Gorani.controller`는 가져오지 않음 — 컨트롤러는 1-1부터 새 상태 구조로 만든다. FBX에 재질 슬롯이 없어 재질은 프리팹에서 입힘
+  - 확인: 아바타 유효 · Humanoid, 동작 9개 모두 Humanoid, 재질 `Gorani_Mat`, 키 약 1.85m, 포즈 6개 렌더 정상, 콘솔 오류 0. 메뉴는 1번 실행
+  - 확인 못 함: 동작을 실제 재생(플레이 모드)한 모습 — 프레임을 찍어 본 것뿐. 메뉴 재실행 결과 비교
+  - 확인 방법: Project 창 `Assets/Game/Prefabs/Gorani.prefab` 선택 → Inspector 미리 보기에서 옷 색이 보이고, 프리팹을 씬에 끌어다 놓으면 T자 자세로 서 있으면 정상
 
 ## Phase 1. 핵심 조작 (회색 방 하나)
 - [ ] 1-1. TPS 이동 · 카메라
