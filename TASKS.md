@@ -1,7 +1,7 @@
 # TASKS.md
 
 ## 진행 요약 (2026-11-09 기준 — 새 세션은 여기부터 읽는다)
-**최신 (2026-11-09): 착수 질문 답을 받아 문서 3종 작성 — 브랜치 `phase0-setup`(10b853a에서 시작), main 병합 전, 테스트 0개. 다음: 0-2 첫날 구조 세팅.**
+**최신 (2026-11-09): 0-2 첫날 구조 세팅 끝 — 브랜치 `phase0-setup`(10b853a에서 시작), main 병합 전, 테스트 1개(실행 안 함). 다음: 0-3 고라니 가져오기.**
 
 기존 까치 보스전은 `main`(2adecb2)에 그대로 있다. 제출물 저장소는 별도(GGachi).
 
@@ -12,12 +12,15 @@
   - 결정 (2026-11-09, 사용자): 3DRoguelike 프로젝트를 유지하고 빈 프로젝트 커밋 10b853a에서 새 브랜치로 시작 — 판 규칙을 분리한 구조로 처음부터 짜기 위해. 고라니 에셋은 main에서 가져온다.
   - 결정 내용은 GDD "규칙" 표. 세계관은 Notion 원문대로.
   - 정한 것 (Claude, 확인 필요): 핵심 재미 3 문구, 브랜치 이름 `phase0-setup`, 폴더 `Assets/Game/`
-- [ ] **0-2. 첫날 구조 세팅** — 다음 작업
-  - UI 방식 결정 (GDD 열린 항목 5)
-  - 어셈블리: Rules(엔진 참조 없음, 테스트로 검사) · Runtime · Editor · Tests
-  - 데이터 에셋 자리, `.gitignore` 정리(넓은 패턴 `**/Build/` 금지) + `.gitattributes`(에셋 줄바꿈 고정)
-  - Unity MCP 연결 확인, 시작 샘플(TutorialInfo · Readme) 정리
-- [ ] **0-3. 고라니 가져오기** — main에서 모델 · 동작만, Humanoid 설정 확인
+- [x] **0-2. 첫날 구조 세팅** (2026-11-09 사용자 "A로 진행해줘")
+  - 결정 (2026-11-09, 사용자): UI는 uGUI + TextMeshPro — 까치 보스전에서 이미 쓴 방식이라 익숙함
+  - 구현: 어셈블리 `Game.Rules`(엔진 참조 없음) · `Game.Runtime` · `Game.Editor` · `Game.Tests.EditMode`, 폴더 `Assets/Game/`, `.gitignore`를 루트 기준 경로로, `.gitattributes`로 Unity 텍스트 에셋 줄바꿈 LF 고정, 시작 샘플(TutorialInfo · Readme) 삭제
+  - 정한 것 (Claude, 확인 필요): 빈 어셈블리가 빌드되도록 표시 클래스 3개(`RulesAssembly` · `RuntimeAssembly` · `EditorAssembly`)를 둠 — 뒤의 둘은 첫 스크립트가 생기면 지운다. 빈 폴더는 `.gitkeep`으로 유지. MCP용 `com.unity.ai.assistant` 2.20.0-pre.1을 main과 같은 버전으로 추가
+  - 확인: 어셈블리 4개 컴파일 성공 · `Game.Rules.dll` 참조는 netstandard뿐 · MCP 연결 · 콘솔 오류 0. 경고 3개는 assistant 패키지의 실행 파일 서명 수집 경고로 게임 코드와 무관
+  - 확인 못 함: 저장소를 새로 받았을 때 Unity가 경고 없이 열리는지
+  - 테스트 작성, 실행 안 함: `RulesAssemblyTests`
+  - 확인 방법: Unity에서 Window ▸ General ▸ Test Runner ▸ EditMode → `RulesAssembly_DoesNotReferenceUnity` 실행 → 통과하면 정상
+- [ ] **0-3. 고라니 가져오기** — 다음 작업. main에서 모델 · 동작만, Humanoid 설정 확인
 
 ## Phase 1. 핵심 조작 (회색 방 하나)
 - [ ] 1-1. TPS 이동 · 카메라

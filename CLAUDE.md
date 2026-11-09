@@ -37,18 +37,18 @@
 | 엔진 | Unity 6000.6.0f1 | 프로젝트 기존 값 |
 | 렌더 | URP 17.6 | 프로젝트 기존 값 |
 | 입력 | Input System 1.20 | 프로젝트 기존 값 |
-| UI | 미정 (TASKS 0-2 전에 결정) | 열림 |
+| UI | uGUI + TextMeshPro | 2026-11-09 |
 | 3D 에셋 | VARCO 3D, 동작은 Mixamo Humanoid | 2026-11-09 |
 
 ## 폴더 구조
-저장소 루트에 문서, Unity 프로젝트는 `3DRoguelike/` 하위 폴더. 어셈블리 구성은 TASKS 0-2에서 만들고 여기를 실제 기준으로 고친다.
+저장소 루트에 문서, Unity 프로젝트는 `3DRoguelike/` 하위 폴더.
 ```
 (저장소 루트)                  CLAUDE.md, GDD.md, TASKS.md, Docs/
 └─ 3DRoguelike/Assets/Game/
-   ├─ Scripts/Rules/           엔진을 모르는 판 규칙 (별도 어셈블리)
-   ├─ Scripts/Runtime/         MonoBehaviour: 이동, 판정, 적 AI, 화면
-   ├─ Scripts/Editor/          Setup 메뉴
-   ├─ Tests/EditMode/          판 규칙 테스트
+   ├─ Scripts/Rules/           Game.Rules: 엔진을 모르는 판 규칙 (noEngineReferences)
+   ├─ Scripts/Runtime/         Game.Runtime: MonoBehaviour, 이동, 판정, 적 AI, 화면
+   ├─ Scripts/Editor/          Game.Editor: Setup 메뉴
+   ├─ Tests/EditMode/          Game.Tests.EditMode: 판 규칙 테스트
    ├─ Data/                    수치 · 콘텐츠 데이터 에셋
    ├─ Art/  Prefabs/  Scenes/
 ```
