@@ -5,7 +5,7 @@
 |---|---|---|
 | 1~5 | `Assets/Game/Data/PlayerTuning.asset` | `PlayerTuning` |
 | 6 | `Assets/Game/Data/TargetEnemyTuning.asset` | `TargetEnemyTuning` |
-| 7 | 아직 없음 — 2-3에서 생김. 지금은 테스트가 같은 값을 직접 넣는다 | `FloorLayoutSettings`(Game.Rules) |
+| 7 · 8 | `Assets/Game/Data/FloorTuning.asset` | `FloorTuning` → `FloorLayoutSettings`(Game.Rules) |
 
 ## 1. 플레이어 조작
 재미 검증 전 출발값이다. 값을 바꾸면 `PlayerTuningTests`도 함께 고친다. 걷기 배속은 바꾼 뒤 `Tools/Game/Setup Test Room`을 다시 실행해야 컨트롤러에 들어간다.
@@ -79,10 +79,20 @@
 | 번쩍임 `hitFlashTime` | 0.08 초 | 첫 시도 |
 
 ## 7. 층 방 배치
-`FloorLayoutSettings`에 넘기는 값. 데이터 에셋은 층을 실제로 만드는 2-3에서 생긴다. 값을 바꾸면 `FloorGeneratorTests`도 함께 고친다(고정 시드 배치도 바뀐다).
+`FloorTuning`이 `FloorLayoutSettings`로 넘기는 값. 값을 바꾸면 `PlayerTuningTests.FloorTuning_MatchesBalance`와 `FloorGeneratorTests.BalanceSettings`도 함께 고친다(고정 시드 배치도 바뀐다).
 
 | 항목 | 값 | 근거 |
 |---|---|---|
 | 격자 `gridWidth` × `gridHeight` | 9 × 9 칸 | 방 12개가 가운데에서 사방으로 뻗어도 남는 크기, 첫 시도 |
 | 방 수 `minRooms` ~ `maxRooms` | 8 ~ 12 개 | GDD 층 구성(사용자 결정 2026-11-09). 큰 방도 1개로 센다 |
 | 방 모양 무게 | 1×1: 7, 2×1: 1, 1×2: 1, 2×2: 1 | 첫 시도. 무게로는 큰 방 30%지만 큰 방은 자리를 못 찾는 일이 많아 실제로는 약 17%(시드 3000개, 시작 방 제외: 2×1 · 1×2 각 6.5%, 2×2 3.9%). 시작 방은 늘 1×1 |
+
+## 8. 방 크기
+`FloorTuning`의 값. 값을 바꾸면 `PlayerTuningTests.FloorTuning_MatchesBalance`도 함께 고친다.
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 격자 한 칸 `cellSize` | 24 m | 시험 방과 같은 크기 — 1-1 ~ 1-5 조작을 이 크기에서 확인함. 큰 방은 48 m |
+| 벽 높이 `wallHeight` · 두께 `wallThickness` | 4 m · 1 m | 시험 방과 같음 |
+| 문 폭 `doorWidth` | 4 m | 플레이어(폭 0.7 m)가 구르거나 카메라를 돌리며 지나가도 넉넉하게, 첫 시도 |
+| 방에 들어선 거리 `enterMargin` | 1.5 m | 문틀에 선 채로 잠겨 갇히지 않게, 첫 시도 |

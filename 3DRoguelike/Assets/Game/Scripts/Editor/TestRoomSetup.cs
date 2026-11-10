@@ -41,7 +41,7 @@ namespace Game.EditorTools
             GameObject playerPrefab = BuildPlayerPrefab(tuning, controller);
             GameObject enemyPrefab = BuildEnemyPrefab(enemyTuning);
             BuildScene(playerPrefab, enemyPrefab);
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            BuildSceneList.Ensure(ScenePath, first: false);
             AssetDatabase.SaveAssets();
             Debug.Log("[TestRoomSetup] 시험 방 생성: " + ScenePath);
         }
@@ -77,7 +77,7 @@ namespace Game.EditorTools
             EditorUtility.SetDirty(material);
         }
 
-        private static Material LoadOrCreateLit(string path, Color color)
+        internal static Material LoadOrCreateLit(string path, Color color)
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material != null) return material;
@@ -391,14 +391,7 @@ namespace Game.EditorTools
         private static void BuildScene(GameObject playerPrefab, GameObject enemyPrefab)
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-
-            var light = new GameObject("Sun").AddComponent<Light>();
-            light.type = LightType.Directional;
-            light.shadows = LightShadows.Soft;
-            light.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
-            RenderSettings.ambientMode = AmbientMode.Flat;
-            RenderSettings.ambientLight = new Color(0.45f, 0.45f, 0.5f);
-
+            BuildLighting();
             BuildRoom();
 
             var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab);
@@ -409,6 +402,16 @@ namespace Game.EditorTools
             enemy.transform.position = new Vector3(0f, 1f, 0f);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
+        }
+
+        internal static void BuildLighting()
+        {
+            var light = new GameObject("Sun").AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.shadows = LightShadows.Soft;
+            light.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = new Color(0.45f, 0.45f, 0.5f);
         }
 
         private static void BuildRoom()
@@ -439,7 +442,7 @@ namespace Game.EditorTools
             block.transform.localScale = size;
         }
 
-        private static void BuildCamera(GameObject player)
+        internal static void BuildCamera(GameObject player)
         {
             Transform target = player.transform.Find("CameraTarget");
             var main = new GameObject("Main Camera") { tag = "MainCamera" };

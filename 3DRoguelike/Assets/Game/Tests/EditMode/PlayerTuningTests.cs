@@ -59,5 +59,31 @@ namespace Game.Tests
             Assert.That(tuning.respawnTime, Is.EqualTo(2f));
             Assert.That(tuning.hitFlashTime, Is.EqualTo(0.08f));
         }
+
+        /// <summary>BALANCE.md 7 · 8번. 7번은 FloorGeneratorTests.BalanceSettings와도 같아야 한다.</summary>
+        [Test]
+        public void FloorTuning_MatchesBalance()
+        {
+            var tuning = AssetDatabase.LoadAssetAtPath<FloorTuning>("Assets/Game/Data/FloorTuning.asset");
+
+            Assert.That(tuning, Is.Not.Null);
+            Assert.That(tuning.gridWidth, Is.EqualTo(9));
+            Assert.That(tuning.gridHeight, Is.EqualTo(9));
+            Assert.That(tuning.minRooms, Is.EqualTo(8));
+            Assert.That(tuning.maxRooms, Is.EqualTo(12));
+            Assert.That(tuning.roomShapes.Length, Is.EqualTo(4));
+            int[,] shapes = { { 1, 1, 7 }, { 2, 1, 1 }, { 1, 2, 1 }, { 2, 2, 1 } };
+            for (int i = 0; i < 4; i++)
+            {
+                Assert.That(tuning.roomShapes[i].width, Is.EqualTo(shapes[i, 0]));
+                Assert.That(tuning.roomShapes[i].height, Is.EqualTo(shapes[i, 1]));
+                Assert.That(tuning.roomShapes[i].weight, Is.EqualTo(shapes[i, 2]));
+            }
+            Assert.That(tuning.cellSize, Is.EqualTo(24f));
+            Assert.That(tuning.wallHeight, Is.EqualTo(4f));
+            Assert.That(tuning.wallThickness, Is.EqualTo(1f));
+            Assert.That(tuning.doorWidth, Is.EqualTo(4f));
+            Assert.That(tuning.enterMargin, Is.EqualTo(1.5f));
+        }
     }
 }

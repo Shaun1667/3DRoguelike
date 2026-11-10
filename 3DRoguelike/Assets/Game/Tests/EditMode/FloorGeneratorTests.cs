@@ -12,7 +12,7 @@ namespace Game.Tests
         const int FloorsPerSeed = 3;
 
         /// <summary>BALANCE.md 7번과 같은 값.</summary>
-        static FloorLayoutSettings BalanceSettings()
+        internal static FloorLayoutSettings BalanceSettings()
         {
             return new FloorLayoutSettings(9, 9, 8, 12, new[]
             {
@@ -23,7 +23,7 @@ namespace Game.Tests
             });
         }
 
-        static FloorLayout Generate(uint seed, int floorIndex)
+        internal static FloorLayout Generate(uint seed, int floorIndex)
         {
             var random = new RunRandom(new RunSeed(seed)).Create(RandomPurpose.Map, floorIndex);
             return FloorGenerator.Generate(BalanceSettings(), random);
