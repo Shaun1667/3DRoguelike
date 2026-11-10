@@ -1,7 +1,7 @@
 # TASKS.md
 
 ## 진행 요약 (2026-11-09 기준 — 새 세션은 여기부터 읽는다)
-**최신 (2026-11-09): 1-2 맨몸 근접 구현 — 브랜치 `phase1-controls`(`phase0-setup` 위), main 병합 전, 테스트 7개(한 번도 실행 안 함), 플레이 확인 대기: 1-5. Phase 1 구현 끝. 다음: 테스트 실행 여부 확인 후 2-1 시드 · 용도별 난수.**
+**최신 (2026-11-10): Unity 6000.3.25f1로 전환(0-4) — 브랜치 `phase1-controls`(`phase0-setup` 위), main 병합 전, 1-5 · 0-4 플레이 확인 완료, EditMode 테스트 7개 전부 통과(2026-11-10, 6000.3). Phase 1 끝. 다음: 2-1 시드 · 용도별 난수.**
 
 기존 까치 보스전은 `main`(2adecb2)에 그대로 있다. 제출물 저장소는 별도(GGachi).
 
@@ -26,6 +26,18 @@
   - 확인: 아바타 유효 · Humanoid, 동작 9개 모두 Humanoid, 재질 `Gorani_Mat`, 키 약 1.85m, 포즈 6개 렌더 정상, 콘솔 오류 0. 메뉴는 1번 실행
   - 확인 못 함: 동작을 실제 재생(플레이 모드)한 모습 — 프레임을 찍어 본 것뿐. 메뉴 재실행 결과 비교
   - 확인 방법: Project 창 `Assets/Game/Prefabs/Gorani.prefab` 선택 → Inspector 미리 보기에서 옷 색이 보이고, 프리팹을 씬에 끌어다 놓으면 T자 자세로 서 있으면 정상
+- [x] **0-4. Unity 6000.3 LTS로 전환** (2026-11-09 사용자 "이 프로젝트도 6000.3 LTS 버전으로 바꿔줘") — 플레이 확인 완료 (2026-11-10 사용자 "테스트룸 직접 플레이 확인 했어")
+  - 결정 (2026-11-10, 사용자 "네가 추천하는 방향으로"): `com.coplaydev.unity-mcp`를 `#v10.3.0`으로 고정해 커밋 — MoaShowdown과 같은 버전이고 다른 PC에서도 열림. `com.claudehand.tools`(이 PC 절대 경로)는 커밋하지 않고 작업 파일에만 둠 — 이 PC에서는 `manifest.json` · `packages-lock.json`에 그 한 줄 · 한 항목이 늘 미커밋 변경으로 남는다. `Missing types` 경고는 2-5 HUD나 첫 빌드 때 정리
+  - 결정 (2026-11-09, 사용자): 엔진을 6000.6.0f1에서 6000.3 LTS로 내림
+  - 구현: `ProjectVersion.txt` 6000.3.25f1. 패키지 URP 17.3.0 · Timeline 1.8.13 · uGUI 2.0.0 · Test Framework 1.6.0 · Rider 3.0.40 · Cinemachine 3.1.7. 6000.3에 없는 모듈 `physicscore2d` · `tetgen` · `timelinefoundation` 제거
+  - 정한 것 (Claude, 확인 필요): 버전은 MoaShowdown과 같은 25f1. Cinemachine은 6000.3 기본값 2.10.7 대신 3.1.7 — 코드가 쓰는 `CinemachineCamera` · `CinemachineThirdPersonFollow`가 3.x부터 있음. `Library`는 옮겨 두었다가 사용자가 6000.6으로 돌아가지 않기로 해 지움(2026-11-10)
+  - 고침 (2026-11-09, Claude 확인 중 발견): 플레이어가 바닥을 뚫고 떨어짐. `DynamicsManager.asset`의 `m_LayerCollisionMatrix`가 `{_typeName: unsigned int, _data: ...}` 형식이었고, 6000.3에서 Default 레이어 충돌이 꺼진 값으로 읽힘 → 값은 그대로(전부 f) 두고 일반 hex 형식으로 고침
+  - Unity가 스스로 바꾼 파일: `UniversalRenderPipelineGlobalSettings.asset` · `EditorBuildSettings.asset` · `PackageManagerSettings.asset`
+  - 확인: 재시작 뒤 컴파일 오류 0 · 레이어 충돌 무시 0쌍 · TestRoom 코드 호출 플레이에서 y=0.08로 서고 `isGrounded`, 충격파로 100 → 85, 벽 Wall_W에 막힘. 수정 전 세션에서 Missing Script 0(TestRoom · Player · Gorani · TargetEnemy), 분홍색 없음, `TryAttack`으로 표적 60 → 50, 카메라 어깨 0.5m · 거리 3m
+  - 남은 경고: `UniversalRenderPipelineGlobalSettings`의 `Missing types` 6개(6000.6 전용 타입)가 켤 때마다 나옴 — 화면 영향은 안 보임
+  - 확인 못 함: 실제 키보드 · 마우스 입력, Wall_W 외 충돌, 충돌 수정 뒤의 렌더링 · `TryAttack` 재확인, 빌드, 경고가 빌드에 주는 영향
+  - 테스트 (2026-11-10 사용자 "테스트 돌려줘"): EditMode 7개 전부 통과 — `HealthPoolTests` 4개, `PlayerTuning_MatchesBalance`, `TargetEnemyTuning_MatchesBalance`, `RulesAssembly_DoesNotReferenceUnity`. 0-2 ~ 1-5의 "실행 안 함" 테스트가 모두 여기서 처음 실행됨. 실행 중 콘솔 오류 0
+  - 확인 방법: `TestRoom` Play → Game 창 클릭 → 1-1 ~ 1-5의 확인 방법대로 이동 · 근접 · 권총 · 구르기 · 표적을 해 보고, 화면과 조작감이 6000.6 때와 같으면 정상
 
 ## Phase 1. 핵심 조작 (회색 방 하나)
 - [x] **1-1. TPS 이동 · 카메라** (2026-11-09 사용자 "1-1 진행") — 플레이 확인 완료 (2026-11-09 사용자 "확인했어")
@@ -65,7 +77,7 @@
   - 확인 못 함: 실제 Shift 입력, 구르며 재장전이 이어지는지, 조작감, 벽에 부딪힐 때 모습, 구르는 동안 카메라가 낮은 몸을 잘 잡는지(캡처에서는 화면 아래쪽에 걸침)
   - 테스트 작성, 실행 안 함: `PlayerTuningTests`에 구르기 수치 추가
   - 확인 방법: `TestRoom` Play → Game 창 클릭 → Shift 또는 방향키 + Shift로 구르기 → 약 4.8m 이동, 연타해도 1초에 한 번, 좌클릭 공격 중에는 안 구르면 정상
-- [x] **1-5. 체력 · 피해 · 표적 적 1종** (2026-11-09 사용자 "확인했어" 후 착수 질문) — 플레이 확인 대기
+- [x] **1-5. 체력 · 피해 · 표적 적 1종** (2026-11-09 사용자 "확인했어" 후 착수 질문) — 플레이 확인 완료 (2026-11-10 사용자 "테스트룸 직접 플레이 확인 했어", 6000.3에서)
   - 결정 (2026-11-09, 사용자): 표적은 제자리에서 예고 후 충격파, 죽으면 다시 나타남 — 근접 · 총 · 구르기 무적을 모두 시험. 플레이어 체력 100, 충격파 15. 맞으면 흰색 번쩍임 + 플레이어 0.5초 무적. 죽으면 쓰러지고 조작 멈춤, R로 다시 시작(결과 화면은 2-5)
   - 구현: 규칙 `HealthPool`(Game.Rules, 순수) · `Health`(무적 시간 · 이벤트, `IDamageable`) · `HitFlash`(프로퍼티 블록 발광) · `PlayerVitals`(체력 연결 · 구르기 무적 · 사망 · 재시작) · `TargetEnemy` · `TargetEnemyTuning` 에셋. `TestRoomSetup`이 표적 프리팹 · Death 상태 · 빌드 씬 목록(TestRoom 하나)까지 구성. 표시 클래스 `RulesAssembly` 삭제
   - 정한 것 (Claude, 확인 필요): 표적 체력 60, 예고 0.8초, 범위 3.5m, 대기 3초, 다시 나타남 2초. 재시작 키는 재장전과 같은 R(죽은 뒤에만). **체력 표시는 HUD 항목(2-5)까지 없음.** 빌드 씬 목록에서 SampleScene 뺌. Gorani_Mat에 발광 키워드를 켬(검은색이라 평소 모습은 그대로)
