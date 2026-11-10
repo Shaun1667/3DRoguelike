@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -39,7 +40,13 @@ namespace Game
         private Vector3 warningFullPosition;
         private Vector3 bodyRestPosition;
 
+        private static readonly List<Mutant> alive = new List<Mutant>();
+
+        /// <summary>살아 있는 Mutant 전부(나타나는 중 포함). 디버그 창의 원펀맨 · 모두 처치가 쓴다.</summary>
+        public static IReadOnlyList<Mutant> Alive => alive;
+
         public bool IsDead => state == State.Dead;
+        public Health Health => health;
 
         private void Awake()
         {
@@ -73,11 +80,13 @@ namespace Game
         private void OnEnable()
         {
             health.Died += OnDied;
+            if (state != State.Dead) alive.Add(this);
         }
 
         private void OnDisable()
         {
             health.Died -= OnDied;
+            alive.Remove(this);
         }
 
         private void Update()
@@ -195,6 +204,7 @@ namespace Game
         private void OnDied()
         {
             state = State.Dead;
+            alive.Remove(this);
             body.SetActive(false);
             spawnWarning.SetActive(false);
             attackWarning.SetActive(false);

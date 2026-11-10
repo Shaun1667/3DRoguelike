@@ -70,6 +70,7 @@
 - 층 방 배치는 `FloorGenerator.Generate(설정, 맵 난수)` 한 곳(`Game.Rules`), 결과는 `FloorLayout`(방 · 문 · 막다른 방 · 보스 방), 수치는 `FloorLayoutSettings`(BALANCE 7번). 새 방 모양 = 모양 목록에 한 줄, 새 방 종류 = `RoomKind` 끝에 추가하고 꾸미기 난수로 막다른 방에 배정한다(맵 모양은 그대로).
 - 층 진행(방 들어가기 · 문 잠금 · 방 깨기)은 규칙 `FloorProgress`, 화면은 `FloorRun`(시드 선택 · 생성 · 적 내보내기) + `FloorGeometry`(회색 도형 바닥 · 벽 · 문). 수치 `Data/FloorTuning.asset`. 층 씬은 `FloorSetup`(메뉴 `Tools/Game/Setup Floor`)이 만들고, 방은 플레이할 때 세워진다. 빌드 씬 목록은 `BuildSceneList.Ensure`로만 바꾼다.
 - HUD는 `GameHud`(체력 · 탄 · 미니맵, 바뀐 것만 고침), 결과 화면은 `RunResultScreen`(R 새 층 · T 같은 층), 판 기록은 규칙 `RunStats`. 둘 다 `HudSetup`이 Setup 메뉴 안에서 만든다. 사망 원인은 `Health.TakeDamage(피해, "공격 이름")` — 새 적 = 데이터에 이름 · 공격 이름. 미니맵에 보이는 방은 `FloorProgress.Visibility`. 한글은 `Art/Fonts/NotoSansKR SDF`(동적 글꼴, SIL OFL).
+- 디버그 도구는 `DebugPanel` 한 곳(`#if UNITY_EDITOR || DEVELOPMENT_BUILD`, 씬마다 저절로 생김 — 씬 · 프리팹에 넣지 않음). F1 창 · F2 원펀맨(한 마리 맞히면 살아 있는 적 전부 처치) · F3 모두 처치. 새 디버그 기능 = 이 창에 한 줄. 적 목록은 `Mutant.Alive`(새 적 종류도 같은 방식으로 목록을 둔다).
 - (시스템이 생길 때마다 "이 시스템은 `클래스` 한 곳, 데이터는 `에셋`, 새 항목 = 표 한 줄"로 한 줄씩 더한다)
 
 ## 핵심 설계 규칙 (변경 금지)
