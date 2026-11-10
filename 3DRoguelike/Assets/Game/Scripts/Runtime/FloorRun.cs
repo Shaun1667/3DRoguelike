@@ -23,6 +23,10 @@ namespace Game
         [Tooltip("층을 세운 뒤 적이 다닐 길을 굽는다")]
         [SerializeField] private NavMeshSurface navMesh;
         [SerializeField] private RunResultScreen resultScreen;
+        [SerializeField] private RewardTable rewardTable;
+        [SerializeField] private RewardChoiceScreen rewardScreen;
+        [Tooltip("보상물을 줍는 거리(m)")]
+        [Min(0.1f)] [SerializeField] private float pickupRadius = 1.4f;
         [Tooltip("비워 두면 플레이마다 새 시드. 'XXXX-XXXX' 코드를 넣으면 그 층을 다시 만든다")]
         [SerializeField] private string fixedSeedCode = "";
         [Tooltip("죽은 뒤 결과 화면까지(초, 쓰러지는 동작을 보여 줄 시간)")]
@@ -36,15 +40,24 @@ namespace Game
         [SerializeField] private Material bossFloorMaterial;
         [SerializeField] private Material wallMaterial;
         [SerializeField] private Material lockedDoorMaterial;
+        [SerializeField] private Material treasureFloorMaterial;
+        [SerializeField] private Material rewardMaterial;
+        [SerializeField] private Material rareRewardMaterial;
 
         private readonly List<Health> roomEnemies = new List<Health>();
         private GameObject[] doorBarriers;
         private Transform playerTransform;
+        private readonly List<(int roomId, GameObject pickup)> pickups = new List<(int, GameObject)>();
 
         public RunSeed Seed { get; private set; }
         public FloorLayout Layout { get; private set; }
         public FloorProgress Progress { get; private set; }
         public FloorEncounters Encounters { get; private set; }
+        public FloorRewards Rewards { get; private set; }
+        /// <summary>보물방 Id. 없으면 -1.</summary>
+        public int TreasureRoom { get; private set; } = -1;
+        /// <summary>지금 놓여 있는 보상물 수.</summary>
+        public int PickupCount => pickups.Count;
         public RunStats Stats { get; private set; }
         /// <summary>잠긴 방에 아직 살아 있는 적 수.</summary>
         public int AliveEnemies => roomEnemies.Count;
@@ -67,9 +80,13 @@ namespace Game
             Seed = ChooseSeed();
             var random = new RunRandom(Seed);
             Layout = FloorGenerator.Generate(tuning.ToSettings(), random.Create(RandomPurpose.Map, 0));
+            TreasureRoom = SpecialRoomPlanner.AssignTreasure(Layout, random.Create(RandomPurpose.Decor, 0));
             Encounters = EncounterPlanner.Plan(Layout, tuning.ToEncounterSettings(), random.Create(RandomPurpose.Enemy, 0));
+            Rewards = RewardPlanner.Plan(Layout, tuning.ToRewardSettings(), rewardTable.ToDefinitions(), random.Create(RandomPurpose.Reward, 0));
             Progress = new FloorProgress(Layout);
-            Stats = new RunStats(Seed, Layout.Rooms.Count - 1);
+            int battleRooms = 0;
+            foreach (FloorRoom room in Layout.Rooms) if (room.Kind == RoomKind.Battle || room.Kind == RoomKind.Boss) battleRooms++;
+            Stats = new RunStats(Seed, battleRooms);
             Progress.RoomLocked += OnRoomLocked;
             Progress.RoomCleared += OnRoomCleared;
 
@@ -80,10 +97,12 @@ namespace Game
                 bossFloor = bossFloorMaterial,
                 wall = wallMaterial,
                 lockedDoor = lockedDoorMaterial,
+                treasureFloor = treasureFloorMaterial,
             };
             doorBarriers = FloorGeometry.Build(Layout, tuning, materials, transform);
             navMesh.BuildNavMesh();
-            Debug.Log($"[FloorRun] 시드 {Seed.ToCode()} · 방 {Layout.Rooms.Count}개 · 보스 방 {Layout.BossRoom.Id}\n{Layout.ToAscii()}");
+            if (TreasureRoom >= 0) SpawnPickup(TreasureRoom);
+            Debug.Log($"[FloorRun] 시드 {Seed.ToCode()} · 방 {Layout.Rooms.Count}개 · 보스 방 {Layout.BossRoom.Id} · 보물방 {TreasureRoom}\n{Layout.ToAscii()}");
         }
 
         private void OnEnable()
@@ -101,6 +120,8 @@ namespace Game
             if (Stats.Outcome != RunOutcome.Playing) return;
 
             Vector3 position = playerTransform.position;
+            SpinPickups();
+            if (!rewardScreen.IsShown) TryPickUp(position);
             if (!FloorGeometry.TryGetCell(Layout, tuning, position, out int x, out int y)) return;
 
             int roomId = Layout.RoomIdAt(x, y);
@@ -159,6 +180,7 @@ namespace Game
         {
             Stats.RecordRoomCleared();
             UpdateDoors();
+            if (roomId != Layout.BossRoom.Id) SpawnPickup(roomId);
             if (roomId == Layout.BossRoom.Id && Stats.ClearFloor(Time.timeSinceLevelLoad))
             {
                 player.DisableControls();
@@ -183,6 +205,55 @@ namespace Game
         {
             yield return new WaitForSecondsRealtime(delay);
             resultScreen.Show(Stats, this);
+        }
+
+        /// <summary>그 방에 정해 둔 보상이 있으면 방 가운데에 보상물을 놓는다(희귀는 노란색 · 조금 크게).</summary>
+        private void SpawnPickup(int roomId)
+        {
+            IReadOnlyList<RewardDefinition> offers = Rewards.OffersFor(roomId);
+            if (offers.Count == 0) return;
+            bool rare = offers[0].Rarity == RewardRarity.Rare;
+            var pickup = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Destroy(pickup.GetComponent<Collider>());
+            pickup.name = $"RewardPickup_Room{roomId}";
+            pickup.transform.SetParent(transform, false);
+            pickup.transform.position = FloorGeometry.RoomCenter(Layout, tuning, Layout.Rooms[roomId]) + Vector3.up * 0.8f;
+            pickup.transform.rotation = Quaternion.Euler(45f, 0f, 45f);
+            pickup.transform.localScale = Vector3.one * (rare ? 0.6f : 0.45f);
+            pickup.GetComponent<Renderer>().sharedMaterial = rare ? rareRewardMaterial : rewardMaterial;
+            pickups.Add((roomId, pickup));
+        }
+
+        private void TryPickUp(Vector3 position)
+        {
+            for (int i = 0; i < pickups.Count; i++)
+            {
+                (int roomId, GameObject pickup) = pickups[i];
+                Vector3 offset = pickup.transform.position - position;
+                offset.y = 0f;
+                if (offset.magnitude > pickupRadius) continue;
+                pickups.RemoveAt(i);
+                Destroy(pickup);
+                OpenRewardChoice(roomId);
+                return;
+            }
+        }
+
+        /// <summary>그 방의 보상 선택 화면을 연다(보상물을 주웠을 때 · 확인용).</summary>
+        public void OpenRewardChoice(int roomId)
+        {
+            IReadOnlyList<RewardDefinition> offers = Rewards.OffersFor(roomId);
+            if (offers.Count == 0) return;
+            rewardScreen.Show(offers, Stats, offers[0].Rarity == RewardRarity.Rare, reward =>
+            {
+                Stats.TakeReward(reward);
+                Debug.Log($"[FloorRun] 보상 '{reward.Name}' → Beast {Stats.Beast} · Human {Stats.Human}");
+            });
+        }
+
+        private void SpinPickups()
+        {
+            foreach ((int _, GameObject pickup) in pickups) pickup.transform.Rotate(0f, 90f * Time.deltaTime, 0f, Space.World);
         }
 
         private void UpdateDoors()

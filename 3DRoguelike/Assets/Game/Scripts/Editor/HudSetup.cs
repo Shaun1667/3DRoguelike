@@ -90,6 +90,49 @@ namespace Game.EditorTools
             return screen;
         }
 
+        /// <summary>보상 선택 화면(처음에는 꺼짐): 위에 안내와 지금 성향, 가운데 카드 3장. EventSystem은 결과 화면이 만든다.</summary>
+        public static RewardChoiceScreen BuildRewardScreen(Canvas canvas)
+        {
+            TMP_FontAsset font = LoadOrCreateFontAsset();
+            RectTransform panel = Rect("RewardPanel", canvas.transform, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            Stretch(panel);
+            AddImage(panel, new Color(0f, 0f, 0f, 0.6f)).raycastTarget = true;
+
+            TMP_Text header = Text("Header", panel, font, 34f, TextAlignmentOptions.Center);
+            Place(header.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 280f), new Vector2(1200f, 110f), new Vector2(0.5f, 0.5f));
+
+            var cards = new Button[3];
+            var texts = new TMP_Text[3];
+            for (int i = 0; i < 3; i++)
+            {
+                RectTransform card = Rect($"Card{i + 1}", panel, new Vector2(0.5f, 0.5f), new Vector2((i - 1) * 380f, -20f), new Vector2(340f, 420f), new Vector2(0.5f, 0.5f));
+                Image background = AddImage(card, new Color(0.18f, 0.18f, 0.2f, 0.95f));
+                background.raycastTarget = true;
+                cards[i] = card.gameObject.AddComponent<Button>();
+                cards[i].targetGraphic = background;
+                texts[i] = Text("Text", card, font, 26f, TextAlignmentOptions.Center);
+                Stretch(texts[i].rectTransform);
+                texts[i].rectTransform.offsetMin = new Vector2(20f, 20f);
+                texts[i].rectTransform.offsetMax = new Vector2(-20f, -20f);
+            }
+
+            var screen = canvas.gameObject.AddComponent<RewardChoiceScreen>();
+            var fields = new SerializedObject(screen);
+            fields.FindProperty("panel").objectReferenceValue = panel.gameObject;
+            fields.FindProperty("header").objectReferenceValue = header;
+            SerializedProperty cardList = fields.FindProperty("cards");
+            SerializedProperty textList = fields.FindProperty("cardTexts");
+            cardList.arraySize = 3; textList.arraySize = 3;
+            for (int i = 0; i < 3; i++)
+            {
+                cardList.GetArrayElementAtIndex(i).objectReferenceValue = cards[i];
+                textList.GetArrayElementAtIndex(i).objectReferenceValue = texts[i];
+            }
+            fields.ApplyModifiedPropertiesWithoutUndo();
+            panel.gameObject.SetActive(false);
+            return screen;
+        }
+
         private static TMP_FontAsset LoadOrCreateFontAsset()
         {
             var existing = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontAssetPath);

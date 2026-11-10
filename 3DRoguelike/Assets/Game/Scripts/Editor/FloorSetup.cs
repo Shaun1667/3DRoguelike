@@ -42,9 +42,16 @@ namespace Game.EditorTools
             var run = new GameObject("Floor").AddComponent<FloorRun>();
             HudSetup.BuildHud(hud, vitals, run);
             RunResultScreen resultScreen = HudSetup.BuildResultScreen(hud);
+            RewardChoiceScreen rewardScreen = HudSetup.BuildRewardScreen(hud);
+            RewardTable rewardTable = LoadOrCreateRewardTable();
 
             var fields = new SerializedObject(run);
             fields.FindProperty("tuning").objectReferenceValue = tuning;
+            fields.FindProperty("rewardTable").objectReferenceValue = rewardTable;
+            fields.FindProperty("rewardScreen").objectReferenceValue = rewardScreen;
+            fields.FindProperty("treasureFloorMaterial").objectReferenceValue = Lit("TreasureFloor", new Color(0.62f, 0.55f, 0.3f));
+            fields.FindProperty("rewardMaterial").objectReferenceValue = Lit("Reward", new Color(0.55f, 0.75f, 0.95f));
+            fields.FindProperty("rareRewardMaterial").objectReferenceValue = Lit("RewardRare", new Color(1f, 0.82f, 0.25f));
             fields.FindProperty("player").objectReferenceValue = vitals;
             fields.FindProperty("resultScreen").objectReferenceValue = resultScreen;
             fields.FindProperty("enemyPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefabPath);
@@ -73,6 +80,17 @@ namespace Game.EditorTools
             AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<FloorTuning>(), TuningPath);
             AssetDatabase.SaveAssets();
             return AssetDatabase.LoadAssetAtPath<FloorTuning>(TuningPath);
+        }
+
+        /// <summary>보상 표는 없을 때만 기본 줄로 만들고, 있으면 고친 내용을 그대로 둔다.</summary>
+        private static RewardTable LoadOrCreateRewardTable()
+        {
+            const string path = "Assets/Game/Data/RewardTable.asset";
+            var table = AssetDatabase.LoadAssetAtPath<RewardTable>(path);
+            if (table != null) return table;
+            AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<RewardTable>(), path);
+            AssetDatabase.SaveAssets();
+            return AssetDatabase.LoadAssetAtPath<RewardTable>(path);
         }
 
         private static Material Lit(string name, Color color)

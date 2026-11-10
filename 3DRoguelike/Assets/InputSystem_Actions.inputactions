@@ -86,9 +86,19 @@
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
+                },
+                {
+                    "name": "Sprint",
+                    "type": "Button",
+                    "id": "5b3e1f0a-7c2d-4e8f-9a61-2d4c8e7f1a05",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
+                {"name": "","id": "5b3e1f0a-7c2d-4e8f-9a61-2d4c8e7f1a06","path": "<Keyboard>/leftShift","interactions": "","processors": "","groups": "Keyboard&Mouse","action": "Sprint","isComposite": false,"isPartOfComposite": false},
                 {"name": "","id": "7d0c6c52-9a51-4c62-8f0d-1a2b3c4d5e03","path": "<Mouse>/rightButton","interactions": "","processors": "","groups": "Keyboard&Mouse","action": "Aim","isComposite": false,"isPartOfComposite": false},{"name": "","id": "7d0c6c52-9a51-4c62-8f0d-1a2b3c4d5e04","path": "<Keyboard>/r","interactions": "","processors": "","groups": "Keyboard&Mouse","action": "Reload","isComposite": false,"isPartOfComposite": false},
                 {
                     "name": "",
@@ -346,7 +356,7 @@
                 {
                     "name": "",
                     "id": "f2e9ba44-c423-42a7-ad56-f20975884794",
-                    "path": "<Keyboard>/leftShift",
+                    "path": "<Keyboard>/leftCtrl",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",

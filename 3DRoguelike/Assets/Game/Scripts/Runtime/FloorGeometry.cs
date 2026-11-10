@@ -17,6 +17,7 @@ namespace Game
             public Material bossFloor;
             public Material wall;
             public Material lockedDoor;
+            public Material treasureFloor;
         }
 
         /// <summary>문 순서(layout.Doors)대로 잠금 벽. 처음에는 꺼져 있다.</summary>
@@ -84,7 +85,10 @@ namespace Game
 
         private static void BuildFloor(FloorRoom room, FloorLayout layout, FloorTuning tuning, Materials materials, Transform parent)
         {
-            Material material = room.Kind == RoomKind.Start ? materials.startFloor : room.Kind == RoomKind.Boss ? materials.bossFloor : materials.floor;
+            Material material = room.Kind == RoomKind.Start ? materials.startFloor
+                : room.Kind == RoomKind.Boss ? materials.bossFloor
+                : room.Kind == RoomKind.Treasure && materials.treasureFloor != null ? materials.treasureFloor
+                : materials.floor;
             Vector3 center = RoomCenter(layout, tuning, room);
             Vector3 size = new Vector3(room.Width * tuning.cellSize, 1f, room.Height * tuning.cellSize);
             Block(parent, $"Floor_{room.Id}_{room.Kind}", center + Vector3.down * 0.5f, size, material);

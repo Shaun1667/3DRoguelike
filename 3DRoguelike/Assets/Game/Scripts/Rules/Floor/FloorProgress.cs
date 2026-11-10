@@ -15,7 +15,7 @@ namespace Game.Rules
 
     /// <summary>
     /// 층 안에서 어느 방에 가 봤고 어느 방을 깼고 지금 어느 방이 잠겼는지. 저장할 판 상태의 일부(3-6).
-    /// 깨지 않은 방에 들어가면 그 방의 문이 모두 잠기고, 방을 깨면 열린다. 시작 방은 처음부터 가 본 방 · 깬 방이다.
+    /// 깨지 않은 방에 들어가면 그 방의 문이 모두 잠기고, 방을 깨면 열린다. 시작 방은 처음부터 가 본 방 · 깬 방이고, 보물방은 처음부터 깬 방이다.
     /// </summary>
     public sealed class FloorProgress
     {
@@ -29,6 +29,10 @@ namespace Game.Rules
             cleared = new bool[layout.Rooms.Count];
             visited = new bool[layout.Rooms.Count];
             cleared[layout.StartRoom.Id] = true;
+            foreach (FloorRoom room in layout.Rooms)
+            {
+                if (room.Kind == RoomKind.Treasure) cleared[room.Id] = true; // 보물방은 적이 없어 잠기지 않는다
+            }
             visited[layout.StartRoom.Id] = true;
             CurrentRoom = layout.StartRoom.Id;
             LockedRoom = -1;

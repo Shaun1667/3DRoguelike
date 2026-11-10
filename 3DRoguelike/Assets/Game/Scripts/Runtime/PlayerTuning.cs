@@ -7,6 +7,8 @@ namespace Game
     public sealed class PlayerTuning : ScriptableObject
     {
         [Min(0f)] public float moveSpeed = 4f;
+        [Tooltip("Shift 달리기: 이동 속도와 걷기 동작 재생 속도에 곱한다. 조준 · 공격 · 구르기 중에는 달리지 않는다")]
+        [Min(1f)] public float sprintMultiplier = 1.6f;
         public float gravity = -20f;
         [Tooltip("마우스 1픽셀당 회전 각도")]
         [Min(0f)] public float lookSensitivity = 0.08f;

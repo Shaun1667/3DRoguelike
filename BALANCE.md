@@ -4,7 +4,7 @@
 | 번호 | 에셋 | 클래스 |
 |---|---|---|
 | 1~5 | `Assets/Game/Data/PlayerTuning.asset` | `PlayerTuning` |
-| 7 · 8 · 10 | `Assets/Game/Data/FloorTuning.asset` | `FloorTuning` → `FloorLayoutSettings` · `EncounterSettings`(Game.Rules) |
+| 7 · 8 · 10 · 11 | `Assets/Game/Data/FloorTuning.asset` · `RewardTable.asset` | `FloorTuning` → `FloorLayoutSettings` · `EncounterSettings` · `RewardSettings`(Game.Rules), `RewardTable` |
 | 9 | `Assets/Game/Data/MutantTuning.asset` | `MutantTuning` |
 
 ## 1. 플레이어 조작
@@ -13,6 +13,7 @@
 | 항목 | 값 | 근거 |
 |---|---|---|
 | 이동 속도 `moveSpeed` | 4 m/s | 까치 보스전 9 m/s ÷ 캐릭터 배율 2.75 = 3.3에서 방 전투를 위해 올림 |
+| 달리기 배율 `sprintMultiplier` | 1.6 (6.4 m/s) | 사용자 요청 2026-11-10 "shift는 달리기" — Mutant 3 m/s의 2배쯤으로 거리를 벌림. 걷기 동작도 이 배속으로, 첫 시도 |
 | 중력 `gravity` | -20 | 까치 보스전 값 |
 | 마우스 감도 `lookSensitivity` | 0.08 도/픽셀 | 첫 시도 |
 | 시점 위아래 `minPitch` · `maxPitch` | -30 ~ 60 도 | 첫 시도 |
@@ -116,3 +117,13 @@
 | 벽에서 `spawnWallMargin` | 4 m | 벽에 붙어 나오지 않게 |
 | 적끼리 `spawnSpacing` | 3 m | 겹쳐 나오지 않게 |
 | 문에서 `spawnDoorClearance` | 6 m | 들어선 자리(문에서 1.5 m) 바로 옆에 나오지 않게 |
+
+## 11. 보상
+`FloorTuning`이 `RewardSettings`로 넘기는 값과 `Data/RewardTable.asset`의 성향 양. 값을 바꾸면 `PlayerTuningTests.FloorTuning_MatchesBalance`도 함께 고친다.
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 전투 방 보상물 확률 `rewardChance` | 0.5 | 사용자 결정 "보상이 안 나올 수도 있음", 첫 시도 |
+| 선택지 수 `rewardChoices` | 3 | 사용자 결정 "완전 무작위 3개" |
+| 보물방 | 층마다 1개(보스 아닌 막다른 방) · 희귀 보상 반드시 | 사용자 결정, 수는 첫 시도 |
+| 성향 양 | 일반 +1 · 희귀 +2 | 첫 시도. 실제 효과는 3-2 강화 표 |

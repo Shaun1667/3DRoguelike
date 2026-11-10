@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: PlayerTuning
   m_EditorClassIdentifier: Game.Runtime::Game.PlayerTuning
   moveSpeed: 4
+  sprintMultiplier: 1.6
   gravity: -20
   lookSensitivity: 0.08
   minPitch: -30

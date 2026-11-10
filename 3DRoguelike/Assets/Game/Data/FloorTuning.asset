@@ -40,3 +40,5 @@ MonoBehaviour:
   spawnWallMargin: 4
   spawnSpacing: 3
   spawnDoorClearance: 6
+  rewardChance: 0.5
+  rewardChoices: 3

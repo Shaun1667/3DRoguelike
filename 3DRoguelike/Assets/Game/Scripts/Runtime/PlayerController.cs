@@ -12,6 +12,7 @@ namespace Game
     {
         private static readonly int MoveXId = Animator.StringToHash("MoveX");
         private static readonly int MoveYId = Animator.StringToHash("MoveY");
+        private static readonly int MoveSpeedId = Animator.StringToHash("MoveSpeed");
 
         [SerializeField] private PlayerTuning tuning;
         [SerializeField] private Transform cameraTarget;
@@ -23,6 +24,7 @@ namespace Game
         private CharacterController controller;
         private InputAction moveAction;
         private InputAction lookAction;
+        private InputAction sprintAction;
         private float pitch;
         private float verticalVelocity;
         private Vector2 blend;
@@ -32,7 +34,14 @@ namespace Game
             controller = GetComponent<CharacterController>();
             moveAction = InputSystem.actions.FindAction("Player/Move", throwIfNotFound: true);
             lookAction = InputSystem.actions.FindAction("Player/Look", throwIfNotFound: true);
+            sprintAction = InputSystem.actions.FindAction("Player/Sprint", throwIfNotFound: true);
         }
+
+        /// <summary>Shift를 누르고 움직이는 중(조준 · 공격 · 구르기 중이 아닐 때).</summary>
+        public bool IsSprinting { get; private set; }
+
+        /// <summary>디버그 · 확인용: 입력 없이 달리기를 켠다.</summary>
+        public bool DebugForceSprint { get; set; }
 
         private void OnEnable()
         {
@@ -52,8 +61,11 @@ namespace Game
             bool locked = melee.IsAttacking || roll.IsRolling;
             Vector2 input = locked ? Vector2.zero : Vector2.ClampMagnitude(moveAction.ReadValue<Vector2>(), 1f);
             if (gun.IsAiming) input *= tuning.aimMoveMultiplier;
-            Move(input);
+            IsSprinting = (sprintAction.IsPressed() || DebugForceSprint) && !locked && !gun.IsAiming && input.sqrMagnitude > 0.01f;
+            float speed = IsSprinting ? tuning.sprintMultiplier : 1f;
+            Move(input * speed);
             Animate(input);
+            animator.SetFloat(MoveSpeedId, speed);
         }
 
         private void Look(Vector2 delta)

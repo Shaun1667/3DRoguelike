@@ -13,6 +13,7 @@ namespace Game.Tests
 
             Assert.That(tuning, Is.Not.Null);
             Assert.That(tuning.moveSpeed, Is.EqualTo(4f));
+            Assert.That(tuning.sprintMultiplier, Is.EqualTo(1.6f));
             Assert.That(tuning.gravity, Is.EqualTo(-20f));
             Assert.That(tuning.lookSensitivity, Is.EqualTo(0.08f));
             Assert.That(tuning.minPitch, Is.EqualTo(-30f));
@@ -99,6 +100,8 @@ namespace Game.Tests
             Assert.That(tuning.spawnWallMargin, Is.EqualTo(4f));
             Assert.That(tuning.spawnSpacing, Is.EqualTo(3f));
             Assert.That(tuning.spawnDoorClearance, Is.EqualTo(6f));
+            Assert.That(tuning.rewardChance, Is.EqualTo(0.5f));
+            Assert.That(tuning.rewardChoices, Is.EqualTo(3));
         }
     }
 }

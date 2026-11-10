@@ -43,7 +43,8 @@ namespace Game
                         $"시드  {stats.Seed.ToCode()}\n" +
                         $"깬 방  {stats.RoomsCleared} / {stats.BattleRooms}\n" +
                         $"처치  {stats.Kills}\n" +
-                        $"시간  {RunStats.FormatTime(stats.ElapsedSeconds)}";
+                        $"시간  {RunStats.FormatTime(stats.ElapsedSeconds)}\n" +
+                        $"성향  Beast {stats.Beast} · Human {stats.Human}  (보상 {stats.RewardsTaken.Count}개)";
 
             panel.SetActive(true);
             Time.timeScale = 0f;

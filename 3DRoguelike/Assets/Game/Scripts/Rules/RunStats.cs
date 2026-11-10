@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Game.Rules
 {
@@ -23,7 +24,7 @@ namespace Game.Rules
         }
 
         public RunSeed Seed { get; }
-        /// <summary>층의 깰 방 수(시작 방 제외).</summary>
+        /// <summary>층의 깰 방 수(적이 나오는 방: 전투 · 보스).</summary>
         public int BattleRooms { get; }
         public int RoomsCleared { get; private set; }
         public int Kills { get; private set; }
@@ -31,6 +32,23 @@ namespace Game.Rules
         /// <summary>죽게 한 공격. 죽지 않았으면 null.</summary>
         public string DeathCause { get; private set; }
         public float ElapsedSeconds { get; private set; }
+        /// <summary>판 안 성향(핵심 설계 규칙 4: 고른 보상으로만 오르고 판마다 0에서 시작).</summary>
+        public int Beast { get; private set; }
+        public int Human { get; private set; }
+        public IReadOnlyList<RewardDefinition> RewardsTaken => rewardsTaken;
+
+        readonly List<RewardDefinition> rewardsTaken = new List<RewardDefinition>();
+
+        /// <summary>보상을 골랐다. 그 성향이 보상의 양만큼 오른다.</summary>
+        /// <returns>판이 진행 중이라 반영했으면 true</returns>
+        public bool TakeReward(RewardDefinition reward)
+        {
+            if (reward == null) throw new ArgumentNullException(nameof(reward));
+            if (Outcome != RunOutcome.Playing) return false;
+            if (reward.Tendency == Tendency.Beast) Beast += reward.Amount; else Human += reward.Amount;
+            rewardsTaken.Add(reward);
+            return true;
+        }
 
         public void RecordKill()
         {

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Game
 {
-    /// <summary>층 생성 · 방 크기 · 방마다 적 수치. 값의 기준은 BALANCE.md 7 · 8 · 10번. 새 방 모양 = roomShapes에 한 줄.</summary>
+    /// <summary>층 생성 · 방 크기 · 방마다 적 · 보상 수치. 값의 기준은 BALANCE.md 7 · 8 · 10 · 11번. 새 방 모양 = roomShapes에 한 줄.</summary>
     [CreateAssetMenu(menuName = "Game/Floor Tuning")]
     public sealed class FloorTuning : ScriptableObject
     {
@@ -51,6 +51,17 @@ namespace Game
         [Min(0f)] public float spawnSpacing = 3f;
         [Tooltip("문에서 떨어질 거리(m). 들어서자마자 붙어 있지 않게")]
         [Min(0f)] public float spawnDoorClearance = 6f;
+
+        [Header("보상")]
+        [Tooltip("전투 방을 깼을 때 보상물이 나올 확률")]
+        [Range(0f, 1f)] public float rewardChance = 0.5f;
+        [Tooltip("보상물을 주우면 고르는 선택지 수")]
+        [Min(1)] public int rewardChoices = 3;
+
+        public RewardSettings ToRewardSettings()
+        {
+            return new RewardSettings(rewardChance, rewardChoices);
+        }
 
         public EncounterSettings ToEncounterSettings()
         {

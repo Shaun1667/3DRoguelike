@@ -29,6 +29,7 @@ namespace Game
         [SerializeField] private Color visitedRoomColor = new Color(0.65f, 0.65f, 0.65f, 0.85f);
         [SerializeField] private Color knownRoomColor = new Color(0.4f, 0.4f, 0.4f, 0.45f);
         [SerializeField] private Color bossMarkColor = new Color(0.9f, 0.25f, 0.2f, 1f);
+        [SerializeField] private Color treasureMarkColor = new Color(0.95f, 0.8f, 0.2f, 1f);
 
         private readonly List<Image> roomImages = new List<Image>();
         private readonly List<Image> bossMarks = new List<Image>();
@@ -103,10 +104,11 @@ namespace Game
 
                 var mark = NewImage("Boss", rect);
                 mark.rectTransform.sizeDelta = new Vector2(minimapCell * 0.4f, minimapCell * 0.4f);
-                mark.color = bossMarkColor;
+                mark.color = room.Kind == RoomKind.Treasure ? treasureMarkColor : bossMarkColor;
                 mark.gameObject.SetActive(false);
-                bossMarks.Add(room.Kind == RoomKind.Boss ? mark : null);
-                if (room.Kind != RoomKind.Boss) Destroy(mark.gameObject);
+                bool marked = room.Kind == RoomKind.Boss || room.Kind == RoomKind.Treasure;
+                bossMarks.Add(marked ? mark : null);
+                if (!marked) Destroy(mark.gameObject);
             }
         }
 

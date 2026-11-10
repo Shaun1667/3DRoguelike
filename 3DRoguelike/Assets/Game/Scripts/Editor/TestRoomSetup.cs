@@ -133,6 +133,17 @@ namespace Game.EditorTools
                 Child("Right Strafe Walking", 1f, 0f, walk),
             };
             EditorUtility.SetDirty(tree);
+            // Shift 달리기: PlayerController가 MoveSpeed(평소 1, 달릴 때 sprintMultiplier)로 걷기 동작을 빨리 재생한다
+            EnsureParameter(controller, "MoveSpeed", AnimatorControllerParameterType.Float);
+            AnimatorControllerParameter[] parameters = controller.parameters;
+            foreach (AnimatorControllerParameter parameter in parameters)
+            {
+                if (parameter.name == "MoveSpeed") parameter.defaultFloat = 1f;
+            }
+            controller.parameters = parameters;
+            AnimatorState moveState = FindState(machine, "Move");
+            moveState.speedParameter = "MoveSpeed";
+            moveState.speedParameterActive = true;
             AddAttackStates(controller, machine, tuning);
             AddRollState(controller, machine, move: FindState(machine, "Move"), tuning);
             AddDeathState(controller, machine);

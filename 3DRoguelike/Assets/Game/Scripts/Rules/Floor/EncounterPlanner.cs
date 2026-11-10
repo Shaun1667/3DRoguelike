@@ -92,7 +92,7 @@ namespace Game.Rules
             var spawns = new IReadOnlyList<SpawnPoint>[layout.Rooms.Count];
             foreach (FloorRoom room in layout.Rooms)
             {
-                spawns[room.Id] = room.Kind == RoomKind.Start
+                spawns[room.Id] = room.Kind == RoomKind.Start || room.Kind == RoomKind.Treasure
                     ? (IReadOnlyList<SpawnPoint>)Array.Empty<SpawnPoint>()
                     : PlanRoom(layout, settings, random, room).AsReadOnly();
             }
