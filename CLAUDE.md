@@ -66,6 +66,7 @@
 - 구르기 · 무적 판정은 `PlayerRoll` 한 곳(`TryRoll`, `IsInvulnerable`).
 - 체력 계산은 `HealthPool`(Game.Rules), 무적 시간 · 이벤트는 `Health`, 맞은 표시는 `HitFlash`. 플레이어 사망 · 재시작은 `PlayerVitals`. 시험용 표적은 `TargetEnemy`(데이터 `TargetEnemyTuning.asset`) — 진짜 적이 생기면 지운다.
 - 난수는 `RunRandom.Create(용도, 층)` 한 곳에서 만들고(`Game.Rules`, PCG32), 받는 쪽은 `IRandom`만 안다. 판 시드는 `RunSeed`(화면에는 8글자 코드). 새 용도 = `RandomPurpose`에 한 줄, 한 번 쓴 키 글자는 바꾸지 않는다. `RunRandomTests.FixedSeed_GivesFixedValues`가 깨지면 모든 시드의 결과가 바뀐 것이다.
+- 층 방 배치는 `FloorGenerator.Generate(설정, 맵 난수)` 한 곳(`Game.Rules`), 결과는 `FloorLayout`(방 · 문 · 막다른 방 · 보스 방), 수치는 `FloorLayoutSettings`(BALANCE 7번). 새 방 모양 = 모양 목록에 한 줄, 새 방 종류 = `RoomKind` 끝에 추가하고 꾸미기 난수로 막다른 방에 배정한다(맵 모양은 그대로).
 - (시스템이 생길 때마다 "이 시스템은 `클래스` 한 곳, 데이터는 `에셋`, 새 항목 = 표 한 줄"로 한 줄씩 더한다)
 
 ## 핵심 설계 규칙 (변경 금지)

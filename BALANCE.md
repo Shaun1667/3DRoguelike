@@ -5,6 +5,7 @@
 |---|---|---|
 | 1~5 | `Assets/Game/Data/PlayerTuning.asset` | `PlayerTuning` |
 | 6 | `Assets/Game/Data/TargetEnemyTuning.asset` | `TargetEnemyTuning` |
+| 7 | 아직 없음 — 2-3에서 생김. 지금은 테스트가 같은 값을 직접 넣는다 | `FloorLayoutSettings`(Game.Rules) |
 
 ## 1. 플레이어 조작
 재미 검증 전 출발값이다. 값을 바꾸면 `PlayerTuningTests`도 함께 고친다. 걷기 배속은 바꾼 뒤 `Tools/Game/Setup Test Room`을 다시 실행해야 컨트롤러에 들어간다.
@@ -76,3 +77,12 @@
 | 범위 `shockwaveRadius` | 3.5 m | 근접 사거리 2.2m보다 넓어 근접은 위험을 짐 |
 | 다시 나타남 `respawnTime` | 2 초 | 첫 시도 |
 | 번쩍임 `hitFlashTime` | 0.08 초 | 첫 시도 |
+
+## 7. 층 방 배치
+`FloorLayoutSettings`에 넘기는 값. 데이터 에셋은 층을 실제로 만드는 2-3에서 생긴다. 값을 바꾸면 `FloorGeneratorTests`도 함께 고친다(고정 시드 배치도 바뀐다).
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 격자 `gridWidth` × `gridHeight` | 9 × 9 칸 | 방 12개가 가운데에서 사방으로 뻗어도 남는 크기, 첫 시도 |
+| 방 수 `minRooms` ~ `maxRooms` | 8 ~ 12 개 | GDD 층 구성(사용자 결정 2026-11-09). 큰 방도 1개로 센다 |
+| 방 모양 무게 | 1×1: 7, 2×1: 1, 1×2: 1, 2×2: 1 | 첫 시도. 무게로는 큰 방 30%지만 큰 방은 자리를 못 찾는 일이 많아 실제로는 약 17%(시드 3000개, 시작 방 제외: 2×1 · 1×2 각 6.5%, 2×2 3.9%). 시작 방은 늘 1×1 |
