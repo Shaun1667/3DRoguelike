@@ -65,6 +65,7 @@
 - 권총 · 조준은 `PlayerGun` 한 곳(디버그 `DebugForceAim`), 팔은 `PlayerAimIK`, 카메라 줌 · 조준점은 `AimCameraZoom`. 키는 `InputSystem_Actions`의 Player 맵. 코드로 넣은 키 입력은 전달되지 않으니 확인은 공개 메서드(`TryAttack` · `TryFire`)와 `EditorApplication.Step`으로 한다.
 - 구르기 · 무적 판정은 `PlayerRoll` 한 곳(`TryRoll`, `IsInvulnerable`).
 - 체력 계산은 `HealthPool`(Game.Rules), 무적 시간 · 이벤트는 `Health`, 맞은 표시는 `HitFlash`. 플레이어 사망 · 재시작은 `PlayerVitals`. 시험용 표적은 `TargetEnemy`(데이터 `TargetEnemyTuning.asset`) — 진짜 적이 생기면 지운다.
+- 난수는 `RunRandom.Create(용도, 층)` 한 곳에서 만들고(`Game.Rules`, PCG32), 받는 쪽은 `IRandom`만 안다. 판 시드는 `RunSeed`(화면에는 8글자 코드). 새 용도 = `RandomPurpose`에 한 줄, 한 번 쓴 키 글자는 바꾸지 않는다. `RunRandomTests.FixedSeed_GivesFixedValues`가 깨지면 모든 시드의 결과가 바뀐 것이다.
 - (시스템이 생길 때마다 "이 시스템은 `클래스` 한 곳, 데이터는 `에셋`, 새 항목 = 표 한 줄"로 한 줄씩 더한다)
 
 ## 핵심 설계 규칙 (변경 금지)
