@@ -6,6 +6,10 @@ namespace Game
     [CreateAssetMenu(menuName = "Game/Mutant Tuning")]
     public sealed class MutantTuning : ScriptableObject
     {
+        [Tooltip("결과 화면의 사망 원인: '{이름}의 {공격 이름}'")]
+        public string displayName = "Mutant";
+        public string attackName = "할퀴기";
+
         [Min(1)] public int maxHealth = 30;
         [Min(0f)] public float moveSpeed = 3f;
         [Tooltip("초당 회전 각도")]

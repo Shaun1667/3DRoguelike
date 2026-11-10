@@ -322,6 +322,7 @@ MonoBehaviour:
   gun: {fileID: 572567484739481581}
   roll: {fileID: 3657653419441435848}
   animator: {fileID: 3083816923440732194}
+  restartOnR: 1
 --- !u!1 &5821493286120222906
 GameObject:
   m_ObjectHideFlags: 0

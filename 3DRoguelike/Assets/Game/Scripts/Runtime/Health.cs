@@ -22,6 +22,8 @@ namespace Game
         public int Current => pool.Current;
         public int Max => pool.Max;
         public bool IsDead => pool.IsDead;
+        /// <summary>마지막으로 피해를 준 공격 이름(결과 화면의 사망 원인). 이름 없이 맞았으면 null.</summary>
+        public string LastDamageSource { get; private set; }
 
         public void Configure(int max, float invulnerableAfterHit)
         {
@@ -31,12 +33,19 @@ namespace Game
 
         public void TakeDamage(int amount)
         {
+            TakeDamage(amount, null);
+        }
+
+        /// <param name="source">공격 이름. 예: "Mutant의 할퀴기"</param>
+        public void TakeDamage(int amount, string source)
+        {
             if (Time.time < invulnerableEndTime) return;
             if (DamageBlocked != null && DamageBlocked()) return;
 
             int dealt = pool.TakeDamage(amount);
             if (dealt == 0) return;
 
+            LastDamageSource = source;
             invulnerableEndTime = Time.time + invulnerableTime;
             Damaged?.Invoke(dealt);
             if (pool.IsDead) Died?.Invoke();

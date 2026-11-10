@@ -33,12 +33,20 @@ namespace Game.EditorTools
 
             var player = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath));
             player.transform.position = new Vector3(0f, 0.1f, 0f); // 시작 방 가운데가 원점
-            TestRoomSetup.BuildCamera(player);
+            Canvas hud = TestRoomSetup.BuildCamera(player);
+            var vitals = player.GetComponent<PlayerVitals>();
+            var vitalsFields = new SerializedObject(vitals);
+            vitalsFields.FindProperty("restartOnR").boolValue = false; // 다시 시작은 결과 화면이 맡는다
+            vitalsFields.ApplyModifiedPropertiesWithoutUndo();
 
             var run = new GameObject("Floor").AddComponent<FloorRun>();
+            HudSetup.BuildHud(hud, vitals, run);
+            RunResultScreen resultScreen = HudSetup.BuildResultScreen(hud);
+
             var fields = new SerializedObject(run);
             fields.FindProperty("tuning").objectReferenceValue = tuning;
-            fields.FindProperty("player").objectReferenceValue = player.transform;
+            fields.FindProperty("player").objectReferenceValue = vitals;
+            fields.FindProperty("resultScreen").objectReferenceValue = resultScreen;
             fields.FindProperty("enemyPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefabPath);
             fields.FindProperty("navMesh").objectReferenceValue = TestRoomSetup.AddNavMeshSurface(run.gameObject);
             fields.FindProperty("floorMaterial").objectReferenceValue = Lit("Floor", new Color(0.55f, 0.55f, 0.55f));

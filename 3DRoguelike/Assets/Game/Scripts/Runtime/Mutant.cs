@@ -145,7 +145,7 @@ namespace Game
             Vector3 offset = Flat(player.transform.position - transform.position);
             bool inRange = offset.magnitude <= tuning.hitRange;
             bool inFront = offset.sqrMagnitude < 0.0001f || Vector3.Angle(attackForward, offset) <= tuning.hitAngle * 0.5f;
-            if (inRange && inFront) player.TakeDamage(tuning.damage);
+            if (inRange && inFront) player.TakeDamage(tuning.damage, $"{tuning.displayName}의 {tuning.attackName}");
 
             state = State.Recovering;
             stateEndTime = Time.time + tuning.recoverTime;

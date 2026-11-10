@@ -6,7 +6,9 @@
         "Game.Runtime",
         "Unity.Cinemachine",
         "UnityEngine.UI",
-        "Unity.AI.Navigation"
+        "Unity.AI.Navigation",
+        "Unity.TextMeshPro",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [
         "Editor"

@@ -38,6 +38,7 @@ namespace Game
         public event Action<IDamageable> Hit;
 
         public int Ammo { get; private set; }
+        public int Magazine => tuning.pistolMagazine;
         public bool IsAiming { get; private set; }
         public bool IsReloading => reloading;
         public Vector3 AimPoint { get; private set; }

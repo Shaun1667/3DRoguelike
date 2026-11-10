@@ -437,7 +437,8 @@ namespace Game.EditorTools
 
             var player = (GameObject)PrefabUtility.InstantiatePrefab(playerPrefab);
             player.transform.position = new Vector3(0f, 0.1f, -6f);
-            BuildCamera(player);
+            Canvas hud = BuildCamera(player);
+            HudSetup.BuildHud(hud, player.GetComponent<PlayerVitals>(), floor: null);
 
             var enemy = (GameObject)PrefabUtility.InstantiatePrefab(enemyPrefab);
             enemy.transform.position = new Vector3(0f, 0f, 2f);
@@ -487,7 +488,8 @@ namespace Game.EditorTools
             block.transform.localScale = size;
         }
 
-        internal static void BuildCamera(GameObject player)
+        /// <returns>조준점이 든 HUD 캔버스. HudSetup이 그 위에 체력 · 탄 · 미니맵을 더한다.</returns>
+        internal static Canvas BuildCamera(GameObject player)
         {
             Transform target = player.transform.Find("CameraTarget");
             var main = new GameObject("Main Camera") { tag = "MainCamera" };
@@ -515,14 +517,16 @@ namespace Game.EditorTools
             fields.FindProperty("tuning").objectReferenceValue = tuning;
             fields.FindProperty("gun").objectReferenceValue = player.GetComponent<PlayerGun>();
             fields.FindProperty("follow").objectReferenceValue = thirdPerson;
-            fields.FindProperty("crosshair").objectReferenceValue = BuildCrosshair();
+            GameObject crosshair = BuildCrosshair();
+            fields.FindProperty("crosshair").objectReferenceValue = crosshair;
             fields.ApplyModifiedPropertiesWithoutUndo();
+            return crosshair.transform.parent.GetComponent<Canvas>();
         }
 
         /// <summary>화면 중앙 조준점. 조준할 때만 켠다.</summary>
         private static GameObject BuildCrosshair()
         {
-            var canvas = new GameObject("HUD", typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler)).GetComponent<Canvas>();
+            var canvas = new GameObject("HUD", typeof(Canvas), typeof(UnityEngine.UI.CanvasScaler), typeof(UnityEngine.UI.GraphicRaycaster)).GetComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 
             var dot = new GameObject("Crosshair", typeof(UnityEngine.UI.Image));

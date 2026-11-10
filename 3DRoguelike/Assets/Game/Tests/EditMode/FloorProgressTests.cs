@@ -91,6 +91,43 @@ namespace Game.Tests
         }
 
         [Test]
+        public void Visibility_StartVisitedNeighboursKnownRestHidden()
+        {
+            var progress = NewProgress();
+
+            Assert.That(progress.Visibility(0), Is.EqualTo(RoomVisibility.Visited));
+            Assert.That(progress.Visibility(1), Is.EqualTo(RoomVisibility.Known), "시작 방과 문으로 이어짐");
+            Assert.That(progress.Visibility(2), Is.EqualTo(RoomVisibility.Hidden));
+            Assert.That(progress.IsVisited(1), Is.False);
+        }
+
+        [Test]
+        public void Entering_RevealsRoomAndItsNeighbours()
+        {
+            var progress = NewProgress();
+            int enteredEvent = -1;
+            progress.RoomEntered += id => enteredEvent = id;
+
+            progress.Enter(1);
+
+            Assert.That(enteredEvent, Is.EqualTo(1));
+            Assert.That(progress.Visibility(1), Is.EqualTo(RoomVisibility.Visited));
+            foreach (int neighbour in new[] { 2, 8, 9 }) Assert.That(progress.Visibility(neighbour), Is.EqualTo(RoomVisibility.Known));
+            Assert.That(progress.Visibility(3), Is.EqualTo(RoomVisibility.Hidden));
+        }
+
+        [Test]
+        public void EnteringCurrentRoom_DoesNothing()
+        {
+            var progress = NewProgress();
+            bool fired = false;
+            progress.RoomEntered += _ => fired = true;
+
+            Assert.That(progress.Enter(0), Is.False);
+            Assert.That(fired, Is.False);
+        }
+
+        [Test]
         public void UnknownRoom_Throws()
         {
             var progress = NewProgress();
