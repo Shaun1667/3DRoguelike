@@ -35,6 +35,9 @@ namespace Game
         private float stateEndTime;
         private float nextRepathTime;
         private Vector3 attackForward;
+        private Vector3 warningFullScale;
+        private Vector3 warningFullPosition;
+        private Vector3 bodyRestPosition;
 
         public bool IsDead => state == State.Dead;
 
@@ -42,6 +45,9 @@ namespace Game
         {
             agent = GetComponent<NavMeshAgent>();
             bodyCollider = GetComponent<Collider>();
+            warningFullScale = attackWarning.transform.localScale;
+            warningFullPosition = attackWarning.transform.localPosition;
+            bodyRestPosition = body.transform.localPosition;
             health.Configure(tuning.maxHealth, 0f);
             flash.Configure(tuning.hitFlashTime);
 
@@ -86,9 +92,11 @@ namespace Game
                     break;
                 case State.WindingUp:
                     if (Time.time >= stateEndTime) Strike();
+                    else ShowWindup(Progress(tuning.windupTime));
                     break;
                 case State.Recovering:
                     if (Time.time >= stateEndTime) ResumeChase();
+                    else Lean(tuning.strikeLeanAngle * (1f - Progress(tuning.recoverTime)));
                     break;
             }
         }
@@ -137,6 +145,30 @@ namespace Game
             attackWarning.SetActive(true);
             state = State.WindingUp;
             stateEndTime = Time.time + tuning.windupTime;
+            ShowWindup(0f);
+        }
+
+        /// <summary>예고 진행(0~1): 몸을 뒤로 젖히고, 바닥 범위가 발밑에서 앞으로 차오른다. 다 차면 할퀸다.</summary>
+        private void ShowWindup(float progress)
+        {
+            Lean(-tuning.windupLeanAngle * progress);
+            float length = Mathf.Max(0.05f, progress);
+            attackWarning.transform.localScale = new Vector3(warningFullScale.x, warningFullScale.y, warningFullScale.z * length);
+            attackWarning.transform.localPosition = new Vector3(warningFullPosition.x, warningFullPosition.y, warningFullPosition.z * length);
+        }
+
+        /// <summary>몸 앞뒤 기울기. 양수 = 앞으로 숙임, 음수 = 뒤로 젖힘. 발밑(루트)을 축으로 돌려 바닥에서 뜨지 않게 한다.</summary>
+        private void Lean(float angle)
+        {
+            Quaternion tilt = Quaternion.Euler(angle, 0f, 0f);
+            body.transform.localRotation = tilt;
+            body.transform.localPosition = tilt * bodyRestPosition;
+        }
+
+        /// <summary>지금 상태가 얼마나 지났나(0~1).</summary>
+        private float Progress(float duration)
+        {
+            return duration <= 0f ? 1f : Mathf.Clamp01(1f - (stateEndTime - Time.time) / duration);
         }
 
         private void Strike()
@@ -149,10 +181,12 @@ namespace Game
 
             state = State.Recovering;
             stateEndTime = Time.time + tuning.recoverTime;
+            Lean(tuning.strikeLeanAngle);
         }
 
         private void ResumeChase()
         {
+            Lean(0f);
             state = State.Chasing;
             nextRepathTime = 0f;
             if (agent.isOnNavMesh) agent.isStopped = false;

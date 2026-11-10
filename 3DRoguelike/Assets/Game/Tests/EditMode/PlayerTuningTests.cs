@@ -58,11 +58,13 @@ namespace Game.Tests
             Assert.That(tuning.repathInterval, Is.EqualTo(0.2f));
             Assert.That(tuning.spawnTime, Is.EqualTo(1f));
             Assert.That(tuning.attackStartRange, Is.EqualTo(1.8f));
-            Assert.That(tuning.windupTime, Is.EqualTo(0.6f));
+            Assert.That(tuning.windupTime, Is.EqualTo(1f));
             Assert.That(tuning.hitRange, Is.EqualTo(2.2f));
             Assert.That(tuning.hitAngle, Is.EqualTo(100f));
             Assert.That(tuning.damage, Is.EqualTo(10));
-            Assert.That(tuning.recoverTime, Is.EqualTo(0.9f));
+            Assert.That(tuning.recoverTime, Is.EqualTo(1.3f));
+            Assert.That(tuning.windupLeanAngle, Is.EqualTo(25f));
+            Assert.That(tuning.strikeLeanAngle, Is.EqualTo(20f));
             Assert.That(tuning.hitFlashTime, Is.EqualTo(0.08f));
             Assert.That(tuning.corpseTime, Is.EqualTo(1f));
         }

@@ -23,14 +23,20 @@ namespace Game
         [Tooltip("이 거리 안에 들어오면 멈추고 예고를 시작한다(m)")]
         [Min(0f)] public float attackStartRange = 1.8f;
         [Tooltip("예고 시간(초). 방향은 예고를 시작할 때 고정된다")]
-        [Min(0f)] public float windupTime = 0.6f;
+        [Min(0f)] public float windupTime = 1f;
         [Tooltip("할퀴는 순간 맞는 거리(m)")]
         [Min(0f)] public float hitRange = 2.2f;
         [Tooltip("정면 기준 전체 각도")]
         [Range(0f, 360f)] public float hitAngle = 100f;
         [Min(0)] public int damage = 10;
         [Tooltip("할퀸 뒤 멈춰 있는 빈틈(초)")]
-        [Min(0f)] public float recoverTime = 0.9f;
+        [Min(0f)] public float recoverTime = 1.3f;
+
+        [Header("연출")]
+        [Tooltip("예고 동안 몸을 뒤로 젖히는 각도. 바닥 예고도 예고 시간에 맞춰 앞으로 차오른다")]
+        [Range(0f, 60f)] public float windupLeanAngle = 25f;
+        [Tooltip("할퀼 때 앞으로 숙이는 각도. 빈틈 동안 천천히 선다")]
+        [Range(0f, 60f)] public float strikeLeanAngle = 20f;
 
         [Min(0f)] public float hitFlashTime = 0.08f;
         [Tooltip("죽은 뒤 사라질 때까지(초)")]

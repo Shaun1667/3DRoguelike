@@ -18,10 +18,12 @@ MonoBehaviour:
   repathInterval: 0.2
   spawnTime: 1
   attackStartRange: 1.8
-  windupTime: 0.6
+  windupTime: 1
   hitRange: 2.2
   hitAngle: 100
   damage: 10
-  recoverTime: 0.9
+  recoverTime: 1.3
+  windupLeanAngle: 25
+  strikeLeanAngle: 20
   hitFlashTime: 0.08
   corpseTime: 1
