@@ -34,3 +34,9 @@ MonoBehaviour:
   wallThickness: 1
   doorWidth: 4
   enterMargin: 1.5
+  minEnemies: 2
+  maxEnemies: 4
+  extraEnemiesPerCell: 1
+  spawnWallMargin: 4
+  spawnSpacing: 3
+  spawnDoorClearance: 6

@@ -54,13 +54,15 @@ namespace Game
         /// <summary>칸 가운데의 월드 위치.</summary>
         public static Vector3 CellCenter(FloorLayout layout, FloorTuning tuning, float x, float y)
         {
-            return new Vector3((x - layout.Width / 2) * tuning.cellSize, 0f, (y - layout.Height / 2) * tuning.cellSize);
+            (float worldX, float worldZ) = FloorSpace.CellCenter(layout, tuning.cellSize, x, y);
+            return new Vector3(worldX, 0f, worldZ);
         }
 
         /// <summary>방 가운데의 월드 위치(바닥 높이).</summary>
         public static Vector3 RoomCenter(FloorLayout layout, FloorTuning tuning, FloorRoom room)
         {
-            return CellCenter(layout, tuning, room.X + (room.Width - 1) * 0.5f, room.Y + (room.Height - 1) * 0.5f);
+            (float worldX, float worldZ) = FloorSpace.RoomCenter(layout, tuning.cellSize, room);
+            return new Vector3(worldX, 0f, worldZ);
         }
 
         /// <summary>월드 위치가 있는 칸. 격자 밖이면 false.</summary>

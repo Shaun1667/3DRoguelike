@@ -45,22 +45,29 @@ namespace Game.Tests
             Assert.That(tuning.aimArmLength, Is.EqualTo(0.55f));
         }
 
+        /// <summary>BALANCE.md 9번.</summary>
         [Test]
-        public void TargetEnemyTuning_MatchesBalance()
+        public void MutantTuning_MatchesBalance()
         {
-            var tuning = AssetDatabase.LoadAssetAtPath<TargetEnemyTuning>("Assets/Game/Data/TargetEnemyTuning.asset");
+            var tuning = AssetDatabase.LoadAssetAtPath<MutantTuning>("Assets/Game/Data/MutantTuning.asset");
 
             Assert.That(tuning, Is.Not.Null);
-            Assert.That(tuning.maxHealth, Is.EqualTo(60));
-            Assert.That(tuning.shockwaveDamage, Is.EqualTo(15));
-            Assert.That(tuning.attackInterval, Is.EqualTo(3f));
-            Assert.That(tuning.warningTime, Is.EqualTo(0.8f));
-            Assert.That(tuning.shockwaveRadius, Is.EqualTo(3.5f));
-            Assert.That(tuning.respawnTime, Is.EqualTo(2f));
+            Assert.That(tuning.maxHealth, Is.EqualTo(30));
+            Assert.That(tuning.moveSpeed, Is.EqualTo(3f));
+            Assert.That(tuning.turnSpeed, Is.EqualTo(540f));
+            Assert.That(tuning.repathInterval, Is.EqualTo(0.2f));
+            Assert.That(tuning.spawnTime, Is.EqualTo(1f));
+            Assert.That(tuning.attackStartRange, Is.EqualTo(1.8f));
+            Assert.That(tuning.windupTime, Is.EqualTo(0.6f));
+            Assert.That(tuning.hitRange, Is.EqualTo(2.2f));
+            Assert.That(tuning.hitAngle, Is.EqualTo(100f));
+            Assert.That(tuning.damage, Is.EqualTo(10));
+            Assert.That(tuning.recoverTime, Is.EqualTo(0.9f));
             Assert.That(tuning.hitFlashTime, Is.EqualTo(0.08f));
+            Assert.That(tuning.corpseTime, Is.EqualTo(1f));
         }
 
-        /// <summary>BALANCE.md 7 · 8번. 7번은 FloorGeneratorTests.BalanceSettings와도 같아야 한다.</summary>
+        /// <summary>BALANCE.md 7 · 8 · 10번. 7번은 FloorGeneratorTests.BalanceSettings, 10번은 EncounterPlannerTests.BalanceSettings와도 같아야 한다.</summary>
         [Test]
         public void FloorTuning_MatchesBalance()
         {
@@ -84,6 +91,12 @@ namespace Game.Tests
             Assert.That(tuning.wallThickness, Is.EqualTo(1f));
             Assert.That(tuning.doorWidth, Is.EqualTo(4f));
             Assert.That(tuning.enterMargin, Is.EqualTo(1.5f));
+            Assert.That(tuning.minEnemies, Is.EqualTo(2));
+            Assert.That(tuning.maxEnemies, Is.EqualTo(4));
+            Assert.That(tuning.extraEnemiesPerCell, Is.EqualTo(1));
+            Assert.That(tuning.spawnWallMargin, Is.EqualTo(4f));
+            Assert.That(tuning.spawnSpacing, Is.EqualTo(3f));
+            Assert.That(tuning.spawnDoorClearance, Is.EqualTo(6f));
         }
     }
 }

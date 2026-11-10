@@ -1,8 +1,10 @@
+using Unity.AI.Navigation;
 using Unity.Cinemachine;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Rendering;
 
 namespace Game.EditorTools
@@ -20,11 +22,11 @@ namespace Game.EditorTools
         private const string PlayerPrefabPath = "Assets/Game/Prefabs/Player.prefab";
         private const string ScenePath = "Assets/Game/Scenes/TestRoom.unity";
         private const string TracerMaterialPath = "Assets/Game/Art/Tracer.mat";
-        private const string EnemyMaterialPath = "Assets/Game/Art/TargetEnemy.mat";
+        private const string EnemyMaterialPath = "Assets/Game/Art/Mutant.mat";
         private const string WarningMaterialPath = "Assets/Game/Art/Warning.mat";
         private const string GoraniMaterialPath = "Assets/Game/Art/Gorani/Gorani_Mat.mat";
-        private const string EnemyTuningPath = "Assets/Game/Data/TargetEnemyTuning.asset";
-        private const string EnemyPrefabPath = "Assets/Game/Prefabs/TargetEnemy.prefab";
+        private const string EnemyTuningPath = "Assets/Game/Data/MutantTuning.asset";
+        internal const string EnemyPrefabPath = "Assets/Game/Prefabs/Mutant.prefab";
 
         private const float RoomSize = 24f;
         private const float WallHeight = 4f;
@@ -36,10 +38,10 @@ namespace Game.EditorTools
             ModelPrefabSetup.Run();
             EnableFlash(AssetDatabase.LoadAssetAtPath<Material>(GoraniMaterialPath));
             PlayerTuning tuning = LoadOrCreateTuning();
-            TargetEnemyTuning enemyTuning = LoadOrCreateEnemyTuning();
+            MutantTuning enemyTuning = LoadOrCreateEnemyTuning();
             AnimatorController controller = BuildController(tuning);
             GameObject playerPrefab = BuildPlayerPrefab(tuning, controller);
-            GameObject enemyPrefab = BuildEnemyPrefab(enemyTuning);
+            GameObject enemyPrefab = BuildMutantPrefab(enemyTuning);
             BuildScene(playerPrefab, enemyPrefab);
             BuildSceneList.Ensure(ScenePath, first: false);
             AssetDatabase.SaveAssets();
@@ -59,13 +61,13 @@ namespace Game.EditorTools
             return tuning;
         }
 
-        private static TargetEnemyTuning LoadOrCreateEnemyTuning()
+        private static MutantTuning LoadOrCreateEnemyTuning()
         {
-            var tuning = AssetDatabase.LoadAssetAtPath<TargetEnemyTuning>(EnemyTuningPath);
+            var tuning = AssetDatabase.LoadAssetAtPath<MutantTuning>(EnemyTuningPath);
             if (tuning != null) return tuning;
-            tuning = ScriptableObject.CreateInstance<TargetEnemyTuning>();
-            AssetDatabase.CreateAsset(tuning, EnemyTuningPath);
-            return tuning;
+            AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<MutantTuning>(), EnemyTuningPath);
+            AssetDatabase.SaveAssets();
+            return AssetDatabase.LoadAssetAtPath<MutantTuning>(EnemyTuningPath);
         }
 
         /// <summary>HitFlash가 프로퍼티 블록으로 켤 수 있도록 발광을 검은색으로 켜 둔다.</summary>
@@ -316,46 +318,85 @@ namespace Game.EditorTools
             return prefab;
         }
 
-        /// <summary>회색 캡슐 표적과 바닥 예고 원.</summary>
-        private static GameObject BuildEnemyPrefab(TargetEnemyTuning tuning)
+        /// <summary>회색 도형 Mutant. 피벗은 발밑. 몸(캡슐 + 앞을 보여 주는 코), 나타나기 예고 원, 할퀴기 범위 예고.</summary>
+        private static GameObject BuildMutantPrefab(MutantTuning tuning)
         {
-            Material bodyMaterial = LoadOrCreateLit(EnemyMaterialPath, new Color(0.35f, 0.35f, 0.4f));
+            Material bodyMaterial = LoadOrCreateLit(EnemyMaterialPath, new Color(0.4f, 0.42f, 0.32f));
             EnableFlash(bodyMaterial);
+            Material warningMaterial = LoadOrCreateUnlit(WarningMaterialPath, new Color(0.8f, 0.15f, 0.1f));
 
-            var root = new GameObject("TargetEnemy");
+            var root = new GameObject("Mutant");
             var capsule = root.AddComponent<CapsuleCollider>();
-            capsule.height = 2f;
-            capsule.radius = 0.5f;
+            capsule.height = 1.8f;
+            capsule.radius = 0.45f;
+            capsule.center = new Vector3(0f, 0.9f, 0f);
+
+            var agent = root.AddComponent<NavMeshAgent>();
+            agent.radius = 0.45f;
+            agent.height = 1.8f;
+            agent.baseOffset = 0f;
+            agent.enabled = false; // 나타날 때 켠다. NavMesh를 굽기 전에 켜지면 경고가 난다
 
             var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             Object.DestroyImmediate(body.GetComponent<Collider>());
             body.name = "Body";
             body.transform.SetParent(root.transform, false);
+            body.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+            body.transform.localScale = new Vector3(0.9f, 0.9f, 0.9f);
             body.GetComponent<Renderer>().sharedMaterial = bodyMaterial;
 
-            var warning = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            Object.DestroyImmediate(warning.GetComponent<Collider>());
-            warning.name = "Warning";
-            warning.transform.SetParent(root.transform, false);
-            warning.transform.localPosition = new Vector3(0f, -0.98f, 0f);
-            float diameter = tuning.shockwaveRadius * 2f;
-            warning.transform.localScale = new Vector3(diameter, 0.005f, diameter);
-            warning.GetComponent<Renderer>().sharedMaterial = LoadOrCreateUnlit(WarningMaterialPath, new Color(0.8f, 0.15f, 0.1f));
-            warning.GetComponent<Renderer>().shadowCastingMode = ShadowCastingMode.Off;
+            var snout = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.DestroyImmediate(snout.GetComponent<Collider>());
+            snout.name = "Snout";
+            snout.transform.SetParent(body.transform, false);
+            snout.transform.localPosition = new Vector3(0f, 0.45f, 0.5f);
+            snout.transform.localScale = new Vector3(0.35f, 0.2f, 0.3f);
+            snout.GetComponent<Renderer>().sharedMaterial = bodyMaterial;
+
+            GameObject spawnWarning = FlatMarker(root.transform, "SpawnWarning", PrimitiveType.Cylinder, Vector3.zero, new Vector3(1.6f, 0.005f, 1.6f), warningMaterial);
+            float halfAngle = Mathf.Min(tuning.hitAngle, 180f) * 0.5f * Mathf.Deg2Rad;
+            float width = 2f * tuning.hitRange * Mathf.Sin(halfAngle);
+            GameObject attackWarning = FlatMarker(root.transform, "AttackWarning", PrimitiveType.Cube,
+                new Vector3(0f, 0f, tuning.hitRange * 0.5f), new Vector3(width, 0.005f, tuning.hitRange), warningMaterial);
 
             var health = root.AddComponent<Health>();
             var flash = root.AddComponent<HitFlash>();
-            var fields = new SerializedObject(root.AddComponent<TargetEnemy>());
+            var fields = new SerializedObject(root.AddComponent<Mutant>());
             fields.FindProperty("tuning").objectReferenceValue = tuning;
             fields.FindProperty("health").objectReferenceValue = health;
             fields.FindProperty("flash").objectReferenceValue = flash;
-            fields.FindProperty("warning").objectReferenceValue = warning;
             fields.FindProperty("body").objectReferenceValue = body;
+            fields.FindProperty("spawnWarning").objectReferenceValue = spawnWarning;
+            fields.FindProperty("attackWarning").objectReferenceValue = attackWarning;
             fields.ApplyModifiedPropertiesWithoutUndo();
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, EnemyPrefabPath);
             Object.DestroyImmediate(root);
             return prefab;
+        }
+
+        /// <summary>바닥에 붙은 얇은 예고 표시. 충돌 · 그림자 없음.</summary>
+        private static GameObject FlatMarker(Transform parent, string name, PrimitiveType shape, Vector3 position, Vector3 scale, Material material)
+        {
+            var marker = GameObject.CreatePrimitive(shape);
+            Object.DestroyImmediate(marker.GetComponent<Collider>());
+            marker.name = name;
+            marker.transform.SetParent(parent, false);
+            marker.transform.localPosition = position + Vector3.up * 0.02f;
+            marker.transform.localScale = scale;
+            var renderer = marker.GetComponent<Renderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            return marker;
+        }
+
+        /// <summary>방(자식 도형)의 NavMesh를 플레이 시작 때 굽게 한다.</summary>
+        internal static NavMeshSurface AddNavMeshSurface(GameObject owner)
+        {
+            var surface = owner.AddComponent<NavMeshSurface>();
+            surface.collectObjects = CollectObjects.Children;
+            surface.useGeometry = NavMeshCollectGeometry.PhysicsColliders;
+            return surface;
         }
 
         /// <summary>회색 도형 권총과 탄도 선.</summary>
@@ -399,7 +440,8 @@ namespace Game.EditorTools
             BuildCamera(player);
 
             var enemy = (GameObject)PrefabUtility.InstantiatePrefab(enemyPrefab);
-            enemy.transform.position = new Vector3(0f, 1f, 0f);
+            enemy.transform.position = new Vector3(0f, 0f, 2f);
+            enemy.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
 
             EditorSceneManager.SaveScene(scene, ScenePath);
         }
@@ -417,6 +459,9 @@ namespace Game.EditorTools
         private static void BuildRoom()
         {
             var room = new GameObject("Room").transform;
+            var bake = new SerializedObject(room.gameObject.AddComponent<BuildNavMeshOnAwake>());
+            bake.FindProperty("surface").objectReferenceValue = AddNavMeshSurface(room.gameObject);
+            bake.ApplyModifiedPropertiesWithoutUndo();
             float half = RoomSize * 0.5f;
             Block(room, "Floor", new Vector3(0f, -0.5f, 0f), new Vector3(RoomSize, 1f, RoomSize));
             float wallY = WallHeight * 0.5f;

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Game
 {
-    /// <summary>층 생성과 방 크기 수치. 값의 기준은 BALANCE.md 7 · 8번. 새 방 모양 = roomShapes에 한 줄.</summary>
+    /// <summary>층 생성 · 방 크기 · 방마다 적 수치. 값의 기준은 BALANCE.md 7 · 8 · 10번. 새 방 모양 = roomShapes에 한 줄.</summary>
     [CreateAssetMenu(menuName = "Game/Floor Tuning")]
     public sealed class FloorTuning : ScriptableObject
     {
@@ -38,6 +38,24 @@ namespace Game
         [Min(0.5f)] public float doorWidth = 4f;
         [Tooltip("벽에서 이만큼 들어서야 방에 들어간 것으로 본다(m). 문틀에서 잠기지 않게")]
         [Min(0f)] public float enterMargin = 1.5f;
+
+        [Header("방마다 적")]
+        [Tooltip("한 칸 방의 적 수 최소 · 최대")]
+        [Min(1)] public int minEnemies = 2;
+        [Min(1)] public int maxEnemies = 4;
+        [Tooltip("큰 방은 칸이 하나 늘 때마다 이만큼 더")]
+        [Min(0)] public int extraEnemiesPerCell = 1;
+        [Tooltip("적이 나타날 자리가 벽에서 떨어질 거리(m)")]
+        [Min(0f)] public float spawnWallMargin = 4f;
+        [Tooltip("적끼리 떨어질 거리(m)")]
+        [Min(0f)] public float spawnSpacing = 3f;
+        [Tooltip("문에서 떨어질 거리(m). 들어서자마자 붙어 있지 않게")]
+        [Min(0f)] public float spawnDoorClearance = 6f;
+
+        public EncounterSettings ToEncounterSettings()
+        {
+            return new EncounterSettings(cellSize, minEnemies, maxEnemies, extraEnemiesPerCell, spawnWallMargin, spawnSpacing, spawnDoorClearance);
+        }
 
         public FloorLayoutSettings ToSettings()
         {

@@ -64,7 +64,8 @@
 - 맨몸 근접은 `PlayerMelee` 한 곳, 수치는 `PlayerTuning`. 맞을 수 있는 대상은 `IDamageable`을 구현한다.
 - 권총 · 조준은 `PlayerGun` 한 곳(디버그 `DebugForceAim`), 팔은 `PlayerAimIK`, 카메라 줌 · 조준점은 `AimCameraZoom`. 키는 `InputSystem_Actions`의 Player 맵. 코드로 넣은 키 입력은 전달되지 않으니 확인은 공개 메서드(`TryAttack` · `TryFire`)와 `EditorApplication.Step`으로 한다.
 - 구르기 · 무적 판정은 `PlayerRoll` 한 곳(`TryRoll`, `IsInvulnerable`).
-- 체력 계산은 `HealthPool`(Game.Rules), 무적 시간 · 이벤트는 `Health`, 맞은 표시는 `HitFlash`. 플레이어 사망 · 재시작은 `PlayerVitals`. 시험용 표적은 `TargetEnemy`(데이터 `TargetEnemyTuning.asset`) — 진짜 적이 생기면 지운다.
+- 체력 계산은 `HealthPool`(Game.Rules), 무적 시간 · 이벤트는 `Health`, 맞은 표시는 `HitFlash`. 플레이어 사망 · 재시작은 `PlayerVitals`. 시험용 표적 `TargetEnemy`는 2-4에서 지움.
+- 적 행동은 종류마다 클래스 한 곳(지금 `Mutant`: 예고 → 쫓기 → 예고 → 할퀴기 → 빈틈, 데이터 `MutantTuning.asset`), 이동은 NavMesh(`NavMeshAgent`). 층은 `FloorRun`이 세운 뒤 굽고, 시험 방은 `BuildNavMeshOnAwake`. 방마다 적 수 · 자리는 규칙 `EncounterPlanner`가 층 시작 때 적 난수로 모두 정한다. 격자 ↔ 층 좌표 변환은 `FloorSpace` 한 곳.
 - 난수는 `RunRandom.Create(용도, 층)` 한 곳에서 만들고(`Game.Rules`, PCG32), 받는 쪽은 `IRandom`만 안다. 판 시드는 `RunSeed`(화면에는 8글자 코드). 새 용도 = `RandomPurpose`에 한 줄, 한 번 쓴 키 글자는 바꾸지 않는다. `RunRandomTests.FixedSeed_GivesFixedValues`가 깨지면 모든 시드의 결과가 바뀐 것이다.
 - 층 방 배치는 `FloorGenerator.Generate(설정, 맵 난수)` 한 곳(`Game.Rules`), 결과는 `FloorLayout`(방 · 문 · 막다른 방 · 보스 방), 수치는 `FloorLayoutSettings`(BALANCE 7번). 새 방 모양 = 모양 목록에 한 줄, 새 방 종류 = `RoomKind` 끝에 추가하고 꾸미기 난수로 막다른 방에 배정한다(맵 모양은 그대로).
 - 층 진행(방 들어가기 · 문 잠금 · 방 깨기)은 규칙 `FloorProgress`, 화면은 `FloorRun`(시드 선택 · 생성 · 적 내보내기) + `FloorGeometry`(회색 도형 바닥 · 벽 · 문). 수치 `Data/FloorTuning.asset`. 층 씬은 `FloorSetup`(메뉴 `Tools/Game/Setup Floor`)이 만들고, 방은 플레이할 때 세워진다. 빌드 씬 목록은 `BuildSceneList.Ensure`로만 바꾼다.

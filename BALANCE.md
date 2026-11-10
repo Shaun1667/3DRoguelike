@@ -4,8 +4,8 @@
 | 번호 | 에셋 | 클래스 |
 |---|---|---|
 | 1~5 | `Assets/Game/Data/PlayerTuning.asset` | `PlayerTuning` |
-| 6 | `Assets/Game/Data/TargetEnemyTuning.asset` | `TargetEnemyTuning` |
-| 7 · 8 | `Assets/Game/Data/FloorTuning.asset` | `FloorTuning` → `FloorLayoutSettings`(Game.Rules) |
+| 7 · 8 · 10 | `Assets/Game/Data/FloorTuning.asset` | `FloorTuning` → `FloorLayoutSettings` · `EncounterSettings`(Game.Rules) |
+| 9 | `Assets/Game/Data/MutantTuning.asset` | `MutantTuning` |
 
 ## 1. 플레이어 조작
 재미 검증 전 출발값이다. 값을 바꾸면 `PlayerTuningTests`도 함께 고친다. 걷기 배속은 바꾼 뒤 `Tools/Game/Setup Test Room`을 다시 실행해야 컨트롤러에 들어간다.
@@ -65,18 +65,8 @@
 | 맞은 뒤 무적 `hitInvulnerableTime` | 0.5 초 | 사용자 결정 2026-11-09 |
 | 번쩍임 `hitFlashTime` | 0.08 초 | 첫 시도 |
 
-## 6. 표적 적 (시험용)
-진짜 적이 생기면 없어진다. 값을 바꾸면 `PlayerTuningTests`도 함께 고치고, 범위를 바꾸면 Setup 메뉴를 다시 실행한다.
-
-| 항목 | 값 | 근거 |
-|---|---|---|
-| 체력 `maxHealth` | 60 | 근접 6대, 권총 10발 |
-| 충격파 피해 `shockwaveDamage` | 15 | 사용자 결정 2026-11-09 — 플레이어 7대 |
-| 대기 `attackInterval` | 3 초 | 사용자 결정 2026-11-09 |
-| 예고 `warningTime` | 0.8 초 | 구르기 무적 0.4초를 맞출 시간 |
-| 범위 `shockwaveRadius` | 3.5 m | 근접 사거리 2.2m보다 넓어 근접은 위험을 짐 |
-| 다시 나타남 `respawnTime` | 2 초 | 첫 시도 |
-| 번쩍임 `hitFlashTime` | 0.08 초 | 첫 시도 |
+## 6. 표적 적 (시험용) — 지움
+2-4에서 진짜 적(Mutant, 9번)이 생겨 `TargetEnemy` · `TargetEnemyTuning.asset`을 지웠다(CLAUDE.md "진짜 적이 생기면 지운다"). 마지막 값은 git 이력(99b1231)에 있다.
 
 ## 7. 층 방 배치
 `FloorTuning`이 `FloorLayoutSettings`로 넘기는 값. 값을 바꾸면 `PlayerTuningTests.FloorTuning_MatchesBalance`와 `FloorGeneratorTests.BalanceSettings`도 함께 고친다(고정 시드 배치도 바뀐다).
@@ -96,3 +86,32 @@
 | 벽 높이 `wallHeight` · 두께 `wallThickness` | 4 m · 1 m | 시험 방과 같음 |
 | 문 폭 `doorWidth` | 4 m | 플레이어(폭 0.7 m)가 구르거나 카메라를 돌리며 지나가도 넉넉하게, 첫 시도 |
 | 방에 들어선 거리 `enterMargin` | 1.5 m | 문틀에 선 채로 잠겨 갇히지 않게, 첫 시도 |
+
+## 9. 숲 Mutant
+`MutantTuning`의 값. 값을 바꾸면 `PlayerTuningTests.MutantTuning_MatchesBalance`도 함께 고치고, 할퀴기 거리 · 각도를 바꾸면 `Tools/Game/Setup Test Room`을 다시 실행한다(바닥 예고 크기).
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 체력 `maxHealth` | 30 | 근접 3대, 권총 5발 — 방에 2~4마리라 표적(60)의 절반 |
+| 이동 속도 `moveSpeed` | 3 m/s | 플레이어 4 m/s보다 느려 걸으며 쏠 수 있고, 조준(×0.6 = 2.4 m/s) 중에는 따라잡힘 |
+| 회전 `turnSpeed` | 540 도/초 | 쫓을 때 바로 돌아섬, 첫 시도 |
+| 길 다시 찾기 `repathInterval` | 0.2 초 | 첫 시도 |
+| 나타나기 예고 `spawnTime` | 1 초 | 들어서자마자 맞지 않게 |
+| 예고 시작 거리 `attackStartRange` | 1.8 m | 맞는 거리보다 짧아 예고 중 조금 물러나도 맞음 |
+| 예고 `windupTime` | 0.6 초 | 구르기 무적 0.4초를 맞출 시간(표적은 0.8초) |
+| 맞는 거리 `hitRange` · 각도 `hitAngle` | 2.2 m · 100 도 | 플레이어 근접(2.2 m · 110 도)과 비슷하게 |
+| 피해 `damage` | 10 | 플레이어 10대. 한 방에 4마리가 동시에 붙으면 위험 |
+| 빈틈 `recoverTime` | 0.9 초 | 할퀸 뒤 근접 1~2대를 넣을 시간 |
+| 번쩍임 `hitFlashTime` | 0.08 초 | 플레이어와 같음 |
+| 사라짐 `corpseTime` | 1 초 | 첫 시도 |
+
+## 10. 방마다 적
+`FloorTuning`이 `EncounterSettings`로 넘기는 값. 값을 바꾸면 `PlayerTuningTests.FloorTuning_MatchesBalance`와 `EncounterPlannerTests.BalanceSettings`도 함께 고친다.
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 한 칸 방 적 수 `minEnemies` ~ `maxEnemies` | 2 ~ 4 | 첫 시도 |
+| 큰 방 더하기 `extraEnemiesPerCell` | 칸 하나에 +1 | 2×1 · 1×2는 3~5, 2×2는 5~7 |
+| 벽에서 `spawnWallMargin` | 4 m | 벽에 붙어 나오지 않게 |
+| 적끼리 `spawnSpacing` | 3 m | 겹쳐 나오지 않게 |
+| 문에서 `spawnDoorClearance` | 6 m | 들어선 자리(문에서 1.5 m) 바로 옆에 나오지 않게 |

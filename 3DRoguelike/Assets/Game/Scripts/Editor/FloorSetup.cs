@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Game.EditorTools
 {
     /// <summary>
-    /// 층 씬을 만든다. 방은 플레이할 때 시드로 세워지므로 씬에는 조명 · 플레이어 · 카메라 · FloorRun만 둔다.
+    /// 층 씬을 만든다. 방은 플레이할 때 시드로 세워지므로 씬에는 조명 · 플레이어 · 카메라 · FloorRun(+ NavMesh)만 둔다.
     /// 여러 번 실행해도 결과가 같다. 수치 에셋은 없을 때만 만들고 값을 덮어쓰지 않는다.
     /// </summary>
     public static class FloorSetup
@@ -13,7 +13,7 @@ namespace Game.EditorTools
         private const string TuningPath = "Assets/Game/Data/FloorTuning.asset";
         private const string ScenePath = "Assets/Game/Scenes/Floor.unity";
         private const string PlayerPrefabPath = "Assets/Game/Prefabs/Player.prefab";
-        private const string EnemyPrefabPath = "Assets/Game/Prefabs/TargetEnemy.prefab";
+        private const string EnemyPrefabPath = TestRoomSetup.EnemyPrefabPath;
         private const string MaterialFolder = "Assets/Game/Art/Floor";
 
         [MenuItem("Tools/Game/Setup Floor")]
@@ -21,7 +21,7 @@ namespace Game.EditorTools
         {
             if (AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath) == null || AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefabPath) == null)
             {
-                TestRoomSetup.Run(); // 플레이어 · 표적 프리팹을 만든다
+                TestRoomSetup.Run(); // 플레이어 · Mutant 프리팹을 만든다
             }
 
             if (!AssetDatabase.IsValidFolder(MaterialFolder)) AssetDatabase.CreateFolder("Assets/Game/Art", "Floor");
@@ -40,6 +40,7 @@ namespace Game.EditorTools
             fields.FindProperty("tuning").objectReferenceValue = tuning;
             fields.FindProperty("player").objectReferenceValue = player.transform;
             fields.FindProperty("enemyPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefabPath);
+            fields.FindProperty("navMesh").objectReferenceValue = TestRoomSetup.AddNavMeshSurface(run.gameObject);
             fields.FindProperty("floorMaterial").objectReferenceValue = Lit("Floor", new Color(0.55f, 0.55f, 0.55f));
             fields.FindProperty("startFloorMaterial").objectReferenceValue = Lit("StartFloor", new Color(0.45f, 0.6f, 0.45f));
             fields.FindProperty("bossFloorMaterial").objectReferenceValue = Lit("BossFloor", new Color(0.6f, 0.4f, 0.4f));

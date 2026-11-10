@@ -5,7 +5,8 @@
         "Game.Rules",
         "Game.Runtime",
         "Unity.Cinemachine",
-        "UnityEngine.UI"
+        "UnityEngine.UI",
+        "Unity.AI.Navigation"
     ],
     "includePlatforms": [
         "Editor"
