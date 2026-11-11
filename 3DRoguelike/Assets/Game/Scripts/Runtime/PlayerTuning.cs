@@ -10,6 +10,8 @@ namespace Game
         [Tooltip("Shift 달리기: 이동 속도와 걷기 동작 재생 속도에 곱한다. 조준 · 공격 · 구르기 중에는 달리지 않는다")]
         [Min(1f)] public float sprintMultiplier = 1.6f;
         public float gravity = -20f;
+        [Tooltip("스페이스바 점프 높이(m). 뛰어오르는 속도 = √(2 × 높이 × |중력|)")]
+        [Min(0f)] public float jumpHeight = 1.2f;
         [Tooltip("마우스 1픽셀당 회전 각도")]
         [Min(0f)] public float lookSensitivity = 0.08f;
         public float minPitch = -30f;

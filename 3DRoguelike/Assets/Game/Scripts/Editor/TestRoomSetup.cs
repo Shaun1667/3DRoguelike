@@ -124,16 +124,19 @@ namespace Game.EditorTools
             tree.blendParameter = "MoveX";
             tree.blendParameterY = "MoveY";
             float walk = tuning.walkPlaybackSpeed;
+            EnsureLoop("Fast Run");
             tree.children = new[]
             {
                 Child("Idle", 0f, 0f, 1f),
                 Child("Walk", 0f, 1f, walk),
+                Child("Fast Run", 0f, tuning.sprintMultiplier, RunTimeScale(walk, tuning.sprintMultiplier)),
                 Child("Walking Backward", 0f, -1f, walk),
                 Child("Left Strafe Walking", -1f, 0f, walk),
                 Child("Right Strafe Walking", 1f, 0f, walk),
             };
             EditorUtility.SetDirty(tree);
-            // Shift 달리기: PlayerController가 MoveSpeed(평소 1, 달릴 때 sprintMultiplier)로 걷기 동작을 빨리 재생한다
+            // Shift 달리기: 앞으로 달릴 때 PlayerController가 MoveY를 sprintMultiplier까지 올려 Fast Run으로 넘어간다.
+            // MoveSpeed(평소 1, 달릴 때 sprintMultiplier)는 상태 전체 배속이라, 옆 · 뒤로 달릴 때는 걷기 동작이 빨라진다
             EnsureParameter(controller, "MoveSpeed", AnimatorControllerParameterType.Float);
             AnimatorControllerParameter[] parameters = controller.parameters;
             foreach (AnimatorControllerParameter parameter in parameters)
@@ -146,6 +149,7 @@ namespace Game.EditorTools
             moveState.speedParameterActive = true;
             AddAttackStates(controller, machine, tuning);
             AddRollState(controller, machine, move: FindState(machine, "Move"), tuning);
+            AddJumpState(controller, machine, move: FindState(machine, "Move"), tuning);
             AddDeathState(controller, machine);
             AnimatorControllerLayer[] layers = controller.layers;
             layers[0].iKPass = true; // 조준 중 오른팔 IK
@@ -212,6 +216,31 @@ namespace Game.EditorTools
             exit.duration = 0.1f;
         }
 
+        /// <summary>
+        /// 점프(스페이스바, 2026-11-10). 클립 전체를 공중에 떠 있는 시간(2 × √(2 × 높이 ÷ |중력|))에 맞춰 재생하고 이동으로 돌아간다.
+        /// 클립의 몸 위아래 움직임은 루트 모션으로 빠지고(applyRootMotion 꺼짐), 실제 높이는 PlayerController가 정한다.
+        /// </summary>
+        private static void AddJumpState(AnimatorController controller, AnimatorStateMachine machine, AnimatorState move, PlayerTuning tuning)
+        {
+            EnsureParameter(controller, "Jump", AnimatorControllerParameterType.Trigger);
+            AnimatorState state = FindState(machine, "Jump") ?? machine.AddState("Jump");
+            state.motion = LoadClip("Jump");
+            float airTime = 2f * Mathf.Sqrt(2f * tuning.jumpHeight / Mathf.Max(-tuning.gravity, 0.01f));
+            state.speed = state.motion.averageDuration / Mathf.Max(airTime, 0.1f);
+
+            AnimatorStateTransition enter = machine.AddAnyStateTransition(state);
+            enter.hasExitTime = false;
+            enter.duration = 0.05f;
+            enter.canTransitionToSelf = false;
+            enter.AddCondition(AnimatorConditionMode.If, 0f, "Jump");
+
+            state.transitions = new AnimatorStateTransition[0];
+            AnimatorStateTransition exit = state.AddTransition(move);
+            exit.hasExitTime = true;
+            exit.exitTime = 0.9f;
+            exit.duration = 0.1f;
+        }
+
         /// <summary>사망. 한 번 쓰러지고 그대로 멈춘다.</summary>
         private static void AddDeathState(AnimatorController controller, AnimatorStateMachine machine)
         {
@@ -233,6 +262,53 @@ namespace Game.EditorTools
                 if (child.state.name == name) return child.state;
             }
             return null;
+        }
+
+        /// <summary>
+        /// 달리기 클립 배속. 걷기는 walkPlaybackSpeed에서 moveSpeed에 발이 맞으므로, 두 클립이 앞으로 가는 속도의 비율로 맞춘다.
+        /// 달릴 때 상태 배속 MoveSpeed가 sprintMultiplier를 곱하므로 여기서는 곱하지 않는다.
+        /// </summary>
+        private static float RunTimeScale(float walk, float sprintMultiplier)
+        {
+            float walkSpeed = LoadClip("Walk").averageSpeed.z;
+            float runSpeed = LoadClip("Fast Run").averageSpeed.z;
+            if (walkSpeed <= 0.01f || runSpeed <= 0.01f)
+            {
+                // 제자리 동작이면 속도가 0이다. 그때는 상태 배속(×sprintMultiplier)을 빼서 클립 원래 속도로 재생한다
+                Debug.LogWarning($"[TestRoomSetup] 클립 속도를 읽지 못해 달리기 동작을 원래 속도로 재생합니다 (걷기 {walkSpeed}, 달리기 {runSpeed})");
+                return 1f / Mathf.Max(sprintMultiplier, 0.01f);
+            }
+            float scale = walk * walkSpeed / runSpeed;
+            Debug.Log($"[TestRoomSetup] 달리기 배속 {scale:0.00} (클립 속도 걷기 {walkSpeed:0.00} · 달리기 {runSpeed:0.00})");
+            return scale;
+        }
+
+        /// <summary>새로 넣은 Mixamo 동작을 걷기와 같은 설정(반복, 회전 · 높이 고정)으로 가져온다. 이미 맞으면 다시 가져오지 않는다.</summary>
+        private static void EnsureLoop(string fileName)
+        {
+            string path = $"{ClipFolder}/{fileName}.fbx";
+            if (!(AssetImporter.GetAtPath(path) is ModelImporter importer)) throw new System.InvalidOperationException($"동작을 찾지 못했습니다: {fileName}");
+            ModelImporterClipAnimation[] clips = importer.clipAnimations;
+            bool alreadySet = clips.Length > 0;
+            foreach (ModelImporterClipAnimation clip in clips)
+            {
+                alreadySet &= clip.loopTime && clip.loopPose && clip.lockRootRotation && clip.lockRootHeightY && !clip.lockRootPositionXZ;
+            }
+            if (alreadySet) return;
+            if (clips.Length == 0) clips = importer.defaultClipAnimations;
+            foreach (ModelImporterClipAnimation clip in clips)
+            {
+                clip.loopTime = true;
+                clip.loopPose = true;
+                clip.lockRootRotation = true;
+                clip.lockRootHeightY = true;
+                clip.lockRootPositionXZ = false;
+                clip.keepOriginalOrientation = true;
+                clip.keepOriginalPositionY = true;
+                clip.keepOriginalPositionXZ = false;
+            }
+            importer.clipAnimations = clips;
+            importer.SaveAndReimport();
         }
 
         private static ChildMotion Child(string clip, float x, float y, float speed)

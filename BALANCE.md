@@ -15,10 +15,12 @@
 | 이동 속도 `moveSpeed` | 4 m/s | 까치 보스전 9 m/s ÷ 캐릭터 배율 2.75 = 3.3에서 방 전투를 위해 올림 |
 | 달리기 배율 `sprintMultiplier` | 1.6 (6.4 m/s) | 사용자 요청 2026-11-10 "shift는 달리기" — Mutant 3 m/s의 2배쯤으로 거리를 벌림. 걷기 동작도 이 배속으로, 첫 시도 |
 | 중력 `gravity` | -20 | 까치 보스전 값 |
+| 점프 높이 `jumpHeight` | 1.2 m (공중 약 0.69초) | 사용자 요청 2026-11-10 "스페이스바는 점프" — 키 1.85m 캐릭터가 허리 높이 상자를 넘을 정도, 첫 시도. 점프 동작 배속은 Setup이 공중 시간에 맞춘다 |
 | 마우스 감도 `lookSensitivity` | 0.08 도/픽셀 | 첫 시도 |
 | 시점 위아래 `minPitch` · `maxPitch` | -30 ~ 60 도 | 첫 시도 |
 | 동작 전환 `animationBlendSpeed` | 8 /초 | 까치 보스전 값 |
 | 걷기 배속 `walkPlaybackSpeed` | 2.4 | 까치 보스전 2배에서 이동 속도 증가만큼 올림 |
+| 달리기 동작 배속 | 계산값 (Setup 콘솔에 출력) | 걷기 배속 × 클립 속도 비(Walk ÷ Fast Run) — 6.4 m/s에서 발이 맞게. 앞으로 달릴 때만, 2026-11-10 |
 
 ## 2. 맨몸 근접
 값을 바꾸면 `PlayerTuningTests`도 함께 고친다. 재생 배속 · 잠금 시간은 바꾼 뒤 `Tools/Game/Setup Test Room`을 다시 실행한다.

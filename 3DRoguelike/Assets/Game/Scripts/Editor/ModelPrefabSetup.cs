@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -47,37 +48,112 @@ namespace Game.EditorTools
         }
 
         /// <summary>
-        /// 고라니 동작 FBX가 고라니 아바타로 가져와지게 한다(2026-11-10).
+        /// 고라니 동작 FBX가 고라니의 기본 자세(T자세)를 기준으로 아바타를 만들게 한다(2026-11-10).
         /// Mixamo에서 뼈대만 받은 동작 FBX는 각자 첫 프레임 자세로 아바타를 만들어, 그 자세가 기준이 되면서 왼발 끝이 약 25도 들려 보였다.
+        /// 고라니 아바타를 그대로 복사(CopyFromOther)할 수는 없다 — 동작 FBX에는 Armature 노드가 없어 뼈대 구조가 달라 동작을 못 가져온다.
+        /// 그래서 동작 FBX 자신의 뼈대 구조 · 위치는 두고, mixamorig 뼈의 기본 회전만 고라니 값으로 바꿔 아바타를 만든다.
         /// 이미 맞으면 다시 가져오지 않는다.
         /// </summary>
         private static void UseGoraniAvatarForClips()
         {
-            Avatar avatar = null;
-            foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(GoraniModel))
+            var goraniImporter = AssetImporter.GetAtPath(GoraniModel) as ModelImporter;
+            if (goraniImporter == null || goraniImporter.humanDescription.human == null || goraniImporter.humanDescription.human.Length == 0)
             {
-                if (asset is Avatar found) avatar = found;
-            }
-            if (avatar == null)
-            {
-                Debug.LogError("[ModelPrefabSetup] 고라니 아바타를 찾지 못했습니다: " + GoraniModel);
+                Debug.LogError("[ModelPrefabSetup] 고라니 휴머노이드 설정을 찾지 못했습니다: " + GoraniModel);
                 return;
             }
+            HumanDescription source = goraniImporter.humanDescription;
+            var rest = new Dictionary<string, SkeletonBone>();
+            foreach (SkeletonBone bone in source.skeleton) rest[bone.name] = bone;
+            Quaternion hipsWorld = RestWorldRotation(source.skeleton, "mixamorig:Hips");
 
             int changed = 0;
             foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { GoraniClipFolder }))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 if (!(AssetImporter.GetAtPath(path) is ModelImporter importer)) continue;
+                var model = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (model == null) continue;
+
+                var skeleton = new List<SkeletonBone>();
+                foreach (Transform t in model.GetComponentsInChildren<Transform>(true))
+                {
+                    bool root = t == model.transform;
+                    var bone = new SkeletonBone
+                    {
+                        name = root ? model.name + "(Clone)" : t.name,
+                        position = t.localPosition,
+                        rotation = t.localRotation,
+                        scale = t.localScale,
+                    };
+                    if (t.name == "mixamorig:Hips")
+                    {
+                        Quaternion parentWorld = Quaternion.identity;
+                        for (Transform p = t.parent; p != null && p != model.transform; p = p.parent) parentWorld = p.localRotation * parentWorld;
+                        bone.rotation = Quaternion.Inverse(parentWorld) * hipsWorld;
+                    }
+                    else if (!root && rest.TryGetValue(t.name, out SkeletonBone goraniBone))
+                    {
+                        bone.rotation = goraniBone.rotation;
+                    }
+                    skeleton.Add(bone);
+                }
+
+                HumanDescription description = source;
+                description.skeleton = skeleton.ToArray();
                 if (importer.animationType == ModelImporterAnimationType.Human
-                    && importer.avatarSetup == ModelImporterAvatarSetup.CopyFromOther && importer.sourceAvatar == avatar) continue;
+                    && importer.avatarSetup == ModelImporterAvatarSetup.CreateFromThisModel
+                    && SameSkeleton(importer.humanDescription.skeleton, description.skeleton)) continue;
+
                 importer.animationType = ModelImporterAnimationType.Human;
-                importer.avatarSetup = ModelImporterAvatarSetup.CopyFromOther;
-                importer.sourceAvatar = avatar;
+                importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+                importer.sourceAvatar = null;
+                importer.humanDescription = description;
                 importer.SaveAndReimport();
                 changed++;
             }
-            Debug.Log($"[ModelPrefabSetup] 동작 FBX 아바타를 고라니로: {changed}개 바꿈");
+            Debug.Log($"[ModelPrefabSetup] 동작 FBX 아바타 기준 자세를 고라니로: {changed}개 바꿈");
+        }
+
+        /// <summary>뼈대 목록에서 이름이 같은 뼈의 기본 자세 월드 회전(부모 이름을 따라 곱한다).</summary>
+        private static Quaternion RestWorldRotation(SkeletonBone[] skeleton, string name)
+        {
+            var byName = new Dictionary<string, SkeletonBone>();
+            foreach (SkeletonBone bone in skeleton) byName[bone.name] = bone;
+            var parentOf = ParentNames(skeleton);
+            Quaternion world = Quaternion.identity;
+            string current = name;
+            while (byName.TryGetValue(current, out SkeletonBone bone))
+            {
+                world = bone.rotation * world;
+                if (!parentOf.TryGetValue(current, out current)) break;
+            }
+            return world;
+        }
+
+        /// <summary>SkeletonBone에는 부모 이름이 공개돼 있지 않아 고라니 모델의 실제 계층에서 읽는다.</summary>
+        private static Dictionary<string, string> ParentNames(SkeletonBone[] skeleton)
+        {
+            var parents = new Dictionary<string, string>();
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(GoraniModel);
+            if (model == null) return parents;
+            foreach (Transform t in model.GetComponentsInChildren<Transform>(true))
+            {
+                if (t == model.transform) continue;
+                parents[t.name] = t.parent == model.transform ? model.name + "(Clone)" : t.parent.name;
+            }
+            return parents;
+        }
+
+        private static bool SameSkeleton(SkeletonBone[] a, SkeletonBone[] b)
+        {
+            if (a == null || b == null || a.Length != b.Length) return false;
+            for (int i = 0; i < a.Length; i++)
+            {
+                if (a[i].name != b[i].name || Quaternion.Angle(a[i].rotation, b[i].rotation) > 0.01f
+                    || (a[i].position - b[i].position).sqrMagnitude > 1e-12f) return false;
+            }
+            return true;
         }
     }
 }

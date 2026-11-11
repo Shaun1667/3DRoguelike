@@ -1,7 +1,7 @@
 # TASKS.md
 
 ## 진행 요약 (2026-11-10 기준 — 새 세션은 여기부터 읽는다)
-**최신 (2026-11-10): 3-1 보상 선택 · Beast/Human 성향 구현, 조작 · 동작 수정(구르기 Ctrl · 달리기 Shift · 왼발) — 브랜치 `phase2-floor`, main 병합 전. Phase 2 플레이 확인 완료. 다음: 사용자가 `Tools/Game/Setup Test Room` · `Setup Floor` 실행 → 플레이 확인 → 테스트 실행 → 3-2 강화 표.**
+**최신 (2026-11-11): 3-1 보상 선택 · 조작 수정 · 점프 · 달리기 동작 플레이 확인 완료(테스트는 아직 실행 안 함) — 브랜치 `phase2-floor`, main 병합 전. 지금: 3-2 강화 표 착수 질문.**
 
 기존 까치 보스전은 `main`(2adecb2)에 그대로 있다. 제출물 저장소는 별도(GGachi).
 
@@ -145,7 +145,7 @@
   - 테스트: 디버그 도구라 없음
   - 확인 방법: `Floor` Play → Game 창 클릭 → F1로 창 → F2 켜고 옆 방에서 한 마리만 때리면 전부 쓰러지고 문이 열림 → F3은 바로 전부 처치
 
-- [x] **조작 · 동작 수정** (2026-11-10 사용자 "걷는 모습의 왼쪽 발 모양이 조금 이상해 틀어진거같아 / 구르기를 ctrl로 바꾸고 shift는 달리기로 해줘") — Setup 실행 · 플레이 확인 대기
+- [x] **조작 · 동작 수정** (2026-11-10 사용자 "걷는 모습의 왼쪽 발 모양이 조금 이상해 틀어진거같아 / 구르기를 ctrl로 바꾸고 shift는 달리기로 해줘") — 플레이 확인 완료 (2026-11-11 사용자 "플레이 확인 했어")
   - 결정 (2026-11-10, 사용자): 구르기 Shift → **Ctrl**(1-4의 "구르기를 Shift로" 결정을 바꿈), **Shift = 달리기**(새 입력 `Player/Sprint`)
   - 구현: `PlayerTuning.sprintMultiplier`, `PlayerController`(달리기 · `IsSprinting` · `DebugForceSprint`, 애니메이터 `MoveSpeed`로 걷기 동작 배속), `TestRoomSetup`이 Move 상태 속도를 `MoveSpeed`에 연결. 왼발: `ModelPrefabSetup`이 고라니 동작 FBX 9개를 고라니 아바타로 가져오게 함(Copy From Other Avatar)
   - 원인 (왼발): 동작 FBX가 각자 첫 프레임(걷는 중) 자세로 만든 아바타를 써서, 그 비대칭 자세가 기준이 되며 고라니에서 왼발 끝이 딛는 순간 약 25도 들림. 고라니 아바타로 옮겨 계산하면 오차 0(모의 확인). Foot IK는 원인 · 해결책 아님
@@ -153,9 +153,22 @@
   - 확인: 컴파일 오류 0. 입력 경로 Roll = leftCtrl · Sprint = leftShift. 달리기 이동 6.40 m/s · 걷기 4.00 m/s(코드 계산). 원인 측정 표는 하위 세션 보고
   - 확인 못 함: **`Tools/Game/Setup Test Room`을 아직 못 돌림**(하위 세션 권한에 막힘) → 그 전에는 애니메이터에 `MoveSpeed`가 없어 경고가 나고 왼발도 그대로. 실제 Shift · Ctrl 입력
   - 확인 방법: Unity에서 `Tools/Game/Setup Test Room` → `Tools/Game/Setup Floor` 실행 → Play → Shift를 누르고 걸으면 빨라지고, Ctrl로 구르고, 걸을 때 왼발 바닥이 땅에 붙으면 정상
+  - 결과 (2026-11-10, 사용자가 Setup Test Room 실행): 콘솔 에러 0, 동작 FBX 9개 모두 고라니 기준(CreateFromThisModel + 고라니 기본 회전 — CopyFromOther는 뼈대 구조가 달라 실패해서 바꿈), 컨트롤러 `MoveSpeed` 연결됨. 왼발: 기본 자세 대칭, 디딜 때 양발 바닥에 붙음. 발끝을 떼는 순간 왼쪽만 약 38° 더 꺾이는 것은 Walk.fbx 자체 모델에서도 같아 원본 동작의 성질 — 플레이 확인 대기
+
+- [x] **점프** (2026-11-10 사용자 "스페이스바는 점프로 넣어줘") — 플레이 확인 완료 (2026-11-11 사용자 "플레이 확인 했어")
+  - 구현: 입력 `Player/Jump`(Space, 원래 있던 것), `PlayerTuning.jumpHeight` 1.2 m(BALANCE 1번), `PlayerController.TryJump`(땅에 있고 공격 · 구르기 중이 아닐 때), `TestRoomSetup`이 `Jump` 트리거와 Jump 상태(클립 `Jump`, 공중 시간 약 0.69초에 맞춘 배속)를 넣음
+  - 정한 것 (Claude, 확인 필요): 높이 1.2 m, 공중에서도 방향 조작 · 공격 · 사격 가능, 공중 구르기는 막지 않음, 2단 점프 없음
+  - 확인 방법: `Tools/Game/Setup Test Room` 다시 실행 → Play → Space로 뛰고 착지 후 걷기로 돌아오면 정상
+
+- [x] **달리기 동작** (2026-11-10 사용자 "뛰는 모습이 어색해 뛰는 모션 있지 않았어?" → 후보 중 "Fast Run으로 해줘") — 플레이 확인 완료 (2026-11-11 사용자 "플레이 확인 했어")
+  - 원인: 프로젝트에 달리기 동작이 없어 Shift 달리기 때 걷기 동작을 1.6배로 재생하고 있었음
+  - 구현: `Downloads/Fast Run.fbx`(Mixamo, 동작만)를 `Art/Gorani/Animation/`에 복사. `TestRoomSetup`이 반복 재생으로 가져오고(걷기와 같은 루트 설정), Move 블렌드 트리의 (0, sprintMultiplier) 자리에 넣음. 배속 = 걷기 배속 × 걷기 클립 속도 ÷ 달리기 클립 속도(클립 averageSpeed로 계산, Setup 콘솔에 출력). `PlayerController`가 앞으로 달릴 때만 MoveY를 1.6까지 올림
+  - 정한 것 (Claude, 확인 필요): 앞(대각선 앞 포함)으로 달릴 때만 달리기 동작, 옆 · 뒤로 달리면 지금처럼 걷기 동작을 빨리. 걷기 ↔ 달리기 전환은 animationBlendSpeed(8/초)로 약 0.08초
+  - 결과: Setup이 Fast Run을 고라니 기준 Humanoid · 반복으로 가져옴, 달리기 배속 0.74(블렌드 트리 (0, 1.6)). 사용자 플레이 확인
+  - 확인 방법: `Tools/Game/Setup Test Room` 다시 실행 → Play → W + Shift로 달리면 달리기 동작, 발이 땅에서 미끄러지지 않으면 정상
 
 ## Phase 3. 숲 한 지역 + 보스
-- [x] **3-1. 보상 선택 · Beast/Human 성향** (2026-11-10 사용자 "3DRoguelike 다음 진행 사항 진행해줘") — Setup 실행 · 플레이 확인 대기
+- [x] **3-1. 보상 선택 · Beast/Human 성향** (2026-11-10 사용자 "3DRoguelike 다음 진행 사항 진행해줘") — 플레이 확인 완료 (2026-11-11 사용자 "플레이 확인 했어"), 테스트 실행 전
   - 결정 (2026-11-10, 사용자): 방을 깨면 방 가운데에 보상물이 나오고 주워서 고름 — 보상이 안 나올 수도 있음. 보물방(특수 방)은 적이 없고 희귀 보상이 반드시. 선택지는 완전 무작위 3개. 성향 수치는 선택 화면과 결과 화면에만 보임
   - 구현: 규칙 `SpecialRoomPlanner`(보물방, 꾸미기 난수) · `RewardPlanner` · `RewardSettings` · `FloorRewards` · `RewardDefinition`(성향 · 희귀도), `RoomKind.Treasure`, `RunStats.TakeReward` · `Beast` · `Human`. 보물방은 처음부터 깬 방 · 적 없음. `RewardTable` 에셋(일반 6 · 희귀 4), `RewardChoiceScreen`(카드 3장 · 1/2/3 · 클릭, 시간 멈춤). `FloorRun`이 층 시작 때 보물방 · 보상을 정하고, 방을 깨면 보상물(회전하는 상자, 희귀는 노랑)을 놓고, 가까이 가면 선택 화면. 미니맵 보물방 노란 점, 결과 화면에 성향 · 받은 보상 수
   - 정한 것 (Claude, 확인 필요): 보물방 층마다 1개(보스 아닌 막다른 방), 전투 방 보상 확률 50%, 보스 방은 보상 없음(층이 끝남), 보상물은 닿으면(1.4 m) 주움 · 키 없음, 일반 +1 · 희귀 +2, 보상 이름은 GDD 트리에서. **실제 효과(피해 · 속도)는 3-2 강화 표에서** — 지금은 성향만 오름. 같은 시드 = 같은 보물방 · 같은 보상(층 시작 때 방 Id 순서로 정함)

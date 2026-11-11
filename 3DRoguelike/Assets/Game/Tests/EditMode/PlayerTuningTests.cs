@@ -15,6 +15,7 @@ namespace Game.Tests
             Assert.That(tuning.moveSpeed, Is.EqualTo(4f));
             Assert.That(tuning.sprintMultiplier, Is.EqualTo(1.6f));
             Assert.That(tuning.gravity, Is.EqualTo(-20f));
+            Assert.That(tuning.jumpHeight, Is.EqualTo(1.2f));
             Assert.That(tuning.lookSensitivity, Is.EqualTo(0.08f));
             Assert.That(tuning.minPitch, Is.EqualTo(-30f));
             Assert.That(tuning.maxPitch, Is.EqualTo(60f));

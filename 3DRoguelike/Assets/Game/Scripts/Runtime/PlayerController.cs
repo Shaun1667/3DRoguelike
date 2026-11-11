@@ -13,6 +13,7 @@ namespace Game
         private static readonly int MoveXId = Animator.StringToHash("MoveX");
         private static readonly int MoveYId = Animator.StringToHash("MoveY");
         private static readonly int MoveSpeedId = Animator.StringToHash("MoveSpeed");
+        private static readonly int JumpId = Animator.StringToHash("Jump");
 
         [SerializeField] private PlayerTuning tuning;
         [SerializeField] private Transform cameraTarget;
@@ -25,8 +26,10 @@ namespace Game
         private InputAction moveAction;
         private InputAction lookAction;
         private InputAction sprintAction;
+        private InputAction jumpAction;
         private float pitch;
         private float verticalVelocity;
+        private bool jumping;
         private Vector2 blend;
 
         private void Awake()
@@ -35,7 +38,11 @@ namespace Game
             moveAction = InputSystem.actions.FindAction("Player/Move", throwIfNotFound: true);
             lookAction = InputSystem.actions.FindAction("Player/Look", throwIfNotFound: true);
             sprintAction = InputSystem.actions.FindAction("Player/Sprint", throwIfNotFound: true);
+            jumpAction = InputSystem.actions.FindAction("Player/Jump", throwIfNotFound: true);
         }
+
+        /// <summary>땅에 서 있다(지난 이동 기준).</summary>
+        public bool IsGrounded => controller.isGrounded;
 
         /// <summary>Shift를 누르고 움직이는 중(조준 · 공격 · 구르기 중이 아닐 때).</summary>
         public bool IsSprinting { get; private set; }
@@ -63,8 +70,10 @@ namespace Game
             if (gun.IsAiming) input *= tuning.aimMoveMultiplier;
             IsSprinting = (sprintAction.IsPressed() || DebugForceSprint) && !locked && !gun.IsAiming && input.sqrMagnitude > 0.01f;
             float speed = IsSprinting ? tuning.sprintMultiplier : 1f;
+            if (jumpAction.WasPressedThisFrame()) TryJump(locked);
             Move(input * speed);
-            Animate(input);
+            // 앞으로 달릴 때만 MoveY가 1을 넘어 달리기 동작으로 넘어간다(옆 · 뒤로 달리면 걷기 동작을 빨리 재생)
+            Animate(IsSprinting && input.y > 0f ? new Vector2(input.x, input.y * speed) : input);
             animator.SetFloat(MoveSpeedId, speed);
         }
 
@@ -75,9 +84,28 @@ namespace Game
             cameraTarget.localRotation = Quaternion.Euler(pitch, 0f, 0f);
         }
 
+        /// <summary>스페이스바 점프. 땅에 있고 공격 · 구르기 중이 아닐 때만 뛴다.</summary>
+        public bool TryJump(bool locked)
+        {
+            if (locked || !controller.isGrounded) return false;
+            verticalVelocity = Mathf.Sqrt(2f * tuning.jumpHeight * -tuning.gravity);
+            jumping = true;
+            animator.SetTrigger(JumpId);
+            return true;
+        }
+
         private void Move(Vector2 input)
         {
-            verticalVelocity = controller.isGrounded ? -1f : verticalVelocity + tuning.gravity * Time.deltaTime;
+            // 뛰어오른 첫 프레임은 아직 isGrounded라서, 올라가는 동안에는 땅 판정으로 속도를 지우지 않는다
+            if (controller.isGrounded && !(jumping && verticalVelocity > 0f))
+            {
+                verticalVelocity = -1f;
+                jumping = false;
+            }
+            else
+            {
+                verticalVelocity += tuning.gravity * Time.deltaTime;
+            }
             Vector3 horizontal = (transform.right * input.x + transform.forward * input.y) * tuning.moveSpeed + roll.Velocity;
             controller.Move((horizontal + Vector3.up * verticalVelocity) * Time.deltaTime);
         }
