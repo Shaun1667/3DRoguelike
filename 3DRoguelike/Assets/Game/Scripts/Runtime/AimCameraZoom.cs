@@ -15,7 +15,7 @@ namespace Game
 
         private void Update()
         {
-            blend = Mathf.MoveTowards(blend, gun.IsAiming ? 1f : 0f, tuning.aimBlendSpeed * Time.deltaTime);
+            blend = Mathf.MoveTowards(blend, gun.IsAiming ? 1f : 0f, tuning.aimBlendSpeed * gun.Upgrades.Scale(Rules.UpgradeStat.AimTransition) * Time.deltaTime);
             follow.CameraDistance = Mathf.Lerp(tuning.cameraDistance, tuning.aimCameraDistance, blend);
             if (crosshair.activeSelf != gun.IsAiming) crosshair.SetActive(gun.IsAiming);
         }

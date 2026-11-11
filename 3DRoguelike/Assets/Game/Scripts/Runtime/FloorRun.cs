@@ -87,6 +87,7 @@ namespace Game
             int battleRooms = 0;
             foreach (FloorRoom room in Layout.Rooms) if (room.Kind == RoomKind.Battle || room.Kind == RoomKind.Boss) battleRooms++;
             Stats = new RunStats(Seed, battleRooms);
+            player.GetComponent<PlayerUpgrades>().Use(Stats.Upgrades);
             Progress.RoomLocked += OnRoomLocked;
             Progress.RoomCleared += OnRoomCleared;
 
@@ -179,6 +180,9 @@ namespace Game
         private void OnRoomCleared(int roomId)
         {
             Stats.RecordRoomCleared();
+            // 재생 강화: 방을 깰 때 최대 체력의 일정 비율 회복
+            int heal = Mathf.RoundToInt(player.Health.Max * Stats.Upgrades.Bonus(UpgradeStat.HealOnRoomClear));
+            if (heal > 0 && !player.Health.IsDead) player.Health.Heal(heal);
             UpdateDoors();
             if (roomId != Layout.BossRoom.Id) SpawnPickup(roomId);
             if (roomId == Layout.BossRoom.Id && Stats.ClearFloor(Time.timeSinceLevelLoad))

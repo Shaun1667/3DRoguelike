@@ -21,7 +21,7 @@ namespace Game
 
         private void Update()
         {
-            weight = Mathf.MoveTowards(weight, gun.IsAiming ? 1f : 0f, tuning.aimBlendSpeed * Time.deltaTime);
+            weight = Mathf.MoveTowards(weight, gun.IsAiming ? 1f : 0f, tuning.aimBlendSpeed * gun.Upgrades.Scale(Rules.UpgradeStat.AimTransition) * Time.deltaTime);
         }
 
         private void OnAnimatorIK(int layerIndex)

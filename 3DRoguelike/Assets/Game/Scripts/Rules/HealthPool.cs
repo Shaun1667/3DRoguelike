@@ -25,6 +25,15 @@ namespace Game.Rules
             return dealt;
         }
 
+        /// <returns>실제로 오른 체력. 죽은 뒤에는 회복하지 않는다(되살리기는 <see cref="Restore"/>).</returns>
+        public int Heal(int amount)
+        {
+            if (amount <= 0 || IsDead) return 0;
+            int healed = Math.Min(amount, Max - Current);
+            Current += healed;
+            return healed;
+        }
+
         public void Restore()
         {
             Current = Max;

@@ -42,6 +42,7 @@ namespace Game
             health = player.Health;
             gun = player.Gun;
             health.Damaged += OnDamaged;
+            health.Healed += OnDamaged;
             gun.AmmoChanged += OnAmmoChanged;
             RefreshHealth();
             RefreshAmmo();
@@ -56,7 +57,11 @@ namespace Game
 
         private void OnDestroy()
         {
-            if (health != null) health.Damaged -= OnDamaged;
+            if (health != null)
+            {
+                health.Damaged -= OnDamaged;
+                health.Healed -= OnDamaged;
+            }
             if (gun != null) gun.AmmoChanged -= OnAmmoChanged;
             if (floor != null && floor.Progress != null)
             {
@@ -71,7 +76,7 @@ namespace Game
             if (gun.IsReloading != shownReloading) RefreshAmmo();
         }
 
-        private void OnDamaged(int amount) => RefreshHealth();
+        private void OnDamaged(int amount) => RefreshHealth(); // 맞았을 때 · 회복했을 때
         private void OnAmmoChanged(int ammo) => RefreshAmmo();
         private void OnRoomChanged(int roomId) => RefreshMinimap();
 

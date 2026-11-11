@@ -31,6 +31,7 @@ namespace Game
         private float verticalVelocity;
         private bool jumping;
         private Vector2 blend;
+        private PlayerUpgrades upgrades;
 
         private void Awake()
         {
@@ -39,6 +40,7 @@ namespace Game
             lookAction = InputSystem.actions.FindAction("Player/Look", throwIfNotFound: true);
             sprintAction = InputSystem.actions.FindAction("Player/Sprint", throwIfNotFound: true);
             jumpAction = InputSystem.actions.FindAction("Player/Jump", throwIfNotFound: true);
+            upgrades = GetComponent<PlayerUpgrades>();
         }
 
         /// <summary>땅에 서 있다(지난 이동 기준).</summary>
@@ -67,14 +69,15 @@ namespace Game
             Look(lookAction.ReadValue<Vector2>());
             bool locked = melee.IsAttacking || roll.IsRolling;
             Vector2 input = locked ? Vector2.zero : Vector2.ClampMagnitude(moveAction.ReadValue<Vector2>(), 1f);
-            if (gun.IsAiming) input *= tuning.aimMoveMultiplier;
+            if (gun.IsAiming) input *= Mathf.Min(1f, tuning.aimMoveMultiplier * upgrades.Scale(Rules.UpgradeStat.AimMoveSpeed));
             IsSprinting = (sprintAction.IsPressed() || DebugForceSprint) && !locked && !gun.IsAiming && input.sqrMagnitude > 0.01f;
             float speed = IsSprinting ? tuning.sprintMultiplier : 1f;
             if (jumpAction.WasPressedThisFrame()) TryJump(locked);
             Move(input * speed);
             // 앞으로 달릴 때만 MoveY가 1을 넘어 달리기 동작으로 넘어간다(옆 · 뒤로 달리면 걷기 동작을 빨리 재생)
             Animate(IsSprinting && input.y > 0f ? new Vector2(input.x, input.y * speed) : input);
-            animator.SetFloat(MoveSpeedId, speed);
+            // 이동 속도 강화만큼 동작도 빨리 재생해 발이 미끄러지지 않게 한다
+            animator.SetFloat(MoveSpeedId, speed * upgrades.Scale(Rules.UpgradeStat.MoveSpeed));
         }
 
         private void Look(Vector2 delta)
@@ -106,7 +109,7 @@ namespace Game
             {
                 verticalVelocity += tuning.gravity * Time.deltaTime;
             }
-            Vector3 horizontal = (transform.right * input.x + transform.forward * input.y) * tuning.moveSpeed + roll.Velocity;
+            Vector3 horizontal = (transform.right * input.x + transform.forward * input.y) * tuning.moveSpeed * upgrades.Scale(Rules.UpgradeStat.MoveSpeed) + roll.Velocity;
             controller.Move((horizontal + Vector3.up * verticalVelocity) * Time.deltaTime);
         }
 

@@ -14,62 +14,100 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::Game.RewardTable
   entries:
   - id: beast_strength
-    displayName: "\uADFC\uB825"
-    description: "\uB9E8\uC190 \uACF5\uACA9\uC774 \uBB35\uC9C1\uD574\uC9C4\uB2E4"
+    displayName: "근력"
+    description: "맨손 공격이 묵직해진다"
     tendency: 0
     amount: 1
     rarity: 0
+    effects:
+    - stat: 0
+      percent: 20
+    comingLater: 0
   - id: beast_move
-    displayName: "\uC774\uB3D9"
-    description: "\uB354 \uBE68\uB9AC \uC6C0\uC9C1\uC778\uB2E4"
+    displayName: "이동"
+    description: "더 빨리 움직인다"
     tendency: 0
     amount: 1
     rarity: 0
+    effects:
+    - stat: 1
+      percent: 10
+    comingLater: 0
   - id: beast_regen
-    displayName: "\uC7AC\uC0DD"
-    description: "\uC0C1\uCC98\uAC00 \uBE68\uB9AC \uC544\uBB38\uB2E4"
+    displayName: "재생"
+    description: "방을 깰 때마다 상처가 아문다"
     tendency: 0
     amount: 1
     rarity: 0
+    effects:
+    - stat: 2
+      percent: 20
+    comingLater: 0
   - id: human_pistol
-    displayName: "\uAD8C\uCD1D \uC190\uC9C8"
-    description: "\uAD8C\uCD1D\uC774 \uB354 \uC138\uAC8C \uB9DE\uB294\uB2E4"
+    displayName: "권총 손질"
+    description: "권총이 더 세게 맞는다"
     tendency: 1
     amount: 1
     rarity: 0
+    effects:
+    - stat: 3
+      percent: 20
+    comingLater: 0
   - id: human_magazine
-    displayName: "\uD0C4\uCC3D"
-    description: "\uD55C \uBC88\uC5D0 \uB354 \uB9CE\uC774 \uC3DC\uB2E4"
+    displayName: "탄창"
+    description: "한 번에 더 많이 쏜다"
     tendency: 1
     amount: 1
     rarity: 0
+    effects:
+    - stat: 4
+      percent: 20
+    comingLater: 0
   - id: human_aim
-    displayName: "\uC870\uC900"
-    description: "\uC870\uC900\uC774 \uBE68\uB77C\uC9C4\uB2E4"
+    displayName: "조준"
+    description: "조준이 빨라진다"
     tendency: 1
     amount: 1
     rarity: 0
+    effects:
+    - stat: 5
+      percent: 20
+    - stat: 6
+      percent: 20
+    comingLater: 0
   - id: beast_charge
-    displayName: "\uB3CC\uC9C4"
-    description: "\uC801\uC5D0\uAC8C \uBAB8\uC744 \uB358\uC9C4\uB2E4"
+    displayName: "돌진"
+    description: "적에게 몸을 던진다"
     tendency: 0
     amount: 2
     rarity: 1
+    effects: []
+    comingLater: 1
   - id: beast_dodge
-    displayName: "\uD68C\uD53C"
-    description: "\uAD6C\uB974\uAE30\uAC00 \uAE38\uACE0 \uBE68\uB77C\uC9C4\uB2E4"
+    displayName: "회피"
+    description: "구르기가 길고 빨라진다"
     tendency: 0
     amount: 2
     rarity: 1
+    effects:
+    - stat: 7
+      percent: 40
+    - stat: 8
+      percent: 40
+    comingLater: 0
   - id: human_shotgun
-    displayName: "\uC0B0\uD0C4\uCD1D"
-    description: "\uAC00\uAE4C\uC6B4 \uC801 \uC5EC\uB7FF\uC744 \uD55C \uBC88\uC5D0"
+    displayName: "산탄총"
+    description: "가까운 적 여럿을 한 번에"
     tendency: 1
     amount: 2
     rarity: 1
+    effects: []
+    comingLater: 1
   - id: human_explosive
-    displayName: "\uD3ED\uBC1C\uBB3C"
-    description: "\uBAA8\uC5EC \uC788\uB294 \uC801\uC744 \uB0A0\uB9B0\uB2E4"
+    displayName: "폭발물"
+    description: "모여 있는 적을 날린다"
     tendency: 1
     amount: 2
     rarity: 1
+    effects: []
+    comingLater: 1

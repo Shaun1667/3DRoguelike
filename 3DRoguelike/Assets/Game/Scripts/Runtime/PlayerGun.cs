@@ -30,6 +30,8 @@ namespace Game
         private float reloadEndTime;
         private float tracerEndTime;
         private bool reloading;
+        private PlayerUpgrades upgrades;
+        private int shownMagazine;
 
         /// <summary>남은 탄이 바뀔 때.</summary>
         public event Action<int> AmmoChanged;
@@ -38,7 +40,12 @@ namespace Game
         public event Action<IDamageable> Hit;
 
         public int Ammo { get; private set; }
-        public int Magazine => tuning.pistolMagazine;
+        /// <summary>강화(탄창)를 반영한 탄창 크기.</summary>
+        public int Magazine => upgrades.ScaleInt(Rules.UpgradeStat.PistolMagazine, tuning.pistolMagazine);
+        /// <summary>강화(권총 손질)를 반영한 한 발 피해.</summary>
+        public int Damage => upgrades.ScaleInt(Rules.UpgradeStat.PistolDamage, tuning.pistolDamage);
+        /// <summary>달린 강화. 조준 화면(카메라 · 팔)도 여기서 읽는다.</summary>
+        public PlayerUpgrades Upgrades => upgrades;
         public bool IsAiming { get; private set; }
         public bool IsReloading => reloading;
         public Vector3 AimPoint { get; private set; }
@@ -53,9 +60,27 @@ namespace Game
             reloadAction = InputSystem.actions.FindAction("Player/Reload", throwIfNotFound: true);
             mainCamera = Camera.main;
             hand = animator.GetBoneTransform(HumanBodyBones.RightHand);
-            Ammo = tuning.pistolMagazine;
+            upgrades = GetComponent<PlayerUpgrades>();
+            upgrades.Changed += OnUpgradesChanged;
+            shownMagazine = Magazine;
+            Ammo = shownMagazine;
             tracer.enabled = false;
             pistol.gameObject.SetActive(false);
+        }
+
+        private void OnDestroy()
+        {
+            if (upgrades != null) upgrades.Changed -= OnUpgradesChanged;
+        }
+
+        /// <summary>탄창이 커지면 늘어난 만큼 바로 채워 준다(줄면 넘친 탄을 버린다).</summary>
+        private void OnUpgradesChanged()
+        {
+            int magazine = Magazine;
+            if (magazine == shownMagazine) return;
+            Ammo = Mathf.Clamp(Ammo + magazine - shownMagazine, 0, magazine);
+            shownMagazine = magazine;
+            AmmoChanged?.Invoke(Ammo);
         }
 
         private void OnDisable()
@@ -105,7 +130,7 @@ namespace Game
             ShowTracer(end);
             if (target != null)
             {
-                target.TakeDamage(tuning.pistolDamage);
+                target.TakeDamage(Damage);
                 Hit?.Invoke(target);
             }
             return true;
@@ -113,7 +138,7 @@ namespace Game
 
         public void StartReload()
         {
-            if (reloading || Ammo == tuning.pistolMagazine) return;
+            if (reloading || Ammo >= Magazine) return;
             reloading = true;
             reloadEndTime = Time.time + tuning.pistolReloadTime;
         }
@@ -121,7 +146,7 @@ namespace Game
         private void FinishReload()
         {
             reloading = false;
-            Ammo = tuning.pistolMagazine;
+            Ammo = Magazine;
             AmmoChanged?.Invoke(Ammo);
         }
 

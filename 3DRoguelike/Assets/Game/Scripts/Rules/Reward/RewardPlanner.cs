@@ -44,6 +44,8 @@ namespace Game.Rules
     /// 방 Id 순서로 정하므로 같은 시드면 들어가는 순서와 무관하게 같은 보상이다.
     /// 전투 방: 확률로 일반 보상 선택지. 보물방: 반드시 희귀 보상 선택지. 시작 · 보스 방: 없음(보스 방을 깨면 층이 끝난다).
     /// 선택지는 표에서 겹치지 않게 무작위로 뽑고, 표가 모자라면 있는 만큼만.
+    /// 준비 중(<see cref="RewardDefinition.ComingLater"/>)인 보상은 내지 않는다. 보물방은 희귀가 선택지 수보다 적으면
+    /// 희귀를 모두 앞에 놓고 남은 자리를 일반으로 채운다.
     /// </summary>
     public static class RewardPlanner
     {
@@ -55,15 +57,26 @@ namespace Game.Rules
             if (random == null) throw new ArgumentNullException(nameof(random));
 
             var common = new List<RewardDefinition>(); var rare = new List<RewardDefinition>();
-            foreach (RewardDefinition reward in table) (reward.Rarity == RewardRarity.Rare ? rare : common).Add(reward);
+            foreach (RewardDefinition reward in table)
+            {
+                if (reward.ComingLater) continue;
+                (reward.Rarity == RewardRarity.Rare ? rare : common).Add(reward);
+            }
 
             var offers = new IReadOnlyList<RewardDefinition>[layout.Rooms.Count];
             foreach (FloorRoom room in layout.Rooms)
             {
-                List<RewardDefinition> pool = null;
-                if (room.Kind == RoomKind.Treasure) pool = rare;
-                else if (room.Kind == RoomKind.Battle && random.NextFloat() < settings.BattleRoomChance) pool = common;
-                offers[room.Id] = pool == null ? (IReadOnlyList<RewardDefinition>)Array.Empty<RewardDefinition>() : Pick(pool, settings.Choices, random).AsReadOnly();
+                List<RewardDefinition> picked = null;
+                if (room.Kind == RoomKind.Treasure)
+                {
+                    picked = Pick(rare, settings.Choices, random);
+                    if (picked.Count < settings.Choices) picked.AddRange(Pick(common, settings.Choices - picked.Count, random));
+                }
+                else if (room.Kind == RoomKind.Battle && random.NextFloat() < settings.BattleRoomChance)
+                {
+                    picked = Pick(common, settings.Choices, random);
+                }
+                offers[room.Id] = picked == null ? (IReadOnlyList<RewardDefinition>)Array.Empty<RewardDefinition>() : picked.AsReadOnly();
             }
             return new FloorRewards(offers);
         }

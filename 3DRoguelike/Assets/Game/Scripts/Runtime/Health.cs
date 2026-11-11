@@ -16,6 +16,9 @@ namespace Game
 
         public event Action Died;
 
+        /// <summary>회복한 순간. 값은 실제로 오른 체력.</summary>
+        public event Action<int> Healed;
+
         /// <summary>true를 돌려주는 동안 피해를 받지 않는다 (구르기 무적 등).</summary>
         public Func<bool> DamageBlocked { get; set; }
 
@@ -49,6 +52,14 @@ namespace Game
             invulnerableEndTime = Time.time + invulnerableTime;
             Damaged?.Invoke(dealt);
             if (pool.IsDead) Died?.Invoke();
+        }
+
+        /// <summary>회복. 실제로 오른 만큼 <see cref="Healed"/>를 알린다.</summary>
+        public int Heal(int amount)
+        {
+            int healed = pool.Heal(amount);
+            if (healed > 0) Healed?.Invoke(healed);
+            return healed;
         }
 
         public void Restore()

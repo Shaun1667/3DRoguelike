@@ -399,6 +399,7 @@ namespace Game.EditorTools
             vitals.FindProperty("roll").objectReferenceValue = roll;
             vitals.FindProperty("animator").objectReferenceValue = animator;
             vitals.ApplyModifiedPropertiesWithoutUndo();
+            root.AddComponent<PlayerUpgrades>(); // 판 안 강화(3-2). 층에서는 FloorRun이 판 기록의 합계를 넘긴다
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             Object.DestroyImmediate(root);

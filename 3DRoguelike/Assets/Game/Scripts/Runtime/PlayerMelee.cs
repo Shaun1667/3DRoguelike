@@ -25,6 +25,7 @@ namespace Game
         private readonly Collider[] overlaps = new Collider[MaxOverlaps];
         private readonly HashSet<IDamageable> hitThisSwing = new HashSet<IDamageable>();
         private InputAction attackAction;
+        private PlayerUpgrades upgrades;
         private bool nextIsLeft;
         private bool hitPending;
         private float hitTime;
@@ -38,7 +39,11 @@ namespace Game
         private void Awake()
         {
             attackAction = InputSystem.actions.FindAction("Player/Attack", throwIfNotFound: true);
+            upgrades = GetComponent<PlayerUpgrades>();
         }
+
+        /// <summary>강화(근력)를 반영한 한 대 피해.</summary>
+        public int Damage => upgrades.ScaleInt(Rules.UpgradeStat.MeleeDamage, tuning.meleeDamage);
 
         private void Update()
         {
@@ -81,7 +86,7 @@ namespace Game
                 var target = other.GetComponentInParent<IDamageable>();
                 if (target == null || !hitThisSwing.Add(target)) continue;
 
-                target.TakeDamage(tuning.meleeDamage);
+                target.TakeDamage(Damage);
                 Hit?.Invoke(target);
             }
         }

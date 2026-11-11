@@ -46,12 +46,27 @@ namespace Game
                 cards[i].gameObject.SetActive(used);
                 if (!used) continue;
                 RewardDefinition reward = offers[i];
-                cardTexts[i].text = $"<size=130%><b>{reward.Name}</b></size>\n\n{reward.Description}\n\n{reward.Tendency} +{reward.Amount}\n<size=70%>[{i + 1}]</size>";
+                cardTexts[i].text = $"<size=130%><b>{reward.Name}</b></size>\n\n{reward.Description}\n\n{EffectLines(reward, stats.Upgrades)}{reward.Tendency} +{reward.Amount}\n<size=70%>[{i + 1}]</size>";
             }
             panel.SetActive(true);
             Time.timeScale = 0f;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
+        }
+
+        /// <summary>"근접 피해 +20%  (지금 +20%)" 줄들. 이미 가진 강화가 있으면 지금 합계도 보여 준다.</summary>
+        private static string EffectLines(RewardDefinition reward, UpgradeSheet upgrades)
+        {
+            var text = new System.Text.StringBuilder();
+            foreach (StatEffect effect in reward.Effects)
+            {
+                text.Append("<color=#9fe39f>").Append(UpgradeStats.Describe(effect)).Append("</color>");
+                float now = upgrades.Bonus(effect.stat) * 100f;
+                if (now > 0.01f) text.Append($"<size=75%>  (지금 +{now:0.#}%)</size>");
+                text.Append('\n');
+            }
+            if (reward.Effects.Count > 0) text.Append('\n');
+            return text.ToString();
         }
 
         /// <summary>고르기(키 · 클릭 · 확인용 코드). 범위를 벗어나면 무시한다.</summary>

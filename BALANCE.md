@@ -4,7 +4,7 @@
 | 번호 | 에셋 | 클래스 |
 |---|---|---|
 | 1~5 | `Assets/Game/Data/PlayerTuning.asset` | `PlayerTuning` |
-| 7 · 8 · 10 · 11 | `Assets/Game/Data/FloorTuning.asset` · `RewardTable.asset` | `FloorTuning` → `FloorLayoutSettings` · `EncounterSettings` · `RewardSettings`(Game.Rules), `RewardTable` |
+| 7 · 8 · 10 · 11 · 12 | `Assets/Game/Data/FloorTuning.asset` · `RewardTable.asset` | `FloorTuning` → `FloorLayoutSettings` · `EncounterSettings` · `RewardSettings`(Game.Rules), `RewardTable` |
 | 9 | `Assets/Game/Data/MutantTuning.asset` | `MutantTuning` |
 
 ## 1. 플레이어 조작
@@ -129,3 +129,19 @@
 | 선택지 수 `rewardChoices` | 3 | 사용자 결정 "완전 무작위 3개" |
 | 보물방 | 층마다 1개(보스 아닌 막다른 방) · 희귀 보상 반드시 | 사용자 결정, 수는 첫 시도 |
 | 성향 양 | 일반 +1 · 희귀 +2 | 첫 시도. 실제 효과는 3-2 강화 표 |
+
+## 12. 강화 효과
+`Data/RewardTable.asset`의 보상마다 붙은 효과(`effects`). 퍼센트는 기본값(1 · 3번 수치) 기준이고, 같은 보상을 다시 고르면 더해진다(상한 없음). 값을 바꾸면 `UpgradeSheetTests.RewardTable_MatchesBalance`도 함께 고친다. 결정 2026-11-11(사용자): 일반 +20% · 희귀 +40%, 쌓임, 기술 보상은 나중.
+
+| 보상 | 효과 | 1번 고르면 | 근거 |
+|---|---|---|---|
+| 근력 | 근접 피해 +20% | 10 → 12 | 일반 크기 |
+| 이동 | 이동 속도 +10% | 4 → 4.4 m/s (달리기 7.0) | 일반의 절반 — 빨라지면 적(3 m/s)과 거리 벌리기가 너무 쉬워짐. 동작 배속도 같이 올라감 |
+| 재생 | 방을 깰 때 최대 체력의 20% 회복 | 100 기준 20 | 기본 회복이 0이라 "방을 깰 때"로 줌 |
+| 권총 손질 | 권총 피해 +20% | 6 → 7 (반올림) | 일반 크기. 두 번이면 6 × 1.4 = 8 |
+| 탄창 | 탄창 +20% | 12 → 14 (반올림) | 늘어난 만큼 바로 채움 |
+| 조준 | 조준 전환 +20%, 조준 중 이동 +20% | 0.17 → 0.14초, 이동 배율 0.6 → 0.72 | 이름대로 조준만. 이동 배율은 1을 넘지 않음 |
+| 회피 (희귀) | 구르기 거리 +40%, 구르기 재사용 +40% | 4.8 → 6.7 m, 대기 1 → 0.71초 | 희귀 크기. 대기는 구르는 시간 0.8초보다 짧아지지 않음 |
+| 돌진 · 산탄총 · 폭발물 (희귀) | 없음 — 준비 중(`comingLater`), 선택지에 안 나옴 | — | 기술은 따로 항목에서. 그동안 보물방은 회피 + 일반 2장 |
+
+정수 값(피해 · 탄창)은 반올림(.5는 올림)하고 1 아래로 내려가지 않는다.

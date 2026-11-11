@@ -136,6 +136,48 @@ namespace Game.Tests
             Assert.That(stats.Beast, Is.EqualTo(1));
         }
 
+        /// <summary>3-2: 기술이 아직 없는 보상은 내지 않고, 희귀가 모자란 보물방은 희귀를 앞에 두고 일반으로 채운다.</summary>
+        [Test]
+        public void ComingLater_IsNeverOffered_AndTreasureFillsWithCommon()
+        {
+            var table = new List<RewardDefinition>();
+            for (int i = 0; i < 6; i++) table.Add(new RewardDefinition($"c{i}", "", "", Tendency.Beast, 1, RewardRarity.Common));
+            table.Add(new RewardDefinition("later_common", "", "", Tendency.Beast, 1, RewardRarity.Common, comingLater: true));
+            table.Add(new RewardDefinition("dodge", "", "", Tendency.Beast, 2, RewardRarity.Rare));
+            for (int i = 0; i < 3; i++) table.Add(new RewardDefinition($"later{i}", "", "", Tendency.Human, 2, RewardRarity.Rare, comingLater: true));
+
+            for (uint seed = 0; seed < 200; seed++)
+            {
+                var run = new RunRandom(new RunSeed(seed));
+                FloorLayout layout = FloorGeneratorTests.Generate(seed, 0);
+                int treasure = SpecialRoomPlanner.AssignTreasure(layout, run.Create(RandomPurpose.Decor, 0));
+                FloorRewards rewards = RewardPlanner.Plan(layout, new RewardSettings(1f, 3), table, run.Create(RandomPurpose.Reward, 0));
+                foreach (FloorRoom room in layout.Rooms)
+                {
+                    IReadOnlyList<RewardDefinition> offers = rewards.OffersFor(room.Id);
+                    Assert.That(offers.Any(r => r.ComingLater), Is.False);
+                    Assert.That(offers.Select(r => r.Id).Distinct().Count(), Is.EqualTo(offers.Count));
+                }
+                if (treasure < 0) continue;
+                IReadOnlyList<RewardDefinition> chest = rewards.OffersFor(treasure);
+                Assert.That(chest.Count, Is.EqualTo(3));
+                Assert.That(chest[0].Id, Is.EqualTo("dodge"), "희귀가 맨 앞(보상물 색이 희귀)");
+                Assert.That(chest.Skip(1).All(r => r.Rarity == RewardRarity.Common), Is.True);
+            }
+        }
+
+        [Test]
+        public void TakeReward_AddsEffectsToUpgrades()
+        {
+            var stats = new RunStats(new RunSeed(1u), 5);
+            var strength = new RewardDefinition("s", "s", "", Tendency.Beast, 1, RewardRarity.Common, new[] { new StatEffect(UpgradeStat.MeleeDamage, 20f) });
+            stats.TakeReward(strength);
+            stats.TakeReward(strength);
+
+            Assert.That(stats.Upgrades.Bonus(UpgradeStat.MeleeDamage), Is.EqualTo(0.4f).Within(1e-5f));
+            Assert.That(stats.Upgrades.Bonus(UpgradeStat.MoveSpeed), Is.EqualTo(0f));
+        }
+
         [Test]
         public void BadValues_Throw()
         {

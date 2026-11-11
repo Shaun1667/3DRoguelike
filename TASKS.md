@@ -1,7 +1,7 @@
 # TASKS.md
 
 ## 진행 요약 (2026-11-10 기준 — 새 세션은 여기부터 읽는다)
-**최신 (2026-11-11): 3-1 보상 선택 · 조작 수정 · 점프 · 달리기 동작 플레이 확인 완료(테스트는 아직 실행 안 함) — 브랜치 `phase2-floor`, main 병합 전. 지금: 3-2 강화 표 착수 질문.**
+**최신 (2026-11-11): 3-2 강화 표 구현(수치 강화 7종, 기술 3종은 나중) — Setup 실행 · 플레이 확인 대기, 테스트는 3-1부터 아직 실행 안 함. 브랜치 `phase2-floor`, main 병합 전. 다음: 사용자가 `Setup Test Room` · `Setup Floor` 실행 → 플레이 확인 → 테스트 실행 → 3-3 적 3~4종.**
 
 기존 까치 보스전은 `main`(2adecb2)에 그대로 있다. 제출물 저장소는 별도(GGachi).
 
@@ -176,7 +176,13 @@
   - 확인: (Unity 확인 전)
   - 테스트 작성, 실행 안 함: `RewardPlannerTests` 8개, `PlayerTuningTests`에 달리기 · 보상 수치
   - 확인 방법: Setup 두 메뉴 실행 뒤 `Floor` Play → 미니맵 노란 점(보물방)에 가면 노란 상자 → 닿으면 희귀 카드 3장 → 고르면 성향이 오름(결과 화면에 표시). 전투 방은 깬 뒤 반쯤 파란 상자가 나옴
-- [ ] 3-2. 강화 표 (효과 조회 한 곳)
+- [x] **3-2. 강화 표 (효과 조회 한 곳)** (2026-11-11 사용자 "3-2 진행해줘") — Setup 실행 · 플레이 확인 대기
+  - 결정 (2026-11-11, 사용자): 이번에는 **수치 강화만** — 돌진 · 산탄총 · 폭발물(새 기술)은 나중 항목으로, 그동안 선택지에서 뺌. 같은 강화는 **고를 때마다 쌓임**(상한 없음). 크기는 **일반 +20% · 희귀 +40%**(이동만 +10%)
+  - 구현: 규칙 `UpgradeStat`(능력치 9개, 모두 클수록 좋은 방향) · `StatEffect` · `UpgradeSheet`(합계 · 조회 한 곳, `Scale` · `Bonus` · `ScaleInt`), `RewardDefinition.Effects` · `ComingLater`, `RunStats.Upgrades`, `HealthPool.Heal`. `RewardPlanner`가 준비 중 보상을 빼고, 보물방에 희귀가 모자라면 희귀를 앞에 두고 일반으로 채움. 화면: `PlayerUpgrades`(플레이어가 읽는 곳, 층에서는 `FloorRun`이 판 합계를 넘김) → `PlayerMelee` · `PlayerGun` · `PlayerRoll` · `PlayerController` · `AimCameraZoom` · `PlayerAimIK`. 재생은 `FloorRun`이 방을 깰 때 `Health.Heal`(HUD가 `Healed`로 고침). 카드에 효과 줄과 지금 합계를 보여 줌. `RewardTable` 에셋에 효과를 넣음(Setup이 덮어쓰지 않아 직접)
+  - 정한 것 (Claude, 확인 필요): 효과 배정 — 근력 = 근접 피해, 이동 = 이동 속도(동작 배속도 같이), 재생 = 방을 깰 때 최대 체력 20% 회복, 권총 손질 = 권총 피해, 탄창 = 탄창 크기(늘면 바로 채움), 조준 = 조준 전환 · 조준 중 이동, 회피 = 구르기 거리 · 재사용. 보물방 빈자리는 일반 보상으로 채움(희귀가 회피 하나뿐이라). 정수 값은 반올림
+  - 수치: BALANCE 12번
+  - 테스트 작성, 실행 안 함: `UpgradeSheetTests` 6개(에셋 값 포함), `RewardPlannerTests`에 준비 중 · 보물방 채우기 · 강화 합계 2개, `HealthPoolTests`에 회복 1개
+  - 확인 방법: `Tools/Game/Setup Test Room`(플레이어에 `PlayerUpgrades`가 붙음) → `Tools/Game/Setup Floor` → `Floor` Play → 보상 카드에 초록 효과 줄(예: "근접 피해 +20%")이 보이고, 고르면 바로 반영 — 근력을 3번 고르면 Mutant(체력 30)가 근접 3대 → 2대(16 × 2), 탄창은 HUD 탄 수가 12 → 14, 재생은 맞은 뒤 방을 깨면 체력이 오름. 보물방(노란 점)에는 회피 + 일반 2장. 돌진 · 산탄총 · 폭발물은 나오지 않음
 - [ ] 3-3. 적 3~4종 (AI 하나 + 특성 표)
 - [ ] 3-4. 층 이동 · 첫 층 권총 보장
 - [ ] 3-5. 숲 보스

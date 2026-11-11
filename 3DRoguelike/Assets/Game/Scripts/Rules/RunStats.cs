@@ -36,10 +36,12 @@ namespace Game.Rules
         public int Beast { get; private set; }
         public int Human { get; private set; }
         public IReadOnlyList<RewardDefinition> RewardsTaken => rewardsTaken;
+        /// <summary>고른 보상의 능력치 강화 합계(판마다 0에서 시작).</summary>
+        public UpgradeSheet Upgrades { get; } = new UpgradeSheet();
 
         readonly List<RewardDefinition> rewardsTaken = new List<RewardDefinition>();
 
-        /// <summary>보상을 골랐다. 그 성향이 보상의 양만큼 오른다.</summary>
+        /// <summary>보상을 골랐다. 그 성향이 보상의 양만큼 오르고, 효과가 강화 합계에 더해진다.</summary>
         /// <returns>판이 진행 중이라 반영했으면 true</returns>
         public bool TakeReward(RewardDefinition reward)
         {
@@ -47,6 +49,7 @@ namespace Game.Rules
             if (Outcome != RunOutcome.Playing) return false;
             if (reward.Tendency == Tendency.Beast) Beast += reward.Amount; else Human += reward.Amount;
             rewardsTaken.Add(reward);
+            Upgrades.Add(reward);
             return true;
         }
 

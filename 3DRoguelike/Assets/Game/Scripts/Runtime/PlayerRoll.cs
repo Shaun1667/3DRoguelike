@@ -5,7 +5,7 @@ using UnityEngine.InputSystem;
 namespace Game
 {
     /// <summary>
-    /// 구르기(Shift). 입력 방향(없으면 정면)으로 구르고, 앞쪽 일부 시간만 무적이다.
+    /// 구르기(Ctrl). 입력 방향(없으면 정면)으로 구르고, 앞쪽 일부 시간만 무적이다.
     /// 시점은 계속 돌릴 수 있어서 몸(Visual)만 구르는 방향을 바라보게 한다.
     /// </summary>
     public sealed class PlayerRoll : MonoBehaviour
@@ -30,13 +30,17 @@ namespace Game
 
         public bool IsRolling => rolling;
         public bool IsInvulnerable => Time.time < invulnerableEndTime;
-        public Vector3 Velocity => rolling ? direction * tuning.rollSpeed : Vector3.zero;
+        /// <summary>강화(회피)를 반영한 구르기 속도. 시간은 그대로라 더 멀리 구른다.</summary>
+        public Vector3 Velocity => rolling ? direction * tuning.rollSpeed * upgrades.Scale(Rules.UpgradeStat.RollSpeed) : Vector3.zero;
+
+        private PlayerUpgrades upgrades;
 
         private void Awake()
         {
             rollAction = InputSystem.actions.FindAction("Player/Roll", throwIfNotFound: true);
             moveAction = InputSystem.actions.FindAction("Player/Move", throwIfNotFound: true);
             visual = animator.transform;
+            upgrades = GetComponent<PlayerUpgrades>();
         }
 
         private void OnDisable()
@@ -73,7 +77,8 @@ namespace Game
             rolling = true;
             endTime = Time.time + tuning.rollDuration;
             invulnerableEndTime = Time.time + tuning.rollDuration * tuning.rollInvulnerableRatio;
-            nextRollTime = Time.time + tuning.rollCooldown;
+            // 재사용 대기는 구르는 시간보다 짧아지지 않는다(구르는 중에는 어차피 못 구름)
+            nextRollTime = Time.time + Mathf.Max(tuning.rollDuration, tuning.rollCooldown / upgrades.Scale(Rules.UpgradeStat.RollRecovery));
             animator.SetTrigger(RollId);
             Rolled?.Invoke();
             return true;

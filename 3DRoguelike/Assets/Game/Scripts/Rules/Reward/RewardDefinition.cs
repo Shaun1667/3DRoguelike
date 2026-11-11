@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Game.Rules
 {
@@ -16,10 +17,11 @@ namespace Game.Rules
         Rare,
     }
 
-    /// <summary>보상 하나. 실제 효과(피해 · 속도 등)는 3-2 강화 표에서 이 Id로 찾는다.</summary>
+    /// <summary>보상 하나. 고르면 성향이 오르고, 효과(<see cref="Effects"/>)가 <see cref="UpgradeSheet"/>에 더해진다.</summary>
     public sealed class RewardDefinition
     {
-        public RewardDefinition(string id, string name, string description, Tendency tendency, int amount, RewardRarity rarity)
+        public RewardDefinition(string id, string name, string description, Tendency tendency, int amount, RewardRarity rarity,
+                                IReadOnlyList<StatEffect> effects = null, bool comingLater = false)
         {
             if (string.IsNullOrEmpty(id)) throw new ArgumentException("Reward id is required.", nameof(id));
             if (amount < 0) throw new ArgumentOutOfRangeException(nameof(amount));
@@ -29,7 +31,14 @@ namespace Game.Rules
             Tendency = tendency;
             Amount = amount;
             Rarity = rarity;
+            Effects = effects == null ? (IReadOnlyList<StatEffect>)Array.Empty<StatEffect>() : new List<StatEffect>(effects).AsReadOnly();
+            ComingLater = comingLater;
         }
+
+        /// <summary>능력치 강화. 같은 보상을 다시 고르면 또 더해진다.</summary>
+        public IReadOnlyList<StatEffect> Effects { get; }
+        /// <summary>기술(돌진 · 산탄총 등)이 아직 없어 선택지에 내지 않는 보상(결정 2026-11-11, 기술은 나중 항목).</summary>
+        public bool ComingLater { get; }
 
         public string Id { get; }
         public string Name { get; }
