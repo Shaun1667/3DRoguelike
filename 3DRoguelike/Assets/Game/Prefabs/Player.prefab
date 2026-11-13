@@ -159,6 +159,8 @@ GameObject:
   - component: {fileID: 5577743127398903433}
   - component: {fileID: 6936733172004137802}
   - component: {fileID: 5143879646021000587}
+  - component: {fileID: 8161590913714033829}
+  - component: {fileID: 67431107247222437}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -323,6 +325,33 @@ MonoBehaviour:
   roll: {fileID: 3657653419441435848}
   animator: {fileID: 3083816923440732194}
   restartOnR: 1
+--- !u!114 &8161590913714033829
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4007715559002320204}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 753d73873e6778041bfc201e88f19a83, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.PlayerUpgrades
+--- !u!114 &67431107247222437
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4007715559002320204}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d06a6f802e9afa24a92461f28f87d84f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Game.Runtime::Game.PlayerForm
+  tuning: {fileID: 11400000, guid: dc741f5697118f84c91092858d24fa57, type: 2}
+  animator: {fileID: 3083816923440732194}
+  mutantController: {fileID: 9100000, guid: e05e15e8a945c574f9da6595a209eba5, type: 2}
 --- !u!1 &5821493286120222906
 GameObject:
   m_ObjectHideFlags: 0

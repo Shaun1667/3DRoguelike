@@ -39,8 +39,11 @@ namespace Game.EditorTools
             EnableFlash(AssetDatabase.LoadAssetAtPath<Material>(GoraniMaterialPath));
             PlayerTuning tuning = LoadOrCreateTuning();
             MutantTuning enemyTuning = LoadOrCreateEnemyTuning();
-            AnimatorController controller = BuildController(tuning);
-            GameObject playerPrefab = BuildPlayerPrefab(tuning, controller);
+            AnimatorController controller = BuildController(tuning, ControllerPath, NormalMotions);
+            AnimatorController mutantController = null;
+            if (HasClips(MutantMotions)) mutantController = BuildController(tuning, MutantControllerPath, MutantMotions);
+            else Debug.LogWarning($"[TestRoomSetup] Mutant 동작 파일({MutantMotions.Walk} · {MutantMotions.Run} · {MutantMotions.Jump}.fbx)이 없어 Mutant 모습은 빼고 만듭니다.");
+            GameObject playerPrefab = BuildPlayerPrefab(tuning, controller, mutantController);
             GameObject enemyPrefab = BuildMutantPrefab(enemyTuning);
             BuildScene(playerPrefab, enemyPrefab);
             BuildSceneList.Ensure(ScenePath, first: false);
@@ -108,10 +111,36 @@ namespace Game.EditorTools
             throw new System.InvalidOperationException($"동작을 찾지 못했습니다: {fileName}");
         }
 
-        private static AnimatorController BuildController(PlayerTuning tuning)
+        /// <summary>
+        /// 앞으로 가는 동작 묶음(파일 이름, `Art/Gorani/Animation/` 안). 보통 모습과 Beast가 높을 때의 Mutant 모습이 컨트롤러를 하나씩 갖고,
+        /// 나머지 동작(대기 · 옆 · 뒤 · 공격 · 구르기 · 죽음)은 같이 쓴다. 새 모습 = 묶음 한 줄 + 컨트롤러 경로.
+        /// </summary>
+        private readonly struct MotionSet
         {
-            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(ControllerPath);
-            if (controller == null) controller = AnimatorController.CreateAnimatorControllerAtPath(ControllerPath);
+            public readonly string Walk, Run, Jump;
+            public MotionSet(string walk, string run, string jump) { Walk = walk; Run = run; Jump = jump; }
+        }
+
+        private static readonly MotionSet NormalMotions = new MotionSet("Walk", "Run", "Jump");
+        private static readonly MotionSet MutantMotions = new MotionSet("Mutant Walk", "Mutant Run", "Mutant Jump");
+        private const string MutantControllerPath = "Assets/Game/Art/Gorani/Gorani_Mutant.controller";
+
+        /// <summary>walkPlaybackSpeed 2.4가 4 m/s에 발이 맞았던 걷기 클립(Mixamo Standard Walk)의 앞으로 가는 속도. 다른 걷기 클립은 이 비율로 맞춘다.</summary>
+        private const float ReferenceWalkClipSpeed = 1.4976f;
+
+        private static bool HasClips(MotionSet motions)
+        {
+            foreach (string clip in new[] { motions.Walk, motions.Run, motions.Jump })
+            {
+                if (AssetImporter.GetAtPath($"{ClipFolder}/{clip}.fbx") == null) return false;
+            }
+            return true;
+        }
+
+        private static AnimatorController BuildController(PlayerTuning tuning, string path, MotionSet motions)
+        {
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
+            if (controller == null) controller = AnimatorController.CreateAnimatorControllerAtPath(path);
 
             EnsureParameter(controller, "MoveX", AnimatorControllerParameterType.Float);
             EnsureParameter(controller, "MoveY", AnimatorControllerParameterType.Float);
@@ -124,18 +153,19 @@ namespace Game.EditorTools
             tree.blendParameter = "MoveX";
             tree.blendParameterY = "MoveY";
             float walk = tuning.walkPlaybackSpeed;
-            EnsureLoop("Fast Run");
+            EnsureLoop(motions.Walk);
+            EnsureLoop(motions.Run);
             tree.children = new[]
             {
                 Child("Idle", 0f, 0f, 1f),
-                Child("Walk", 0f, 1f, walk),
-                Child("Fast Run", 0f, tuning.sprintMultiplier, RunTimeScale(walk, tuning.sprintMultiplier)),
+                Child(motions.Walk, 0f, 1f, ForwardTimeScale(motions.Walk, walk, 1f)),
+                Child(motions.Run, 0f, tuning.sprintMultiplier, ForwardTimeScale(motions.Run, walk, tuning.sprintMultiplier)),
                 Child("Walking Backward", 0f, -1f, walk),
                 Child("Left Strafe Walking", -1f, 0f, walk),
                 Child("Right Strafe Walking", 1f, 0f, walk),
             };
             EditorUtility.SetDirty(tree);
-            // Shift 달리기: 앞으로 달릴 때 PlayerController가 MoveY를 sprintMultiplier까지 올려 Fast Run으로 넘어간다.
+            // Shift 달리기: 앞으로 달릴 때 PlayerController가 MoveY를 sprintMultiplier까지 올려 달리기 동작으로 넘어간다.
             // MoveSpeed(평소 1, 달릴 때 sprintMultiplier)는 상태 전체 배속이라, 옆 · 뒤로 달릴 때는 걷기 동작이 빨라진다
             EnsureParameter(controller, "MoveSpeed", AnimatorControllerParameterType.Float);
             AnimatorControllerParameter[] parameters = controller.parameters;
@@ -149,7 +179,7 @@ namespace Game.EditorTools
             moveState.speedParameterActive = true;
             AddAttackStates(controller, machine, tuning);
             AddRollState(controller, machine, move: FindState(machine, "Move"), tuning);
-            AddJumpState(controller, machine, move: FindState(machine, "Move"), tuning);
+            AddJumpState(controller, machine, move: FindState(machine, "Move"), tuning, motions.Jump);
             AddDeathState(controller, machine);
             AnimatorControllerLayer[] layers = controller.layers;
             layers[0].iKPass = true; // 조준 중 오른팔 IK
@@ -220,11 +250,11 @@ namespace Game.EditorTools
         /// 점프(스페이스바, 2026-11-10). 클립 전체를 공중에 떠 있는 시간(2 × √(2 × 높이 ÷ |중력|))에 맞춰 재생하고 이동으로 돌아간다.
         /// 클립의 몸 위아래 움직임은 루트 모션으로 빠지고(applyRootMotion 꺼짐), 실제 높이는 PlayerController가 정한다.
         /// </summary>
-        private static void AddJumpState(AnimatorController controller, AnimatorStateMachine machine, AnimatorState move, PlayerTuning tuning)
+        private static void AddJumpState(AnimatorController controller, AnimatorStateMachine machine, AnimatorState move, PlayerTuning tuning, string clip)
         {
             EnsureParameter(controller, "Jump", AnimatorControllerParameterType.Trigger);
             AnimatorState state = FindState(machine, "Jump") ?? machine.AddState("Jump");
-            state.motion = LoadClip("Jump");
+            state.motion = LoadClip(clip);
             float airTime = 2f * Mathf.Sqrt(2f * tuning.jumpHeight / Mathf.Max(-tuning.gravity, 0.01f));
             state.speed = state.motion.averageDuration / Mathf.Max(airTime, 0.1f);
 
@@ -265,21 +295,21 @@ namespace Game.EditorTools
         }
 
         /// <summary>
-        /// 달리기 클립 배속. 걷기는 walkPlaybackSpeed에서 moveSpeed에 발이 맞으므로, 두 클립이 앞으로 가는 속도의 비율로 맞춘다.
-        /// 달릴 때 상태 배속 MoveSpeed가 sprintMultiplier를 곱하므로 여기서는 곱하지 않는다.
+        /// 앞으로 가는 클립(걷기 · 달리기)의 배속. 기준 걷기 클립이 walkPlaybackSpeed에서 moveSpeed에 발이 맞았으므로,
+        /// 클립이 앞으로 가는 속도의 비율로 맞추면 어느 클립이든 발이 맞는다. 달릴 때는 상태 배속 MoveSpeed가 sprintMultiplier를 곱하므로 여기서는 곱하지 않는다.
         /// </summary>
-        private static float RunTimeScale(float walk, float sprintMultiplier)
+        /// <param name="stateSpeed">이 클립을 쓸 때의 상태 배속(걷기 1, 달리기 sprintMultiplier). 제자리 클립일 때 원래 속도로 되돌리는 데만 쓴다.</param>
+        private static float ForwardTimeScale(string clip, float walkPlayback, float stateSpeed)
         {
-            float walkSpeed = LoadClip("Walk").averageSpeed.z;
-            float runSpeed = LoadClip("Fast Run").averageSpeed.z;
-            if (walkSpeed <= 0.01f || runSpeed <= 0.01f)
+            float speed = LoadClip(clip).averageSpeed.z;
+            if (speed <= 0.01f)
             {
-                // 제자리 동작이면 속도가 0이다. 그때는 상태 배속(×sprintMultiplier)을 빼서 클립 원래 속도로 재생한다
-                Debug.LogWarning($"[TestRoomSetup] 클립 속도를 읽지 못해 달리기 동작을 원래 속도로 재생합니다 (걷기 {walkSpeed}, 달리기 {runSpeed})");
-                return 1f / Mathf.Max(sprintMultiplier, 0.01f);
+                // 제자리 동작이면 속도가 0이다. 그때는 상태 배속을 빼서 클립 원래 속도로 재생한다
+                Debug.LogWarning($"[TestRoomSetup] '{clip}' 클립이 앞으로 가지 않아(In Place) 원래 속도로 재생합니다. Mixamo에서 In Place를 끄고 받으면 발이 맞습니다.");
+                return 1f / Mathf.Max(stateSpeed, 0.01f);
             }
-            float scale = walk * walkSpeed / runSpeed;
-            Debug.Log($"[TestRoomSetup] 달리기 배속 {scale:0.00} (클립 속도 걷기 {walkSpeed:0.00} · 달리기 {runSpeed:0.00})");
+            float scale = walkPlayback * ReferenceWalkClipSpeed / speed;
+            Debug.Log($"[TestRoomSetup] '{clip}' 배속 {scale:0.00} (클립 속도 {speed:0.00})");
             return scale;
         }
 
@@ -325,7 +355,7 @@ namespace Game.EditorTools
             controller.AddParameter(name, type);
         }
 
-        private static GameObject BuildPlayerPrefab(PlayerTuning tuning, AnimatorController controller)
+        private static GameObject BuildPlayerPrefab(PlayerTuning tuning, AnimatorController controller, AnimatorController mutantController)
         {
             var root = new GameObject("Player") { tag = "Player" };
             var body = root.AddComponent<CharacterController>();
@@ -400,6 +430,11 @@ namespace Game.EditorTools
             vitals.FindProperty("animator").objectReferenceValue = animator;
             vitals.ApplyModifiedPropertiesWithoutUndo();
             root.AddComponent<PlayerUpgrades>(); // 판 안 강화(3-2). 층에서는 FloorRun이 판 기록의 합계를 넘긴다
+            var form = new SerializedObject(root.AddComponent<PlayerForm>()); // Beast가 높으면 Mutant 동작으로
+            form.FindProperty("tuning").objectReferenceValue = tuning;
+            form.FindProperty("animator").objectReferenceValue = animator;
+            form.FindProperty("mutantController").objectReferenceValue = mutantController;
+            form.ApplyModifiedPropertiesWithoutUndo();
 
             GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, PlayerPrefabPath);
             Object.DestroyImmediate(root);

@@ -21,6 +21,7 @@ MonoBehaviour:
   maxPitch: 60
   animationBlendSpeed: 8
   walkPlaybackSpeed: 2.4
+  mutantFormBeast: 10
   playerMaxHealth: 100
   hitInvulnerableTime: 0.5
   hitFlashTime: 0.08

@@ -21,7 +21,9 @@ namespace Game
         private PlayerMelee melee;
         private PlayerGun gun;
         private PlayerController controller;
+        private PlayerForm form;
         private FloorRun floor;
+        private WorldRun world;
         private string lastAction = "";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -55,10 +57,12 @@ namespace Game
             Unhook();
             GameObject player = GameObject.FindWithTag("Player");
             floor = FindAnyObjectByType<FloorRun>();
+            world = FindAnyObjectByType<WorldRun>();
             if (player == null) return;
             melee = player.GetComponent<PlayerMelee>();
             gun = player.GetComponent<PlayerGun>();
             controller = player.GetComponent<PlayerController>();
+            form = player.GetComponent<PlayerForm>();
             if (melee != null) melee.Hit += OnPlayerHit;
             if (gun != null) gun.Hit += OnPlayerHit;
         }
@@ -67,7 +71,7 @@ namespace Game
         {
             if (melee != null) melee.Hit -= OnPlayerHit;
             if (gun != null) gun.Hit -= OnPlayerHit;
-            melee = null; gun = null; controller = null;
+            melee = null; gun = null; controller = null; form = null;
         }
 
         private void Update()
@@ -128,7 +132,7 @@ namespace Game
                 return;
             }
 
-            GUILayout.BeginArea(new Rect(10, 10, 300, 230), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(10, 10, 320, 330), GUI.skin.box);
             GUILayout.Label("디버그 (F1 닫기)");
             if (floor != null && floor.Layout != null)
             {
@@ -139,6 +143,16 @@ namespace Game
             bool next = GUILayout.Toggle(onePunch, " 원펀맨 모드 (F2): 한 마리 맞히면 전부 처치");
             if (next != onePunch) SetOnePunch(next);
             if (GUILayout.Button("지금 모든 적 처치 (F3)")) KillAll("버튼");
+            if (form != null && !form.IsMutant && GUILayout.Button("Mutant 동작으로 (Beast 높을 때 모습)"))
+            {
+                form.BecomeMutant();
+                lastAction = form.IsMutant ? "Mutant 동작으로 바꿈" : "Mutant 컨트롤러 없음 — Setup Test Room 다시 실행";
+            }
+            if (world != null && world.Session != null && world.Session.World.NextDungeon >= 0)
+            {
+                if (GUILayout.Button("다음 던전 입구로 이동")) { world.DebugGoToNext(); lastAction = "다음 던전 입구 앞으로"; }
+                if (GUILayout.Button("다음 던전 깬 것으로 (관문 열기)")) { world.DebugClearNext(); lastAction = "던전을 깬 것으로 침"; }
+            }
             if (lastAction.Length > 0) GUILayout.Label(lastAction);
             GUILayout.EndArea();
         }

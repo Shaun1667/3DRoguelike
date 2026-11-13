@@ -21,6 +21,7 @@ namespace Game.Tests
             Assert.That(tuning.maxPitch, Is.EqualTo(60f));
             Assert.That(tuning.animationBlendSpeed, Is.EqualTo(8f));
             Assert.That(tuning.walkPlaybackSpeed, Is.EqualTo(2.4f));
+            Assert.That(tuning.mutantFormBeast, Is.EqualTo(10));
             Assert.That(tuning.playerMaxHealth, Is.EqualTo(100));
             Assert.That(tuning.hitInvulnerableTime, Is.EqualTo(0.5f));
             Assert.That(tuning.hitFlashTime, Is.EqualTo(0.08f));
