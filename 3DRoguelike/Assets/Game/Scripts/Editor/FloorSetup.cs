@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -11,7 +12,7 @@ namespace Game.EditorTools
     public static class FloorSetup
     {
         private const string TuningPath = "Assets/Game/Data/FloorTuning.asset";
-        private const string ScenePath = "Assets/Game/Scenes/Floor.unity";
+        private const string ScenePath = CurrentRun.FloorScene;
         private const string PlayerPrefabPath = "Assets/Game/Prefabs/Player.prefab";
         private const string EnemyPrefabPath = TestRoomSetup.EnemyPrefabPath;
         private const string MaterialFolder = "Assets/Game/Art/Floor";
@@ -44,11 +45,14 @@ namespace Game.EditorTools
             RunResultScreen resultScreen = HudSetup.BuildResultScreen(hud);
             RewardChoiceScreen rewardScreen = HudSetup.BuildRewardScreen(hud);
             RewardTable rewardTable = LoadOrCreateRewardTable();
+            TMP_Text objective = HudSetup.BuildObjective(hud);
 
             var fields = new SerializedObject(run);
             fields.FindProperty("tuning").objectReferenceValue = tuning;
             fields.FindProperty("rewardTable").objectReferenceValue = rewardTable;
             fields.FindProperty("rewardScreen").objectReferenceValue = rewardScreen;
+            fields.FindProperty("objective").objectReferenceValue = objective;
+            fields.FindProperty("world").objectReferenceValue = WorldSetup.LoadOrCreateTuning();
             fields.FindProperty("treasureFloorMaterial").objectReferenceValue = Lit("TreasureFloor", new Color(0.62f, 0.55f, 0.3f));
             fields.FindProperty("rewardMaterial").objectReferenceValue = Lit("Reward", new Color(0.55f, 0.75f, 0.95f));
             fields.FindProperty("rareRewardMaterial").objectReferenceValue = Lit("RewardRare", new Color(1f, 0.82f, 0.25f));
@@ -64,7 +68,7 @@ namespace Game.EditorTools
             fields.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
-            BuildSceneList.Ensure(ScenePath, first: true);
+            BuildSceneList.Ensure(ScenePath, first: false); // 게임은 월드 씬에서 시작한다(WorldSetup)
             AssetDatabase.SaveAssets();
             Debug.Log("[FloorSetup] 층 씬 생성: " + ScenePath);
         }

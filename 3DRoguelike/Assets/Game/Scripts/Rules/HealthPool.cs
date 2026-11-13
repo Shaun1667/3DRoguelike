@@ -38,5 +38,11 @@ namespace Game.Rules
         {
             Current = Max;
         }
+
+        /// <summary>씬을 옮길 때 넘겨받은 체력으로 맞춘다. 0 ~ 최대로 자른다.</summary>
+        public void SetCurrent(int value)
+        {
+            Current = Math.Max(0, Math.Min(Max, value));
+        }
     }
 }

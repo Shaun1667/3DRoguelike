@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 ## 프로젝트 개요
-폐기된 고라니 융합체 E-07-V.D.가 되어 방이 연결된 맵을 지나며 진화하는 3D TPS 로그라이크. 구조 참고: Binding of Isaac(방 연결), Hades(방 보상 선택), MoaDungeon(시드 생성 · 판 구조).
+폐기된 고라니 융합체 E-07-V.D.가 되어 넓은 월드의 진행 길을 따라가며 던전(방이 연결된 맵)을 깨고 진화하는 3D TPS 로그라이크. 구조 참고: Binding of Isaac(방 연결), Hades(방 보상 선택), MoaDungeon(시드 생성 · 판 구조).
 기획은 GDD.md, 작업 순서와 일지는 TASKS.md, 수치는 BALANCE.md(첫 수치가 코드에 들어갈 때 만든다).
 - **새 세션을 시작하면** 이 문서 → TASKS.md 맨 위 "진행 요약" 순서로 읽고 다음 항목을 확인한 뒤 시작한다. 다른 PC면 Docs/진행상황.md도. "다음 작업: 미정"이면 후보를 먼저 묻는다.
 - 수치는 BALANCE.md와 데이터 에셋 기준이며 코드에 임의로 넣지 않는다.
@@ -72,6 +72,7 @@
 - HUD는 `GameHud`(체력 · 탄 · 미니맵, 바뀐 것만 고침), 결과 화면은 `RunResultScreen`(R 새 층 · T 같은 층), 판 기록은 규칙 `RunStats`. 둘 다 `HudSetup`이 Setup 메뉴 안에서 만든다. 사망 원인은 `Health.TakeDamage(피해, "공격 이름")` — 새 적 = 데이터에 이름 · 공격 이름. 미니맵에 보이는 방은 `FloorProgress.Visibility`. 한글은 `Art/Fonts/NotoSansKR SDF`(동적 글꼴, SIL OFL).
 - 디버그 도구는 `DebugPanel` 한 곳(`#if UNITY_EDITOR || DEVELOPMENT_BUILD`, 씬마다 저절로 생김 — 씬 · 프리팹에 넣지 않음). F1 창 · F2 원펀맨(한 마리 맞히면 살아 있는 적 전부 처치) · F3 모두 처치. 새 디버그 기능 = 이 창에 한 줄. 적 목록은 `Mutant.Alive`(새 적 종류도 같은 방식으로 목록을 둔다).
 - 보상은 규칙 `RewardPlanner`(층 시작 때 방마다 선택지, 보상 난수) · `SpecialRoomPlanner`(보물방, 꾸미기 난수), 판 성향은 `RunStats.TakeReward`. 보상 목록 겸 강화 표는 `Data/RewardTable.asset` — 새 보상 = 표 한 줄(성향 + 능력치 효과 `effects`, 기술이 없으면 `comingLater`). 강화 합계 · 조회는 규칙 `UpgradeSheet` 한 곳(`RunStats.Upgrades`), 플레이어 쪽은 `PlayerUpgrades.Scale(능력치)`만 묻는다. 새 능력치 = `UpgradeStat` 끝에 한 줄 + 이름 + 쓰는 곳 한 군데. 화면은 `RewardChoiceScreen`, 보상물은 `FloorRun`이 놓는다. 이동 · 달리기는 `PlayerController`(Shift 달리기 — 앞으로 달릴 때 `Fast Run` 동작, Space 점프, Ctrl 구르기는 `PlayerRoll`). 고라니 동작 FBX는 고라니 아바타로 가져온다(`ModelPrefabSetup`).
+- 월드는 `WorldRun` 한 곳(고정 지형 · 진행 길 · 길 위 적 무리 · 던전 입구 · 관문), 데이터 `Data/WorldTuning.asset`(BALANCE 13번), 씬은 `WorldSetup`(메뉴 `Tools/Game/Setup World`, 지형 · 나무 · NavMesh까지 굽는다 — 값을 바꾸면 다시 실행). 게임은 `World` 씬에서 시작. 판 상태 한 곳은 규칙 `RunSession`(시드 · `RunStats` · `WorldProgress` · 있는 곳 · 체력), 씬을 오가는 동안 `CurrentRun`이 든다. 던전 = 층 씬(`FloorRun`이 판을 이어받고 난수 층 번호 = 던전 순서). 새 던전 = `dungeons`에 한 줄(길 순서), 새 적 무리 = `encounters`에 한 줄. 결과 화면 다시 시작은 `IRunRestart`.
 - (시스템이 생길 때마다 "이 시스템은 `클래스` 한 곳, 데이터는 `에셋`, 새 항목 = 표 한 줄"로 한 줄씩 더한다)
 
 ## 핵심 설계 규칙 (변경 금지)

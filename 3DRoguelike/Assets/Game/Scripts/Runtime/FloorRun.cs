@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Game.Rules;
+using TMPro;
 using Unity.AI.Navigation;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -9,10 +10,13 @@ using UnityEngine.SceneManagement;
 namespace Game
 {
     /// <summary>
-    /// 층 하나를 진행한다. 시드로 배치와 방마다 적 자리를 정해 세우고, 플레이어가 깨지 않은 방에 들어서면 문을 잠그고 적을 내보낸다.
-    /// 그 방의 적을 모두 잡으면 방을 깬 것이 되어 문이 열린다. 보스 방을 깨거나 플레이어가 죽으면 판이 끝나 결과 화면을 띄운다.
+    /// 층(던전) 하나를 진행한다. 시드로 배치와 방마다 적 자리를 정해 세우고, 플레이어가 깨지 않은 방에 들어서면 문을 잠그고 적을 내보낸다.
+    /// 그 방의 적을 모두 잡으면 방을 깬 것이 되어 문이 열린다.
+    /// 월드에서 들어왔으면(<see cref="CurrentRun.Session"/>) 판 기록을 이어받고, 보스 방을 깨면 월드로 돌아간다 — 마지막 던전이면 지역 클리어.
+    /// 층 씬을 바로 Play하면 던전 하나짜리 판으로, 보스 방을 깨거나 죽으면 결과 화면.
     /// </summary>
-    public sealed class FloorRun : MonoBehaviour
+    [DefaultExecutionOrder(-100)] // 넘겨받은 체력을 HUD.Start보다 먼저 맞춘다
+    public sealed class FloorRun : MonoBehaviour, IRunRestart
     {
         /// <summary>"같은 층으로 다시"를 고르면 씬을 다시 불러오는 동안 시드를 여기에 맡겨 둔다.</summary>
         private static RunSeed? pendingSeed;
@@ -33,6 +37,12 @@ namespace Game
         [Min(0f)] [SerializeField] private float resultDelayAfterDeath = 1.5f;
         [Tooltip("보스 방을 깬 뒤 결과 화면까지(초)")]
         [Min(0f)] [SerializeField] private float resultDelayAfterClear = 1f;
+        [Tooltip("월드에서 들어왔을 때: 마지막 방을 깬 뒤 월드로 돌아가기까지(초)")]
+        [Min(0f)] [SerializeField] private float returnDelayAfterClear = 2f;
+        [Tooltip("던전 이름을 읽는 곳(월드 판일 때)")]
+        [SerializeField] private WorldTuning world;
+        [Tooltip("화면 위 가운데 안내")]
+        [SerializeField] private TMP_Text objective;
 
         [Header("재질")]
         [SerializeField] private Material floorMaterial;
@@ -48,6 +58,9 @@ namespace Game
         private GameObject[] doorBarriers;
         private Transform playerTransform;
         private readonly List<(int roomId, GameObject pickup)> pickups = new List<(int, GameObject)>();
+        /// <summary>월드에서 들어왔으면 그 판. 층 씬만 Play했으면 null.</summary>
+        private RunSession session;
+        private int dungeon;
 
         public RunSeed Seed { get; private set; }
         public FloorLayout Layout { get; private set; }
@@ -68,25 +81,41 @@ namespace Game
         /// <summary>씬을 다시 불러와 판을 새로 시작한다. sameSeed면 지금 층을 그대로 다시 만든다.</summary>
         public void Restart(bool sameSeed)
         {
+            if (session != null)
+            {
+                CurrentRun.RestartFromWorld(sameSeed); // 죽으면 월드 길 시작부터
+                return;
+            }
             pendingSeed = sameSeed ? Seed : (RunSeed?)null;
             Time.timeScale = 1f;
             SceneManager.LoadScene(SceneManager.GetActiveScene().path);
         }
 
+        /// <summary>판 시작부터 흐른 시간. 월드 판은 씬을 옮겨도 이어진다.</summary>
+        private float Elapsed => session != null ? CurrentRun.Elapsed : Time.timeSinceLevelLoad;
+
         private void Awake()
         {
             Time.timeScale = 1f;
             playerTransform = player.transform;
-            Seed = ChooseSeed();
+            session = CurrentRun.Session != null && CurrentRun.Session.InDungeon ? CurrentRun.Session : null;
+            dungeon = session != null ? session.CurrentDungeon : 0;
+            Seed = session != null ? session.Seed : ChooseSeed();
+            // 던전마다 다른 층: 난수의 층 번호 = 길 위 던전 순서
             var random = new RunRandom(Seed);
-            Layout = FloorGenerator.Generate(tuning.ToSettings(), random.Create(RandomPurpose.Map, 0));
-            TreasureRoom = SpecialRoomPlanner.AssignTreasure(Layout, random.Create(RandomPurpose.Decor, 0));
-            Encounters = EncounterPlanner.Plan(Layout, tuning.ToEncounterSettings(), random.Create(RandomPurpose.Enemy, 0));
-            Rewards = RewardPlanner.Plan(Layout, tuning.ToRewardSettings(), rewardTable.ToDefinitions(), random.Create(RandomPurpose.Reward, 0));
+            Layout = FloorGenerator.Generate(tuning.ToSettings(), random.Create(RandomPurpose.Map, dungeon));
+            TreasureRoom = SpecialRoomPlanner.AssignTreasure(Layout, random.Create(RandomPurpose.Decor, dungeon));
+            Encounters = EncounterPlanner.Plan(Layout, tuning.ToEncounterSettings(), random.Create(RandomPurpose.Enemy, dungeon));
+            Rewards = RewardPlanner.Plan(Layout, tuning.ToRewardSettings(), rewardTable.ToDefinitions(), random.Create(RandomPurpose.Reward, dungeon));
             Progress = new FloorProgress(Layout);
             int battleRooms = 0;
             foreach (FloorRoom room in Layout.Rooms) if (room.Kind == RoomKind.Battle || room.Kind == RoomKind.Boss) battleRooms++;
-            Stats = new RunStats(Seed, battleRooms);
+            if (session != null)
+            {
+                Stats = session.Stats;
+                Stats.AddBattleRooms(battleRooms);
+            }
+            else Stats = new RunStats(Seed, battleRooms);
             player.GetComponent<PlayerUpgrades>().Use(Stats.Upgrades);
             Progress.RoomLocked += OnRoomLocked;
             Progress.RoomCleared += OnRoomCleared;
@@ -103,8 +132,21 @@ namespace Game
             doorBarriers = FloorGeometry.Build(Layout, tuning, materials, transform);
             navMesh.BuildNavMesh();
             if (TreasureRoom >= 0) SpawnPickup(TreasureRoom);
-            Debug.Log($"[FloorRun] 시드 {Seed.ToCode()} · 방 {Layout.Rooms.Count}개 · 보스 방 {Layout.BossRoom.Id} · 보물방 {TreasureRoom}\n{Layout.ToAscii()}");
+            Debug.Log($"[FloorRun] {DungeonName} · 시드 {Seed.ToCode()} · 방 {Layout.Rooms.Count}개 · 보스 방 {Layout.BossRoom.Id} · 보물방 {TreasureRoom}\n{Layout.ToAscii()}");
         }
+
+        private void Start()
+        {
+            if (objective != null) objective.text = $"{DungeonName}  ·  마지막 방(빨간 바닥)을 깨면 {(session != null ? "밖으로" : "끝")}";
+            if (session == null) return;
+            // PlayerVitals.Awake가 체력을 가득으로 만든 뒤, HUD.Start보다 먼저(실행 순서 -100)
+            if (session.PlayerHealth != RunSession.FullHealth) player.Health.SetCurrent(session.PlayerHealth);
+            player.GetComponent<PlayerForm>().UpdateForm(Stats.Beast, Stats.Human);
+        }
+
+        private string DungeonName => session != null && world != null && dungeon < world.dungeons.Length
+            ? world.dungeons[dungeon].displayName
+            : "시험 던전";
 
         private void OnEnable()
         {
@@ -185,16 +227,40 @@ namespace Game
             if (heal > 0 && !player.Health.IsDead) player.Health.Heal(heal);
             UpdateDoors();
             if (roomId != Layout.BossRoom.Id) SpawnPickup(roomId);
-            if (roomId == Layout.BossRoom.Id && Stats.ClearFloor(Time.timeSinceLevelLoad))
+            if (roomId != Layout.BossRoom.Id || Stats.Outcome != RunOutcome.Playing) return;
+
+            if (session == null)
+            {
+                if (Stats.ClearFloor(Elapsed))
+                {
+                    player.DisableControls();
+                    EndRun(resultDelayAfterClear);
+                }
+                return;
+            }
+
+            if (session.FinishDungeon(player.Health.Current, Elapsed))
             {
                 player.DisableControls();
-                EndRun(resultDelayAfterClear);
+                EndRun(resultDelayAfterClear); // 마지막 던전: 지역 클리어
+                return;
             }
+            StartCoroutine(ReturnToWorld());
+        }
+
+        /// <summary>던전을 깼다 — 잠깐 알리고 월드의 그 입구 앞으로 돌아간다(뒤 관문이 열려 있다).</summary>
+        private IEnumerator ReturnToWorld()
+        {
+            if (objective != null) objective.text = $"{DungeonName} 클리어!  잠시 뒤 밖으로 나갑니다";
+            Debug.Log($"[FloorRun] {DungeonName} 클리어 → 월드로");
+            yield return new WaitForSecondsRealtime(returnDelayAfterClear);
+            while (rewardScreen.IsShown) yield return null; // 보상을 고르는 중이면 기다린다
+            SceneManager.LoadScene(CurrentRun.WorldScene);
         }
 
         private void OnPlayerDied()
         {
-            if (Stats.Die(player.Health.LastDamageSource, Time.timeSinceLevelLoad)) EndRun(resultDelayAfterDeath);
+            if (Stats.Die(player.Health.LastDamageSource, Elapsed)) EndRun(resultDelayAfterDeath);
         }
 
         private void EndRun(float delay)
@@ -252,6 +318,7 @@ namespace Game
             {
                 Stats.TakeReward(reward);
                 Debug.Log($"[FloorRun] 보상 '{reward.Name}' → Beast {Stats.Beast} · Human {Stats.Human}");
+                player.GetComponent<PlayerForm>().UpdateForm(Stats.Beast, Stats.Human);
             });
         }
 

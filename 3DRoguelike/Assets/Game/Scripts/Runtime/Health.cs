@@ -67,5 +67,11 @@ namespace Game
             pool.Restore();
             invulnerableEndTime = 0f;
         }
+
+        /// <summary>씬을 옮길 때 넘겨받은 체력으로 맞춘다(월드 ↔ 던전). 이벤트 없음 — HUD의 Start보다 먼저 부른다.</summary>
+        public void SetCurrent(int value)
+        {
+            pool.SetCurrent(value);
+        }
     }
 }

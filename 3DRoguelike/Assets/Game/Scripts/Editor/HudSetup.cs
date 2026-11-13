@@ -71,12 +71,12 @@ namespace Game.EditorTools
             AddImage(panel, new Color(0f, 0f, 0f, 0.7f)).raycastTarget = true;
 
             TMP_Text title = Text("Title", panel, font, 64f, TextAlignmentOptions.Center);
-            Place(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 200f), new Vector2(800f, 90f), new Vector2(0.5f, 0.5f));
+            Place(title.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 240f), new Vector2(800f, 90f), new Vector2(0.5f, 0.5f));
             TMP_Text body = Text("Body", panel, font, 30f, TextAlignmentOptions.Center);
-            Place(body.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(800f, 260f), new Vector2(0.5f, 0.5f));
+            Place(body.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(800f, 330f), new Vector2(0.5f, 0.5f));
 
-            Button newFloor = Button("NewFloorButton", panel, font, "새 층  (R)", new Vector2(-150f, -200f));
-            Button sameFloor = Button("SameFloorButton", panel, font, "같은 층  (T)", new Vector2(150f, -200f));
+            Button newFloor = Button("NewFloorButton", panel, font, "새 판  (R)", new Vector2(-150f, -230f));
+            Button sameFloor = Button("SameFloorButton", panel, font, "같은 시드  (T)", new Vector2(150f, -230f));
 
             var screen = canvas.gameObject.AddComponent<RunResultScreen>();
             var fields = new SerializedObject(screen);
@@ -133,7 +133,18 @@ namespace Game.EditorTools
             return screen;
         }
 
-        private static TMP_FontAsset LoadOrCreateFontAsset()
+        /// <summary>화면 위 가운데 한 줄 안내(월드: 다음 던전 · 거리, 던전: 이름 · 클리어).</summary>
+        public static TMP_Text BuildObjective(Canvas canvas)
+        {
+            TMP_FontAsset font = LoadOrCreateFontAsset();
+            TMP_Text text = Text("Objective", canvas.transform, font, 26f, TextAlignmentOptions.Center);
+            Place(text.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -30f), new Vector2(1200f, 40f), new Vector2(0.5f, 1f));
+            text.outlineWidth = 0.2f;
+            text.outlineColor = new Color32(0, 0, 0, 200);
+            return text;
+        }
+
+        internal static TMP_FontAsset LoadOrCreateFontAsset()
         {
             var existing = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontAssetPath);
             if (existing != null) return existing;

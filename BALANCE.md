@@ -6,6 +6,7 @@
 | 1~5 | `Assets/Game/Data/PlayerTuning.asset` | `PlayerTuning` |
 | 7 · 8 · 10 · 11 · 12 | `Assets/Game/Data/FloorTuning.asset` · `RewardTable.asset` | `FloorTuning` → `FloorLayoutSettings` · `EncounterSettings` · `RewardSettings`(Game.Rules), `RewardTable` |
 | 9 | `Assets/Game/Data/MutantTuning.asset` | `MutantTuning` |
+| 13 | `Assets/Game/Data/WorldTuning.asset` | `WorldTuning` |
 
 ## 1. 플레이어 조작
 재미 검증 전 출발값이다. 값을 바꾸면 `PlayerTuningTests`도 함께 고친다. 걷기 배속은 바꾼 뒤 `Tools/Game/Setup Test Room`을 다시 실행해야 컨트롤러에 들어간다.
@@ -145,3 +146,24 @@
 | 돌진 · 산탄총 · 폭발물 (희귀) | 없음 — 준비 중(`comingLater`), 선택지에 안 나옴 | — | 기술은 따로 항목에서. 그동안 보물방은 회피 + 일반 2장 |
 
 정수 값(피해 · 탄창)은 반올림(.5는 올림)하고 1 아래로 내려가지 않는다.
+
+## 13. 숲 월드
+`Data/WorldTuning.asset`(`WorldTuning`). 월드는 판마다 같고 `Tools/Game/Setup World`가 이 값으로 씬을 세운다 — 값을 바꾸면 Setup World를 다시 실행하고 `WorldTests.WorldTuning_MatchesBalance`도 함께 고친다. 결정 2026-11-11(사용자): 고정 월드 + 던전 안만 무작위, 길 위에 적 무리, 숲 지역 + 던전 3개, 죽으면 길 시작부터. 나머지 값은 첫 시도.
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 진행 길 `route` | 꺾은선 9점, 남 → 북 약 1,055 m (S자) | 걷기 4 m/s면 약 4분 반, 달리기 약 2분 45초. 길이 남→북으로만 나아가서 관문의 보이지 않는 벽이 다른 골짜기를 자르지 않음 |
+| 골짜기 반폭 `valleyHalfWidth` | 55 m (폭 110 m) | "광활하게" — 길 옆으로 돌아다닐 여유 |
+| 관문 고개 반폭 · 길이 · 좁아지는 거리 | 6 m · 30 m · 45 m | 관문으로만 지나가게 골짜기를 좁힘 |
+| 절벽 높이 · 가로 `cliffHeight` · `cliffWidth` | 28 m · 10 m | 평균 경사 약 70° — 플레이어 · 적 오르기 한계 45°를 넘음 |
+| 흙길 반폭 `pathHalfWidth` | 4 m | 눈에 띄는 길 |
+| 바닥 굴곡 `groundBumps` | 1.5 m | 길 · 입구 근처(14 m)는 평평 |
+| 나무 `treeCount` · 간격 · 길에서 비움 | 900그루 · 4 m · 9 m | 숲 느낌, 고정 시드 7 |
+| 던전 입구 (길 거리 · 옆) | 300 m 오른쪽 18 m · 600 m 왼쪽 18 m · 900 m 오른쪽 18 m | 길을 셋으로 나눔. 마지막(3번) 던전을 깨면 숲 클리어 |
+| 관문 `gateAfterEntrance` | 입구에서 길 따라 70 m 앞 | 입구가 좁아지는 구간 밖에 있게(45 + 15 m 넘게) |
+| 입장 거리 `entranceRadius` | 2.5 m | 입구 앞 파란 원에 들어서면 바로 입장 |
+| 적 무리 | 6곳(110 · 210 · 420 · 510 · 700 · 800 m), 2 · 3 · 2 · 3 · 3 · 4마리 | 던전 사이마다 두 번 |
+| 무리 나타나는 거리 `encounterTriggerRange` | 22 m | 시야 안에서 바닥 예고가 보이게 |
+| 던전 → 월드로 돌아가기 | 마지막 방을 깨고 2초 뒤(보상 고르는 중이면 고른 뒤) | `FloorRun.returnDelayAfterClear` |
+
+던전 안 층은 판 시드 + 던전 순서(난수의 층 번호)로 만들어져, 같은 시드면 같은 던전 셋이 나온다.

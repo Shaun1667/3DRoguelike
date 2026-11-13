@@ -7,8 +7,8 @@ using UnityEngine.UI;
 namespace Game
 {
     /// <summary>
-    /// 판이 끝나면 뜨는 결과 화면. 사망 원인(또는 층 클리어) · 시드 · 깬 방 · 처치 · 시간을 보여 주고,
-    /// R(새 층) · T(같은 층) 또는 버튼으로 다시 시작한다. 떠 있는 동안 게임 시간은 멈춘다.
+    /// 판이 끝나면 뜨는 결과 화면. 사망 원인(또는 클리어) · 시드 · 깬 던전 · 깬 방 · 처치 · 시간을 보여 주고,
+    /// R(새 판) · T(같은 시드) 또는 버튼으로 다시 시작한다 — 월드 판이면 월드 길 시작부터. 떠 있는 동안 게임 시간은 멈춘다.
     /// </summary>
     public sealed class RunResultScreen : MonoBehaviour
     {
@@ -18,7 +18,7 @@ namespace Game
         [SerializeField] private Button newFloorButton;
         [SerializeField] private Button sameFloorButton;
 
-        private FloorRun run;
+        private IRunRestart run;
 
         public bool IsShown => panel.activeSelf;
         public string TitleText => title.text;
@@ -31,16 +31,18 @@ namespace Game
             sameFloorButton.onClick.AddListener(() => run.Restart(sameSeed: true));
         }
 
-        public void Show(RunStats stats, FloorRun floorRun)
+        public void Show(RunStats stats, IRunRestart restart)
         {
-            run = floorRun;
+            run = restart;
             bool died = stats.Outcome == RunOutcome.Died;
-            title.text = died ? "쓰러졌다" : "층 클리어";
+            title.text = died ? "쓰러졌다" : stats.Outcome == RunOutcome.RegionCleared ? "숲 클리어" : "층 클리어";
             title.color = died ? new Color(0.9f, 0.35f, 0.3f) : new Color(0.55f, 0.85f, 0.5f);
 
             string cause = died ? $"사망 원인  {stats.DeathCause}\n" : "";
+            string dungeons = stats.Dungeons > 0 ? $"깬 던전  {stats.DungeonsCleared} / {stats.Dungeons}\n" : "";
             body.text = cause +
                         $"시드  {stats.Seed.ToCode()}\n" +
+                        dungeons +
                         $"깬 방  {stats.RoomsCleared} / {stats.BattleRooms}\n" +
                         $"처치  {stats.Kills}\n" +
                         $"시간  {RunStats.FormatTime(stats.ElapsedSeconds)}\n" +
