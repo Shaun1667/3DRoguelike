@@ -165,6 +165,34 @@ namespace Game.Tests
             Assert.That(tuning.encounters.Length, Is.EqualTo(6));
             Assert.That(tuning.encounterTriggerRange, Is.EqualTo(22f));
             Assert.That(tuning.treeCount, Is.EqualTo(900));
+            Assert.That(tuning.treeKinds.Length, Is.EqualTo(3));
+            Assert.That(tuning.treeKinds[0].id, Is.EqualTo("Oak"));
+            Assert.That(tuning.treeKinds[0].weight, Is.EqualTo(50f));
+            Assert.That(tuning.treeKinds[1].id, Is.EqualTo("Pine"));
+            Assert.That(tuning.treeKinds[1].weight, Is.EqualTo(35f));
+            Assert.That(tuning.treeKinds[2].id, Is.EqualTo("Mutant"));
+            Assert.That(tuning.treeKinds[2].weight, Is.EqualTo(15f));
+            Assert.That(tuning.treeKinds[2].weightNearDungeon, Is.EqualTo(35f));
+            Assert.That(tuning.treeNearDungeonRadius, Is.EqualTo(45f));
+            Assert.That(tuning.treeScaleRange, Is.EqualTo(new UnityEngine.Vector2(0.85f, 1.15f)));
+            // 바닥 · 분위기 (BALANCE 13번)
+            Assert.That(tuning.forestFloorTile, Is.EqualTo(5f));
+            Assert.That(tuning.dirtTrailTile, Is.EqualTo(4f));
+            Assert.That(tuning.pollutedSoilTile, Is.EqualTo(5f));
+            Assert.That(tuning.groundSmoothness, Is.EqualTo(0.05f));
+            Assert.That(tuning.trailSmoothness, Is.EqualTo(0.1f));
+            Assert.That(tuning.pollutedRadius, Is.EqualTo(28f));
+            Assert.That(tuning.pollutedFade, Is.EqualTo(8f));
+            Assert.That(tuning.pollutedEdgeNoise, Is.EqualTo(6f));
+            Assert.That(tuning.pollutedNoiseScale, Is.EqualTo(0.08f));
+            Assert.That(tuning.forestDirtMix, Is.EqualTo(0.15f));
+            Assert.That(tuning.forestDirtNoiseScale, Is.EqualTo(0.05f));
+            Assert.That(tuning.ambientColor, Is.EqualTo(new UnityEngine.Color(0.42f, 0.42f, 0.38f)));
+            Assert.That(tuning.fogColor, Is.EqualTo(new UnityEngine.Color(0.5f, 0.55f, 0.48f)));
+            Assert.That(tuning.fogStart, Is.EqualTo(70f));
+            Assert.That(tuning.fogEnd, Is.EqualTo(320f));
+            Assert.That(tuning.skyExposure, Is.EqualTo(1.1f));
+
             // 입구는 골짜기가 좁아지기 전(관문 고개 밖)에 있어야 한다
             foreach (WorldTuning.DungeonSite site in tuning.dungeons)
             {

@@ -1,0 +1,101 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e00dd685a880204997840f8ad50ad3f, type: 3}
+  m_Name: WorldTuning
+  m_EditorClassIdentifier: Game.Runtime::Game.WorldTuning
+  route:
+  - {x: 0, y: 0}
+  - {x: 0, y: 120}
+  - {x: 60, y: 240}
+  - {x: 40, y: 380}
+  - {x: -50, y: 500}
+  - {x: -40, y: 640}
+  - {x: 40, y: 760}
+  - {x: 30, y: 880}
+  - {x: 0, y: 980}
+  valleyHalfWidth: 55
+  passHalfWidth: 6
+  passLength: 30
+  passBlend: 45
+  cliffHeight: 28
+  cliffWidth: 10
+  pathHalfWidth: 4
+  groundBumps: 1.5
+  bumpScale: 0.02
+  terrainMargin: 40
+  heightmapResolution: 1025
+  forestFloorTile: 5
+  dirtTrailTile: 4
+  pollutedSoilTile: 5
+  groundSmoothness: 0.05
+  trailSmoothness: 0.1
+  pollutedRadius: 28
+  pollutedFade: 8
+  pollutedEdgeNoise: 6
+  pollutedNoiseScale: 0.08
+  forestDirtMix: 0.15
+  forestDirtNoiseScale: 0.05
+  ambientColor: {r: 0.42, g: 0.42, b: 0.38, a: 1}
+  fogColor: {r: 0.5, g: 0.55, b: 0.48, a: 1}
+  fogStart: 70
+  fogEnd: 320
+  skyExposure: 1.1
+  treeCount: 900
+  treePathClearance: 9
+  treeSpacing: 4
+  treeSeed: 7
+  treeKinds:
+  - id: Oak
+    weight: 50
+    weightNearDungeon: 40
+  - id: Pine
+    weight: 35
+    weightNearDungeon: 25
+  - id: Mutant
+    weight: 15
+    weightNearDungeon: 35
+  treeNearDungeonRadius: 45
+  treeScaleRange: {x: 0.85, y: 1.15}
+  dungeons:
+  - displayName: "\uC232 \uB358\uC804 1 \u2014 \uBB34\uB108\uC9C4 \uC0AC\uC721\uC7A5"
+    routeDistance: 300
+    sideOffset: 18
+  - displayName: "\uC232 \uB358\uC804 2 \u2014 \uBC84\uB824\uC9C4 \uAD00\uCE21\uC18C"
+    routeDistance: 600
+    sideOffset: -18
+  - displayName: "\uC232 \uB358\uC804 3 \u2014 \uAE4A\uC740 \uC232 \uB465\uC9C0"
+    routeDistance: 900
+    sideOffset: 18
+  gateAfterEntrance: 70
+  entranceRadius: 2.5
+  nextRegionLabel: "\uD3D0\uD5C8 \uB3C4\uC2DC \u2014 \uC900\uBE44 \uC911"
+  encounters:
+  - routeDistance: 110
+    sideOffset: 8
+    count: 2
+  - routeDistance: 210
+    sideOffset: -10
+    count: 3
+  - routeDistance: 420
+    sideOffset: 6
+    count: 2
+  - routeDistance: 510
+    sideOffset: -8
+    count: 3
+  - routeDistance: 700
+    sideOffset: 10
+    count: 3
+  - routeDistance: 800
+    sideOffset: -6
+    count: 4
+  encounterTriggerRange: 22
+  encounterSpread: 3

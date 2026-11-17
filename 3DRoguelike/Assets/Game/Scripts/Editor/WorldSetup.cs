@@ -19,17 +19,19 @@ namespace Game.EditorTools
         private const string TuningPath = "Assets/Game/Data/WorldTuning.asset";
         private const string ArtFolder = "Assets/Game/Art/World";
         private const string TerrainDataPath = ArtFolder + "/WorldTerrain.asset";
+        private const string GroundFolder = ArtFolder + "/Ground";
+        private const string SkyPath = ArtFolder + "/WorldSky.mat";
+        private static readonly Color RockColor = new Color(0.42f, 0.41f, 0.39f);
         private const string NavMeshPath = ArtFolder + "/WorldNavMesh.asset";
         private const string PlayerPrefabPath = "Assets/Game/Prefabs/Player.prefab";
-        private const string EnemyPrefabPath = TestRoomSetup.EnemyPrefabPath;
         private const float SiteFlatRadius = 14f;
 
         [MenuItem("Tools/Game/Setup World")]
         public static void Run()
         {
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath) == null || AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefabPath) == null)
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath) == null || AssetDatabase.LoadAssetAtPath<EnemyRoster>(EnemySetup.RosterPath) == null)
             {
-                TestRoomSetup.Run(); // 플레이어 · Mutant 프리팹을 만든다
+                TestRoomSetup.Run(); // 플레이어 프리팹 · 숲 적 4종 · 구성 표를 만든다
             }
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(CurrentRun.FloorScene) == null) FloorSetup.Run(); // 던전(층) 씬
             if (!AssetDatabase.IsValidFolder(ArtFolder)) AssetDatabase.CreateFolder("Assets/Game/Art", "World");
@@ -39,7 +41,7 @@ namespace Game.EditorTools
             WorldTuning tuning = LoadOrCreateTuning();
             WorldRoute route = tuning.ToRoute();
             TestRoomSetup.BuildLighting();
-            BuildAtmosphere();
+            BuildAtmosphere(tuning); // BuildLighting의 앰비언트를 월드용으로 덮어쓴다(시험 방은 그대로)
 
             var root = new GameObject("World");
             Terrain terrain = BuildTerrain(tuning, route, root.transform);
@@ -63,7 +65,7 @@ namespace Game.EditorTools
             Transform[] encounterSites = BuildEncounterSites(tuning, route, terrain, root.transform);
             foreach (Transform site in encounterSites) sites.Add(site.position);
 
-            BuildTrees(tuning, route, terrain, root.transform, sites);
+            BuildTrees(tuning, route, terrain, root.transform, sites, entrances);
 
             // 관문을 세우기 전에 굽는다 — 관문이 열리면 지나갈 길이 이미 NavMesh에 있게
             BakeNavMesh(root);
@@ -86,7 +88,7 @@ namespace Game.EditorTools
             var fields = new SerializedObject(run);
             fields.FindProperty("tuning").objectReferenceValue = tuning;
             fields.FindProperty("player").objectReferenceValue = vitals;
-            fields.FindProperty("enemyPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefabPath);
+            fields.FindProperty("roster").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyRoster>(EnemySetup.RosterPath);
             fields.FindProperty("resultScreen").objectReferenceValue = resultScreen;
             fields.FindProperty("objective").objectReferenceValue = objective;
             fields.FindProperty("startPoint").objectReferenceValue = start;
@@ -117,14 +119,36 @@ namespace Game.EditorTools
             return AssetDatabase.LoadAssetAtPath<WorldTuning>(TuningPath);
         }
 
-        private static void BuildAtmosphere()
+        private static void BuildAtmosphere(WorldTuning tuning)
         {
-            RenderSettings.skybox = AssetDatabase.GetBuiltinExtraResource<Material>("Default-Skybox.mat");
+            RenderSettings.skybox = WorldSky(tuning.skyExposure);
+            RenderSettings.ambientMode = AmbientMode.Flat;
+            RenderSettings.ambientLight = tuning.ambientColor;
             RenderSettings.fog = true;
             RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = new Color(0.6f, 0.66f, 0.62f);
-            RenderSettings.fogStartDistance = 70f;
-            RenderSettings.fogEndDistance = 320f;
+            RenderSettings.fogColor = tuning.fogColor;
+            RenderSettings.fogStartDistance = tuning.fogStart;
+            RenderSettings.fogEndDistance = tuning.fogEnd;
+        }
+
+        /// <summary>기본 Procedural 하늘을 복사한 월드 하늘. 매번 기본값에서 다시 맞춰 여러 번 실행해도 같다.</summary>
+        private static Material WorldSky(float exposure)
+        {
+            var source = AssetDatabase.GetBuiltinExtraResource<Material>("Default-Skybox.mat");
+            var sky = AssetDatabase.LoadAssetAtPath<Material>(SkyPath);
+            if (sky == null)
+            {
+                sky = new Material(source) { name = "WorldSky" };
+                AssetDatabase.CreateAsset(sky, SkyPath);
+            }
+            else
+            {
+                sky.shader = source.shader;
+                sky.CopyPropertiesFromMaterial(source);
+            }
+            sky.SetFloat("_Exposure", exposure);
+            EditorUtility.SetDirty(sky);
+            return sky;
         }
 
         // ---------- 지형 ----------
@@ -151,8 +175,11 @@ namespace Game.EditorTools
                 flatSites.Add(new Vector2(x, z));
             }
 
+            // 에셋을 먼저 만든 뒤 높이 · 레이어 · 칠하기를 넣는다 — 메모리에서 칠한 뒤 CreateAsset하면 칠한 값(SplatAlpha)이 파일에 남지 않았다
+            if (AssetDatabase.LoadAssetAtPath<TerrainData>(TerrainDataPath) != null) AssetDatabase.DeleteAsset(TerrainDataPath);
             var data = new TerrainData { heightmapResolution = tuning.heightmapResolution };
             data.size = new Vector3(width, height, length);
+            AssetDatabase.CreateAsset(data, TerrainDataPath);
             int res = data.heightmapResolution;
             var heights = new float[res, res];
             for (int zi = 0; zi < res; zi++)
@@ -166,36 +193,33 @@ namespace Game.EditorTools
             }
             data.SetHeights(0, 0, heights);
 
+            // 레이어 순서 = alphamap 채널: 0 숲 바닥 · 1 흙길 · 2 절벽 바위 · 3 오염 토양(URP Terrain/Lit 한 패스 4층)
             data.terrainLayers = new[]
             {
-                Layer("Grass", new Color(0.33f, 0.42f, 0.24f)),
-                Layer("Dirt", new Color(0.45f, 0.36f, 0.25f)),
-                Layer("Rock", new Color(0.42f, 0.41f, 0.39f)),
+                Layer("ForestFloor", GroundTexture("Ground_ForestFloor"), tuning.forestFloorTile, tuning.groundSmoothness),
+                Layer("DirtTrail", GroundTexture("Ground_DirtTrail"), tuning.dirtTrailTile, tuning.trailSmoothness),
+                Layer("Rock", SolidTexture("Rock", RockColor), 4f, tuning.groundSmoothness),
+                Layer("PollutedSoil", GroundTexture("Ground_PollutedSoil"), tuning.pollutedSoilTile, tuning.groundSmoothness),
             };
             data.alphamapResolution = 512;
             int alphaRes = data.alphamapResolution;
-            var alpha = new float[alphaRes, alphaRes, 3];
+            var alpha = new float[alphaRes, alphaRes, 4];
             for (int zi = 0; zi < alphaRes; zi++)
             {
                 float z = minZ + length * (zi + 0.5f) / alphaRes;
                 for (int xi = 0; xi < alphaRes; xi++)
                 {
                     float x = minX + width * (xi + 0.5f) / alphaRes;
-                    float d = route.DistanceFrom(x, z, out float along);
-                    float half = tuning.ValleyHalfWidthAt(along);
-                    float dirt = 1f - Smooth01((d - tuning.pathHalfWidth) / 1.5f);
-                    float rock = Smooth01((d - half - 1f) / 3f);
-                    float grass = Mathf.Max(0f, 1f - dirt - rock);
-                    float sum = dirt + rock + grass;
-                    alpha[zi, xi, 0] = grass / sum;
-                    alpha[zi, xi, 1] = dirt / sum;
-                    alpha[zi, xi, 2] = rock / sum;
+                    GroundWeights(tuning, route, flatSites, x, z, out float forest, out float trail, out float rock, out float polluted);
+                    alpha[zi, xi, 0] = forest;
+                    alpha[zi, xi, 1] = trail;
+                    alpha[zi, xi, 2] = rock;
+                    alpha[zi, xi, 3] = polluted;
                 }
             }
             data.SetAlphamaps(0, 0, alpha);
-
-            if (AssetDatabase.LoadAssetAtPath<TerrainData>(TerrainDataPath) != null) AssetDatabase.DeleteAsset(TerrainDataPath);
-            AssetDatabase.CreateAsset(data, TerrainDataPath);
+            EditorUtility.SetDirty(data);
+            AssetDatabase.SaveAssetIfDirty(data);
 
             GameObject terrainObject = Terrain.CreateTerrainGameObject(data);
             terrainObject.name = "Terrain";
@@ -220,20 +244,43 @@ namespace Game.EditorTools
             return cliff + bumps;
         }
 
-        private static TerrainLayer Layer(string name, Color color)
+        /// <summary>
+        /// 바닥 레이어 무게(합 1). 절벽은 바위, 길은 흙길, 던전 입구 둘레(pollutedRadius, 경계는 노이즈로 들쭉날쭉)는 오염 토양,
+        /// 나머지는 숲 바닥에 약한 노이즈로 흙을 조금(forestDirtMix) 섞는다. 길 위는 오염보다 흙길이 먼저다.
+        /// </summary>
+        private static void GroundWeights(WorldTuning tuning, WorldRoute route, List<Vector2> flatSites, float x, float z,
+            out float forest, out float trail, out float rock, out float polluted)
         {
-            string texturePath = $"{ArtFolder}/{name}.asset";
-            string layerPath = $"{ArtFolder}/{name}.terrainlayer";
-            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
-            if (texture == null)
-            {
-                texture = new Texture2D(4, 4, TextureFormat.RGBA32, false) { name = name };
-                var pixels = new Color[16];
-                for (int i = 0; i < pixels.Length; i++) pixels[i] = color;
-                texture.SetPixels(pixels);
-                texture.Apply();
-                AssetDatabase.CreateAsset(texture, texturePath);
-            }
+            float d = route.DistanceFrom(x, z, out float along);
+            float half = tuning.ValleyHalfWidthAt(along);
+            float path = 1f - Smooth01((d - tuning.pathHalfWidth) / 1.5f);
+            rock = Smooth01((d - half - 1f) / 3f);
+            trail = path * (1f - rock);
+            float rest = Mathf.Max(0f, 1f - rock - trail);
+
+            float nearSite = float.MaxValue;
+            foreach (Vector2 site in flatSites) nearSite = Mathf.Min(nearSite, Vector2.Distance(site, new Vector2(x, z)));
+            float edge = (Mathf.PerlinNoise(x * tuning.pollutedNoiseScale + 300f, z * tuning.pollutedNoiseScale + 300f) - 0.5f) * 2f * tuning.pollutedEdgeNoise;
+            float pollution = 1f - Smooth01((nearSite - tuning.pollutedRadius - edge) / tuning.pollutedFade);
+            polluted = rest * pollution;
+
+            float ground = rest - polluted;
+            float dirtSpots = Smooth01((Mathf.PerlinNoise(x * tuning.forestDirtNoiseScale + 500f, z * tuning.forestDirtNoiseScale + 500f) - 0.35f) / 0.4f) * tuning.forestDirtMix;
+            trail += ground * dirtSpots;
+            forest = ground * (1f - dirtSpots);
+
+            float sum = forest + trail + rock + polluted;
+            if (sum <= 0f) { forest = 1f; return; }
+            forest /= sum; trail /= sum; rock /= sum; polluted /= sum;
+        }
+
+
+        // ---------- 바닥 레이어 ----------
+
+        /// <summary>지형 레이어 파일을 만들거나 매번 모든 값을 덮어쓴다. 매끄러움은 텍스처 알파가 아니라 상수(알파가 1이면 거울처럼 하늘이 비친다).</summary>
+        private static TerrainLayer Layer(string name, Texture2D texture, float tile, float smoothness)
+        {
+            string layerPath = $"{GroundFolder}/{name}.terrainlayer";
             var layer = AssetDatabase.LoadAssetAtPath<TerrainLayer>(layerPath);
             if (layer == null)
             {
@@ -241,9 +288,63 @@ namespace Game.EditorTools
                 AssetDatabase.CreateAsset(layer, layerPath);
             }
             layer.diffuseTexture = texture;
-            layer.tileSize = new Vector2(4f, 4f);
+            layer.normalMapTexture = null;
+            layer.maskMapTexture = null;
+            layer.tileSize = new Vector2(tile, tile);
+            layer.tileOffset = Vector2.zero;
+            layer.diffuseRemapMin = Vector4.zero;
+            layer.diffuseRemapMax = Vector4.one;
+            layer.smoothnessSource = TerrainLayerSmoothnessSource.Constant;
+            layer.smoothness = smoothness;
+            layer.metallic = 0f;
+            layer.specular = Color.black;
             EditorUtility.SetDirty(layer);
             return layer;
+        }
+
+        /// <summary>바닥 텍스처(VARCO, 이음매 없는 타일) 가져오기 설정을 맞추고 불러온다.</summary>
+        private static Texture2D GroundTexture(string fileName)
+        {
+            string path = $"{GroundFolder}/{fileName}.png";
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null)
+            {
+                Debug.LogError($"[WorldSetup] 바닥 텍스처가 없습니다: {path}");
+                return null;
+            }
+            bool changed = importer.textureType != TextureImporterType.Default || !importer.sRGBTexture || !importer.mipmapEnabled
+                || importer.wrapMode != TextureWrapMode.Repeat || importer.filterMode != FilterMode.Trilinear || importer.anisoLevel != 4
+                || importer.alphaSource != TextureImporterAlphaSource.None;
+            if (changed)
+            {
+                importer.textureType = TextureImporterType.Default;
+                importer.sRGBTexture = true;
+                importer.mipmapEnabled = true;
+                importer.wrapMode = TextureWrapMode.Repeat;
+                importer.filterMode = FilterMode.Trilinear;
+                importer.anisoLevel = 4;
+                importer.alphaSource = TextureImporterAlphaSource.None;
+                importer.SaveAndReimport();
+            }
+            return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+        }
+
+        /// <summary>텍스처가 없는 레이어(절벽 바위)용 4×4 단색. 매번 색을 다시 칠한다.</summary>
+        private static Texture2D SolidTexture(string name, Color color)
+        {
+            string path = $"{GroundFolder}/{name}.asset";
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(path);
+            if (texture == null)
+            {
+                texture = new Texture2D(4, 4, TextureFormat.RGBA32, false) { name = name };
+                AssetDatabase.CreateAsset(texture, path);
+            }
+            var pixels = new Color[texture.width * texture.height];
+            for (int i = 0; i < pixels.Length; i++) pixels[i] = color;
+            texture.SetPixels(pixels);
+            texture.Apply();
+            EditorUtility.SetDirty(texture);
+            return texture;
         }
 
         private static Material TerrainMaterial()
@@ -346,17 +447,25 @@ namespace Game.EditorTools
         // ---------- 나무 ----------
 
         /// <summary>골짜기 안 흙길 밖에 회색 도형 나무(줄기 충돌 · 수관). 고정 시드라 매번 같은 자리.</summary>
-        private static void BuildTrees(WorldTuning tuning, WorldRoute route, Terrain terrain, Transform parent, List<Vector3> sites)
+        /// <summary>
+        /// 골짜기 안 흙길 밖에 나무(VARCO 모델 프리팹, 줄기 충돌). 종류는 treeKinds 무게로 섞고, 던전 입구 둘레는 weightNearDungeon.
+        /// 고정 시드라 매번 같은 자리. 프리팹이 없는 종류는 회색 도형으로 그린다.
+        /// </summary>
+        private static void BuildTrees(WorldTuning tuning, WorldRoute route, Terrain terrain, Transform parent, List<Vector3> sites, Transform[] entrances)
         {
+            TreeSetup.Run();
             var forest = new GameObject("Trees").transform;
             forest.SetParent(parent, false);
-            Material trunk = Lit("TreeTrunk", new Color(0.32f, 0.24f, 0.17f));
-            Material[] leaves = { Lit("TreeLeaves", new Color(0.18f, 0.32f, 0.16f)), Lit("TreeLeavesDark", new Color(0.13f, 0.25f, 0.14f)) };
+            var prefabs = new GameObject[tuning.treeKinds.Length];
+            for (int i = 0; i < prefabs.Length; i++) prefabs[i] = AssetDatabase.LoadAssetAtPath<GameObject>(TreeSetup.PrefabPath(tuning.treeKinds[i].id));
+            var dungeonSpots = new List<Vector3>();
+            foreach (Transform entrance in entrances) dungeonSpots.Add(entrance.position);
 
             Vector3 origin = terrain.transform.position;
             Vector3 size = terrain.terrainData.size;
             var random = new System.Random(tuning.treeSeed);
             var taken = new HashSet<Vector2Int>();
+            var counts = new int[prefabs.Length];
             int placed = 0;
             for (int attempt = 0; attempt < tuning.treeCount * 8 && placed < tuning.treeCount; attempt++)
             {
@@ -368,18 +477,55 @@ namespace Game.EditorTools
                 var cell = new Vector2Int(Mathf.FloorToInt(x / tuning.treeSpacing), Mathf.FloorToInt(z / tuning.treeSpacing));
                 if (!taken.Add(cell)) continue;
 
-                float scale = 0.8f + (float)random.NextDouble() * 0.5f;
+                // 나무마다 난수 3번(종류 · 크기 · 회전) — 예전 도형 나무와 같은 횟수라 자리가 그대로다
+                bool nearDungeon = NearAny(dungeonSpots, x, z, tuning.treeNearDungeonRadius);
+                int kind = PickTreeKind(tuning.treeKinds, nearDungeon, random.NextDouble());
+                float scale = Mathf.Lerp(tuning.treeScaleRange.x, tuning.treeScaleRange.y, (float)random.NextDouble());
+                Quaternion rotation = Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f);
                 Vector3 ground = OnGround(terrain, (x, z));
-                var tree = new GameObject($"Tree{placed}").transform;
-                tree.SetParent(forest, false);
-                tree.position = ground;
-                tree.rotation = Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f);
-                Block(tree, "Trunk", new Vector3(0f, 3f * scale, 0f), new Vector3(0.6f * scale, 3f * scale, 0.6f * scale), trunk, collide: true, PrimitiveType.Cylinder);
-                float crown = (3.5f + (float)random.NextDouble() * 1.5f) * scale;
-                Block(tree, "Crown", new Vector3(0f, 6f * scale + crown * 0.3f, 0f), new Vector3(crown, crown * 1.2f, crown), leaves[placed % 2], collide: false, PrimitiveType.Sphere);
+
+                Transform tree;
+                if (kind >= 0 && prefabs[kind] != null)
+                {
+                    tree = ((GameObject)PrefabUtility.InstantiatePrefab(prefabs[kind], forest)).transform;
+                    counts[kind]++;
+                }
+                else
+                {
+                    tree = PlaceholderTree(forest);
+                }
+                tree.name = $"Tree{placed}";
+                tree.SetPositionAndRotation(ground, rotation);
+                tree.localScale = Vector3.one * scale;
                 placed++;
             }
-            Debug.Log($"[WorldSetup] 나무 {placed}그루");
+            var summary = new System.Text.StringBuilder();
+            for (int i = 0; i < counts.Length; i++) summary.Append($" · {tuning.treeKinds[i].id} {counts[i]}");
+            Debug.Log($"[WorldSetup] 나무 {placed}그루{summary}");
+        }
+
+        private static int PickTreeKind(WorldTuning.TreeKind[] kinds, bool nearDungeon, double roll)
+        {
+            float total = 0f;
+            foreach (WorldTuning.TreeKind kind in kinds) total += nearDungeon ? kind.weightNearDungeon : kind.weight;
+            if (total <= 0f) return -1;
+            float pick = (float)roll * total;
+            for (int i = 0; i < kinds.Length; i++)
+            {
+                pick -= nearDungeon ? kinds[i].weightNearDungeon : kinds[i].weight;
+                if (pick < 0f) return i;
+            }
+            return kinds.Length - 1;
+        }
+
+        /// <summary>프리팹이 없을 때의 회색 도형 나무(줄기 충돌 · 수관). 크기는 부르는 쪽이 정한다.</summary>
+        private static Transform PlaceholderTree(Transform parent)
+        {
+            var tree = new GameObject("Tree").transform;
+            tree.SetParent(parent, false);
+            Block(tree, "Trunk", new Vector3(0f, 3f, 0f), new Vector3(0.6f, 3f, 0.6f), Lit("TreeTrunk", new Color(0.32f, 0.24f, 0.17f)), collide: true, PrimitiveType.Cylinder);
+            Block(tree, "Crown", new Vector3(0f, 7.2f, 0f), new Vector3(4f, 4.8f, 4f), Lit("TreeLeaves", new Color(0.18f, 0.32f, 0.16f)), collide: false, PrimitiveType.Sphere);
+            return tree;
         }
 
         private static bool NearAny(List<Vector3> sites, float x, float z, float radius)

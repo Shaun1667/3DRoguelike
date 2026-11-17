@@ -30,6 +30,17 @@ namespace Game
             [Min(1)] public int count;
         }
 
+        [Serializable]
+        public struct TreeKind
+        {
+            [Tooltip("프리팹 이름 Tree_{id}")]
+            public string id;
+            [Tooltip("섞는 무게(비율)")]
+            [Min(0f)] public float weight;
+            [Tooltip("던전 입구 둘레(treeNearDungeonRadius 안)에서의 무게")]
+            [Min(0f)] public float weightNearDungeon;
+        }
+
         [Header("길 (위에서 본 x, z — 시작이 남쪽, 북쪽으로 나아감)")]
         public Vector2[] route =
         {
@@ -62,13 +73,59 @@ namespace Game
         [Tooltip("지형 높이 격자(2^n + 1)")]
         public int heightmapResolution = 1025;
 
-        [Header("나무 (회색 도형)")]
+        [Header("바닥 (지형 레이어: 숲 바닥 · 흙길 · 절벽 바위 · 오염 토양)")]
+        [Tooltip("숲 바닥 텍스처 한 장이 덮는 크기(m)")]
+        [Min(0.5f)] public float forestFloorTile = 5f;
+        [Tooltip("흙길 텍스처 한 장이 덮는 크기(m)")]
+        [Min(0.5f)] public float dirtTrailTile = 4f;
+        [Tooltip("오염 토양 텍스처 한 장이 덮는 크기(m)")]
+        [Min(0.5f)] public float pollutedSoilTile = 5f;
+        [Tooltip("바닥 매끄러움(숲 바닥 · 바위 · 오염 토양). 높으면 하늘이 비쳐 바닥이 희게 보인다")]
+        [Range(0f, 1f)] public float groundSmoothness = 0.05f;
+        [Tooltip("흙길 매끄러움")]
+        [Range(0f, 1f)] public float trailSmoothness = 0.1f;
+        [Tooltip("던전 입구에서 이 거리 안은 오염 토양(m)")]
+        [Min(0f)] public float pollutedRadius = 28f;
+        [Tooltip("오염 가장자리가 숲 바닥으로 바뀌는 거리(m)")]
+        [Min(0.1f)] public float pollutedFade = 8f;
+        [Tooltip("오염 경계를 노이즈로 들쭉날쭉하게 하는 폭(±m)")]
+        [Min(0f)] public float pollutedEdgeNoise = 6f;
+        [Tooltip("오염 경계 노이즈 크기(작을수록 굵은 굴곡)")]
+        [Min(0.001f)] public float pollutedNoiseScale = 0.08f;
+        [Tooltip("숲 바닥에 군데군데 섞는 흙 비율 최대(0~1)")]
+        [Range(0f, 1f)] public float forestDirtMix = 0.15f;
+        [Tooltip("숲 바닥 흙 얼룩 노이즈 크기")]
+        [Min(0.001f)] public float forestDirtNoiseScale = 0.05f;
+
+        [Header("분위기 (월드 씬만)")]
+        [Tooltip("앰비언트(Flat) 색 — 푸른 기 없이 따뜻한 중립")]
+        public Color ambientColor = new Color(0.42f, 0.42f, 0.38f);
+        [Tooltip("안개 색(Linear)")]
+        public Color fogColor = new Color(0.5f, 0.55f, 0.48f);
+        [Min(0f)] public float fogStart = 70f;
+        [Min(1f)] public float fogEnd = 320f;
+        [Tooltip("하늘(Procedural 스카이박스) 밝기")]
+        [Min(0f)] public float skyExposure = 1.1f;
+
+        [Header("나무 (VARCO 모델, 종류는 treeKinds 표)")]
         [Min(0)] public int treeCount = 900;
         [Tooltip("길 가운데에서 이만큼 안에는 나무가 없다(m)")]
         [Min(0f)] public float treePathClearance = 9f;
         [Min(0.5f)] public float treeSpacing = 4f;
         [Tooltip("나무 배치 고정 시드(월드는 판마다 같다)")]
         public int treeSeed = 7;
+        [Tooltip("나무 종류 표. 프리팹은 Prefabs/World/Tree_{id}.prefab(TreeSetup이 만든다). 새 나무 = 표 한 줄 + TreeSetup 모델 표 한 줄")]
+        public TreeKind[] treeKinds =
+        {
+            new TreeKind { id = "Oak", weight = 50f, weightNearDungeon = 40f },
+            new TreeKind { id = "Pine", weight = 35f, weightNearDungeon = 25f },
+            new TreeKind { id = "Mutant", weight = 15f, weightNearDungeon = 35f },
+        };
+        [Tooltip("던전 입구에서 이 거리 안의 나무는 weightNearDungeon 비율을 쓴다(m) — 오염된 둥지 둘레에 돌연변이 나무가 많게")]
+        [Min(0f)] public float treeNearDungeonRadius = 45f;
+        [Tooltip("나무 크기 배율 범위(최소 · 최대)")]
+        public Vector2 treeScaleRange = new Vector2(0.85f, 1.15f);
+
 
         [Header("던전 · 관문 (길 순서대로, 마지막 던전을 깨면 지역 클리어)")]
         public DungeonSite[] dungeons =
@@ -108,6 +165,17 @@ namespace Game
 
         /// <summary>던전 i 뒤 관문의 길 거리.</summary>
         public float GateDistance(int dungeon) => dungeons[dungeon].routeDistance + gateAfterEntrance;
+
+        /// <summary>길 위 무리 i 다음에 나오는 던전 순서(적 구성 단계). 마지막 던전 뒤면 마지막 던전.</summary>
+        public int DungeonAhead(int encounter)
+        {
+            float distance = encounters[encounter].routeDistance;
+            for (int i = 0; i < dungeons.Length; i++)
+            {
+                if (dungeons[i].routeDistance >= distance) return i;
+            }
+            return Mathf.Max(0, dungeons.Length - 1);
+        }
 
         /// <summary>길 거리에서의 골짜기 반폭. 관문 둘레에서 고개 폭으로 좁아진다.</summary>
         public float ValleyHalfWidthAt(float distance)

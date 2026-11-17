@@ -17,7 +17,8 @@ namespace Game
     {
         [SerializeField] private WorldTuning tuning;
         [SerializeField] private PlayerVitals player;
-        [SerializeField] private GameObject enemyPrefab;
+        [Tooltip("적 종 · 프리팹 · 비중. 길 위 무리는 그 앞 던전의 단계를 쓰되 Mutant만")]
+        [SerializeField] private EnemyRoster roster;
         [SerializeField] private RunResultScreen resultScreen;
         [Tooltip("화면 위 가운데 안내(다음 던전 · 거리)")]
         [SerializeField] private TMP_Text objective;
@@ -43,15 +44,18 @@ namespace Game
         private Transform playerTransform;
         private float nextObjectiveTime;
         private bool leaving;
+        private EnemyMix mix;
 
         public RunSession Session { get; private set; }
         public WorldTuning Tuning => tuning;
+        public EnemyRoster Roster => roster;
 
         private void Awake()
         {
             Time.timeScale = 1f;
             playerTransform = player.transform;
             Session = CurrentRun.EnsureSession(tuning.dungeons.Length, ChooseSeed);
+            mix = roster.ToMix();
 
             int back = Session.ReturnDungeon;
             if (back >= 0 && back < entrances.Length)
@@ -135,21 +139,30 @@ namespace Game
             SceneManager.LoadScene(CurrentRun.FloorScene);
         }
 
+        /// <summary>
+        /// 무리를 내보낸다. 자리 수(자식 수)를 종으로 나누는 것은 규칙 <see cref="EnemyMixPlanner"/>(길 난수, 무리마다 따로) — 같은 시드면 같은 무리.
+        /// 단계는 그 무리 앞 던전, E 개체 없음(결정 2026-11-12). 떼(멧토끼)는 한 자리 둘레에 둘러선다.
+        /// </summary>
         private void SpawnEncounter(int site)
         {
             started[site] = true;
             Transform points = encounterSites[site];
-            for (int i = 0; i < points.childCount; i++)
+            IRandom random = new RunRandom(Session.Seed).Create(RandomPurpose.Road, site);
+            List<EnemyPick> picks = EnemyMixPlanner.Pick(mix, tuning.DungeonAhead(site), points.childCount, allowEvolved: false, random);
+            for (int i = 0; i < picks.Count && i < points.childCount; i++)
             {
                 Vector3 position = points.GetChild(i).position;
                 Vector3 toPlayer = Flat(playerTransform.position - position);
                 Quaternion facing = toPlayer.sqrMagnitude > 0.01f ? Quaternion.LookRotation(toPlayer) : Quaternion.identity;
-                GameObject enemy = Instantiate(enemyPrefab, position, facing, transform);
-                enemy.name = $"Mutant_Road{site}_{i}";
-                var health = enemy.GetComponent<Health>();
-                health.Died += () => OnRoadEnemyDied(site, health);
-                alive[site].Add(health);
+                foreach (Enemy enemy in roster.SpawnGroup(picks[i].Kind, picks[i].GroupSize, position, facing, transform))
+                {
+                    enemy.name = $"{enemy.name}_Road{site}_{i}";
+                    Health health = enemy.Health;
+                    health.Died += () => OnRoadEnemyDied(site, health);
+                    alive[site].Add(health);
+                }
             }
+            if (alive[site].Count == 0) Session.World.ClearEncounter(site);
         }
 
         private void OnRoadEnemyDied(int site, Health enemy)

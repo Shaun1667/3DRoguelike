@@ -5,8 +5,9 @@
 |---|---|---|
 | 1~5 | `Assets/Game/Data/PlayerTuning.asset` | `PlayerTuning` |
 | 7 · 8 · 10 · 11 · 12 | `Assets/Game/Data/FloorTuning.asset` · `RewardTable.asset` | `FloorTuning` → `FloorLayoutSettings` · `EncounterSettings` · `RewardSettings`(Game.Rules), `RewardTable` |
-| 9 | `Assets/Game/Data/MutantTuning.asset` | `MutantTuning` |
+| 9 | `Assets/Game/Data/Enemies/{Badger,Boar,Hare,Toad}Tuning.asset` | `BadgerTuning` · `BoarTuning` · `HareTuning` · `ToadTuning` (공통 `EnemyTuning`) |
 | 13 | `Assets/Game/Data/WorldTuning.asset` | `WorldTuning` |
+| 14 | `Assets/Game/Data/EnemyRoster.asset` | `EnemyRoster` → `EnemyMix`(Game.Rules) |
 
 ## 1. 플레이어 조작
 재미 검증 전 출발값이다. 값을 바꾸면 `PlayerTuningTests`도 함께 고친다. 걷기 배속은 바꾼 뒤 `Tools/Game/Setup Test Room`을 다시 실행해야 컨트롤러에 들어간다.
@@ -20,6 +21,7 @@
 | 마우스 감도 `lookSensitivity` | 0.08 도/픽셀 | 첫 시도 |
 | 시점 위아래 `minPitch` · `maxPitch` | -30 ~ 60 도 | 첫 시도 |
 | 동작 전환 `animationBlendSpeed` | 8 /초 | 까치 보스전 값 |
+| 밀림 줄어듦 `pushDecay` | 5 /초 | 멧돼지 돌진 밀림(3-3). 밀리는 거리 = 처음 속도 ÷ 이 값(12 m/s → 약 2.4 m), 첫 시도 |
 | 걷기 배속 `walkPlaybackSpeed` | 2.4 | 까치 보스전 2배에서 이동 속도 증가만큼 올림 |
 | 달리기 동작 배속 | 계산값 (Setup 콘솔에 출력) | 걷기 배속 × 클립 속도 비(Walk ÷ Fast Run) — 6.4 m/s에서 발이 맞게. 앞으로 달릴 때만, 2026-11-10 |
 
@@ -91,27 +93,65 @@
 | 문 폭 `doorWidth` | 4 m | 플레이어(폭 0.7 m)가 구르거나 카메라를 돌리며 지나가도 넉넉하게, 첫 시도 |
 | 방에 들어선 거리 `enterMargin` | 1.5 m | 문틀에 선 채로 잠겨 갇히지 않게, 첫 시도 |
 
-## 9. 숲 Mutant
-`MutantTuning`의 값. 값을 바꾸면 `PlayerTuningTests.MutantTuning_MatchesBalance`도 함께 고치고, 할퀴기 거리 · 각도를 바꾸면 `Tools/Game/Setup Test Room`을 다시 실행한다(바닥 예고 크기).
+## 9. 숲 적 4종
+종마다 `Data/Enemies/{종}Tuning.asset` 하나에 Mutant(네 발, 본능)와 E 개체(두 발) 값을 같이 둔다. 결정 2026-11-12(사용자): 오소리 · 멧돼지 · 멧토끼 · 두꺼비, E 개체 = 체력 ×1.8 + 공격 하나 더 — 결정에 없는 값은 첫 시도. 값을 바꾸면 `EnemyTuningTests`도 함께 고치고, 할퀴기 범위 · 돌진 거리 · 부딪힘 반지름 · 내려찍기 반지름 · 부채꼴 발 수를 바꾸면 `Tools/Game/Setup Test Room`을 다시 실행한다(바닥 예고 크기). 예전 `MutantTuning`(2-4)의 값은 오소리로 옮겼다.
 
+공통(`EnemyTuning`)
 | 항목 | 값 | 근거 |
 |---|---|---|
-| 체력 `maxHealth` | 30 | 근접 3대, 권총 5발 — 방에 2~4마리라 표적(60)의 절반 |
-| 이동 속도 `moveSpeed` | 3 m/s | 플레이어 4 m/s보다 느려 걸으며 쏠 수 있고, 조준(×0.6 = 2.4 m/s) 중에는 따라잡힘 |
-| 회전 `turnSpeed` | 540 도/초 | 쫓을 때 바로 돌아섬, 첫 시도 |
-| 길 다시 찾기 `repathInterval` | 0.2 초 | 첫 시도 |
-| 나타나기 예고 `spawnTime` | 1 초 | 들어서자마자 맞지 않게 |
-| 예고 시작 거리 `attackStartRange` | 1.8 m | 맞는 거리보다 짧아 예고 중 조금 물러나도 맞음 |
-| 예고 `windupTime` | 1 초 | 사용자 요청 2026-11-10 "선딜레이가 없고 너무 빠름"(0.6 → 1). 몸을 젖히고 바닥 범위가 차오르는 걸 보고 피할 시간 |
-| 맞는 거리 `hitRange` · 각도 `hitAngle` | 2.2 m · 100 도 | 플레이어 근접(2.2 m · 110 도)과 비슷하게 |
-| 피해 `damage` | 10 | 플레이어 10대. 한 방에 4마리가 동시에 붙으면 위험 |
-| 빈틈 `recoverTime` | 1.3 초 | 사용자 요청 2026-11-10 후딜레이(0.9 → 1.3). 할퀸 뒤 근접 2~3대를 넣을 시간 |
-| 젖히기 `windupLeanAngle` · 숙이기 `strikeLeanAngle` | 25 도 · 20 도 | 연출. 예고 동안 뒤로 젖히고, 할퀼 때 앞으로 숙였다가 빈틈 동안 일어섬 |
-| 번쩍임 `hitFlashTime` | 0.08 초 | 플레이어와 같음 |
-| 사라짐 `corpseTime` | 1 초 | 첫 시도 |
+| E 개체 체력 `evolvedHealthMultiplier` | ×1.8 (반올림) | 결정 2026-11-12 |
+| E 개체 추가 공격 `extraAttackEvery` | 2 — 공격 두 번에 한 번은 추가 공격 | 정한 것 (Claude, 확인 필요) |
+| 회전 `turnSpeed` | 540 도/초 (멧돼지 360) | 2-4 값, 멧돼지는 둔하게 |
+| 길 다시 찾기 · 나타나기 예고 · 번쩍임 · 사라짐 | 0.2초 · 1초 · 0.08초 · 1초 | 2-4 값 |
+| 젖히기 `windupLeanAngle` · 숙이기 `strikeLeanAngle` | 25 · 20 도 (멧토끼 0 · 25, 두꺼비 25 · 10) | 연출 |
+
+오소리(`BadgerTuning`) — 기본 근접. Mutant 값은 2-4 Mutant 그대로
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 체력 `maxHealth` | 30 (E 54) | 근접 3대, 권총 5발 |
+| 이동 `moveSpeed` | 3 m/s | 플레이어 4 m/s보다 느림 |
+| 예고 시작 거리 · 예고 · 맞는 거리 · 각도 | 1.8 m · 1초 · 2.2 m · 100도 | 2-4(사용자 피드백 2026-11-10 반영) |
+| 피해 `damage` · 빈틈 `recoverTime` | 10 · 1.3초 | 2-4 |
+| E: 3연속 할퀴기 `comboHits` · 간격 · 피해 · 내딛기 · 빈틈 | 3번 · 0.55초 · 8 · 0.6 m · 1.6초 | 같은 예고 뒤 세 번. 간격을 플레이어 맞은 뒤 무적(0.5초)보다 길게 해 다 맞으면 24 |
+
+멧돼지(`BoarTuning`) — 돌진 탱커
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 체력 | 70 (E 126) | 근접 7대, 권총 12발 — 탱커 |
+| 이동 | 2.6 m/s | 느린 대신 돌진 |
+| 돌진 시작 거리 `chargeStartRange` | 12 m, 앞이 트였을 때 | 돌진(15 m)보다 짧아 지나쳐 벽에 박을 여지 |
+| 예고 · 돌진 속도 · 거리 | 1.2초 · 9 m/s · 15 m | 결정 2026-11-12. 예고 동안 바닥에 돌진 길 |
+| 피해 · 부딪힘 반지름 | 20 · 1.2 m | 피해는 결정, 반지름 첫 시도(예고 폭 2.4 m) |
+| 밀림 `knockbackSpeed` | 12 m/s (약 2.4 m, 1번 `pushDecay`) | 결정 "밀림", 크기 첫 시도 |
+| 벽 · 나무에 박으면 기절 `stunTime` | 2초 | 결정 2026-11-12. 머리 위 노란 별 |
+| 박지 않았을 때 빈틈 | 1초 | 첫 시도 |
+| E: 돌진 끝 내려찍기 예고 · 반지름 · 피해 · 빈틈 | 0.5초 · 3 m · 15 · 1.2초 | 벽에 박으면 내려찍기 없음 |
+
+멧토끼(`HareTuning`) — 빠른 떼(떼 크기는 14번)
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 체력 | 12 (E 22) | 근접 2대, 권총 2발 — 떼라 약하게 |
+| 이동 | 4.2 m/s | 걷기(4)로는 못 떨치고 달리기(6.4)로 떨침 |
+| 도약 시작 거리 · 웅크림 | 5 m · 0.5초 | 웅크림은 결정. 뛸 곳은 웅크릴 때 정해져 바닥에 보임 |
+| 최대 거리 · 공중 · 높이 · 부딪힘 반지름 | 6 m · 0.4초 · 0.8 m · 0.9 m | 첫 시도 |
+| 피해 · 착지 빈틈 | 6 · 0.8초 | 결정 2026-11-12 |
+| E: 높이 뛰어 내려찍기 웅크림 · 거리 · 공중 · 높이 | 0.8초 · 8 m · 0.8초 · 3 m | 첫 시도 |
+| E: 내려찍기 반지름 · 피해 · 빈틈 | 2 m · 10 · 1초 | 첫 시도 |
+
+두꺼비(`ToadTuning`) — 원거리
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 체력 | 24 (E 43) | 근접 3대, 권총 4발 |
+| 이동 | 2.2 m/s | 물러나도 플레이어가 따라잡음 |
+| 거리 유지 `keepMin` ~ `keepMax` | 8 ~ 14 m, 물러날 때 4 m씩 | 결정 8~14 m. 사이에 막힌 게 있으면 다가감 |
+| 예고 · 날아가는 시간 · 꼭대기 높이 | 1.2초 · 0.9초 · 3 m | 예고는 결정. 떨어질 곳이 예고 때 정해져 바닥에 보임 |
+| 피해 · 맞는 반지름 | 8 · 1.5 m | 피해는 결정 |
+| 독 웅덩이 반지름 · 시간 · 초당 피해 · 간격 | 2 m · 4초 · 4 · 1초 | 시간 · 초당 피해는 결정 |
+| 쏜 뒤 빈틈 · 다음 공격까지 | 1초 · 2.5초 | 첫 시도 |
+| E: 부채꼴 발 수 · 각도 | 3발 · 가운데에서 ±25도 | 결정 3발, 각도 첫 시도 |
 
 ## 10. 방마다 적
-`FloorTuning`이 `EncounterSettings`로 넘기는 값. 값을 바꾸면 `PlayerTuningTests.FloorTuning_MatchesBalance`와 `EncounterPlannerTests.BalanceSettings`도 함께 고친다.
+`FloorTuning`이 `EncounterSettings`로 넘기는 값. 3-3부터 적 수는 '자리'이고 종마다 쓰는 자리 수는 14번(멧토끼 떼는 2자리에 3~5마리). 값을 바꾸면 `PlayerTuningTests.FloorTuning_MatchesBalance`와 `EncounterPlannerTests.BalanceSettings`도 함께 고친다.
 
 | 항목 | 값 | 근거 |
 |---|---|---|
@@ -158,12 +198,40 @@
 | 절벽 높이 · 가로 `cliffHeight` · `cliffWidth` | 28 m · 10 m | 평균 경사 약 70° — 플레이어 · 적 오르기 한계 45°를 넘음 |
 | 흙길 반폭 `pathHalfWidth` | 4 m | 눈에 띄는 길 |
 | 바닥 굴곡 `groundBumps` | 1.5 m | 길 · 입구 근처(14 m)는 평평 |
+| 바닥 레이어 타일 `forestFloorTile` · `dirtTrailTile` · `pollutedSoilTile` | 숲 바닥 5 m · 흙길 4 m · 오염 토양 5 m (절벽 바위는 단색) | VARCO 1024² 이음매 없는 텍스처(`Art/World/Ground`). 정한 것 (감독 지시 2026-11-17) |
+| 바닥 매끄러움 `groundSmoothness` · `trailSmoothness` | 0.05 · 흙길 0.1 (상수, 금속 0) | 매끄러움을 텍스처 알파에서 읽으면(Unity 기본) 1이 되어 낮은 시점에서 하늘이 비쳐 바닥이 청백색으로 보였음 |
+| 오염 토양 `pollutedRadius` · `pollutedFade` | 입구에서 28 m · 가장자리 8 m | 오염된 둥지 둘레. 길 위는 흙길이 먼저 |
+| 오염 경계 노이즈 `pollutedEdgeNoise` · `pollutedNoiseScale` | ±6 m · 0.08 | 경계가 둥글지 않고 들쭉날쭉하게 |
+| 숲 바닥 흙 얼룩 `forestDirtMix` · `forestDirtNoiseScale` | 최대 15% · 0.05 (약 20 m 크기 얼룩) | 숲 바닥 단조로움 줄이기 |
+| 분위기 `ambientColor` · `fogColor` · `fogStart`~`fogEnd` · `skyExposure` | 앰비언트 (0.42, 0.42, 0.38) · 안개 (0.50, 0.55, 0.48) 70~320 m · 하늘 밝기 1.1 | 푸른 기를 줄인 따뜻한 숲. 월드 씬만(시험 방은 그대로) |
 | 나무 `treeCount` · 간격 · 길에서 비움 | 900그루 · 4 m · 9 m | 숲 느낌, 고정 시드 7 |
+| 나무 종류 `treeKinds` 무게 (신갈나무 · 소나무 · 돌연변이) | 50 · 35 · 15 | 결정 2026-11-17(사용자 "추천안대로"): 신갈나무 많이, 소나무 중간, 돌연변이 드문드문. 지금 배치 결과 424 · 306 · 170그루 |
+| 던전 입구 둘레 무게 `weightNearDungeon` · 반경 `treeNearDungeonRadius` | 40 · 25 · 35 · 45 m | 오염된 둥지 둘레에 돌연변이 나무가 더 많게. 정한 것 (Claude, 확인 필요) |
+| 나무 크기 `treeScaleRange` · 회전 | 0.85 ~ 1.15배 · Y축 아무 각도 | 모델 높이 소나무 12 m · 신갈나무 9 m · 돌연변이 8 m. 나무마다 난수 3번(종류 · 크기 · 회전)이라 자리는 도형 나무 때와 같음 |
 | 던전 입구 (길 거리 · 옆) | 300 m 오른쪽 18 m · 600 m 왼쪽 18 m · 900 m 오른쪽 18 m | 길을 셋으로 나눔. 마지막(3번) 던전을 깨면 숲 클리어 |
 | 관문 `gateAfterEntrance` | 입구에서 길 따라 70 m 앞 | 입구가 좁아지는 구간 밖에 있게(45 + 15 m 넘게) |
 | 입장 거리 `entranceRadius` | 2.5 m | 입구 앞 파란 원에 들어서면 바로 입장 |
-| 적 무리 | 6곳(110 · 210 · 420 · 510 · 700 · 800 m), 2 · 3 · 2 · 3 · 3 · 4마리 | 던전 사이마다 두 번 |
+| 적 무리 | 6곳(110 · 210 · 420 · 510 · 700 · 800 m), 자리 2 · 3 · 2 · 3 · 3 · 4(종 · 떼는 14번) | 던전 사이마다 두 번 |
 | 무리 나타나는 거리 `encounterTriggerRange` | 22 m | 시야 안에서 바닥 예고가 보이게 |
 | 던전 → 월드로 돌아가기 | 마지막 방을 깨고 2초 뒤(보상 고르는 중이면 고른 뒤) | `FloorRun.returnDelayAfterClear` |
 
 던전 안 층은 판 시드 + 던전 순서(난수의 층 번호)로 만들어져, 같은 시드면 같은 던전 셋이 나온다.
+
+## 14. 적 구성 (종 비중 · E 개체 · 떼)
+`Data/EnemyRoster.asset`(`EnemyRoster` → 규칙 `EnemyMix` · `EnemyMixPlanner`). 방 적 수(10번)와 길 위 무리 수(13번)는 '자리'로 쓰고, 종마다 정해진 만큼 자리를 쓴다. 결정 2026-11-16(사용자): 종 구성은 단계별로 늘리기 — 던전 1까지 오소리 위주 + 멧토끼 떼, 던전 2부터 멧돼지 · 두꺼비. 결정 2026-11-12(사용자): 길 위 무리는 Mutant만, 던전 2 · 3은 E 개체 약 25% · 50%. 나머지는 첫 시도. 값을 바꾸면 `EnemyTuningTests.EnemyRoster_MatchesBalance`와 `EnemyMixTests.BalanceMix`도 함께 고친다. 같은 시드면 같은 구성(던전은 적 난수, 길 위는 `road` 난수).
+
+| 종 | 쓰는 자리 `slots` | 마릿수 `groupMin` ~ `groupMax` | 떼 반지름 `groupSpread` | 근거 |
+|---|---|---|---|---|
+| 오소리 | 1 | 1 | — | 기준 |
+| 멧돼지 | 2 | 1 | — | 탱커라 둘 몫 |
+| 멧토끼 | 2 | 3 ~ 5 | 1.5 m | 떼 3~5는 결정, 한 마리가 약해 자리 2 |
+| 두꺼비 | 1 | 1 | — | |
+
+| 단계 | 쓰는 곳 | 무게: 오소리 · 멧토끼 · 멧돼지 · 두꺼비 | E 개체 `evolvedChance` |
+|---|---|---|---|
+| 1 | 숲 던전 1 + 그 앞 길 무리(110 · 210 m) | 3 · 1 · 0 · 0 | 0 |
+| 2 | 숲 던전 2 + 그 앞 길 무리(420 · 510 m) | 3 · 1 · 1 · 1 | 0.25 |
+| 3 | 숲 던전 3 + 그 앞 길 무리(700 · 800 m) | 2 · 1 · 2 · 2 | 0.5 |
+
+- 한 번 뽑을 때마다 종 → E 개체 여부 → 떼 크기. 떼는 다 같은 모습. 남은 자리로 쓸 수 있는 종만 뽑으므로(1자리 남으면 오소리 · 두꺼비) 실제 비중은 무게와 조금 다르다. 오소리가 늘 1자리라 자리는 남김없이 쓴다.
+- 길 위 무리는 그 무리 다음 던전의 단계를 쓰되 E 개체 없음. 층 씬만 Play하면 단계 1. 표보다 뒤 던전은 마지막 단계.
