@@ -17,6 +17,8 @@ namespace Game.Rules
         public static readonly RandomPurpose Combat = new RandomPurpose("combat");
         /// <summary>연출. 결과에 영향을 주지 않는 것만.</summary>
         public static readonly RandomPurpose Effects = new RandomPurpose("effects");
+        /// <summary>월드 길 위 적 무리의 종류(층 번호 자리 = 무리 번호). 던전 안 적(enemy)과 수열이 겹치지 않게 따로.</summary>
+        public static readonly RandomPurpose Road = new RandomPurpose("road");
 
         RandomPurpose(string key)
         {

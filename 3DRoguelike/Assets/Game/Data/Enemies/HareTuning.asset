@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d8489380741d3294c99efb573dc11a93, type: 3}
+  m_Name: HareTuning
+  m_EditorClassIdentifier: Game.Runtime::Game.HareTuning
+  displayName: "\uBA67\uD1A0\uB07C Mutant"
+  evolvedDisplayName: "\uBA67\uD1A0\uB07C E \uAC1C\uCCB4"
+  maxHealth: 12
+  evolvedHealthMultiplier: 1.8
+  moveSpeed: 4.2
+  turnSpeed: 540
+  repathInterval: 0.2
+  spawnTime: 1
+  extraAttackEvery: 2
+  windupLeanAngle: 0
+  strikeLeanAngle: 25
+  hitFlashTime: 0.08
+  corpseTime: 1
+  attackName: "\uB4E4\uC774\uBC1B\uAE30"
+  leapStartRange: 5
+  crouchTime: 0.5
+  leapDistance: 6
+  leapTime: 0.4
+  leapHeight: 0.8
+  hitRadius: 0.9
+  damage: 6
+  recoverTime: 0.8
+  slamName: "\uB0B4\uB824\uCC0D\uAE30"
+  slamCrouchTime: 0.8
+  slamLeapDistance: 8
+  slamLeapTime: 0.8
+  slamLeapHeight: 3
+  slamRadius: 2
+  slamDamage: 10
+  slamRecoverTime: 1

@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d664cb8de9f5ac489cdb46dfb53fc32, type: 3}
+  m_Name: EnemyRoster
+  m_EditorClassIdentifier: Game.Runtime::Game.EnemyRoster
+  species:
+  - species: 0
+    mutantPrefab: {fileID: 2958653677551444911, guid: be2e6b17dcb713d42a30c08a789e7a37, type: 3}
+    evolvedPrefab: {fileID: 6290726416497535157, guid: 8b74061a796c5004fa6d8068844c643b, type: 3}
+    slots: 1
+    groupMin: 1
+    groupMax: 1
+    groupSpread: 0
+  - species: 1
+    mutantPrefab: {fileID: 2011652564167693353, guid: 96c9221b31a0b4840a1b357aff478e14, type: 3}
+    evolvedPrefab: {fileID: 7511969412095952143, guid: a9da5f5c1e7f8e247bcfda962621bfb2, type: 3}
+    slots: 2
+    groupMin: 1
+    groupMax: 1
+    groupSpread: 0
+  - species: 2
+    mutantPrefab: {fileID: 4652980600393062585, guid: 6069216cdd0573141b72a2ed104bd160, type: 3}
+    evolvedPrefab: {fileID: 4746364227430402595, guid: 65962eff3c3efe24c81a3bb9384dc263, type: 3}
+    slots: 2
+    groupMin: 3
+    groupMax: 5
+    groupSpread: 1.5
+  - species: 3
+    mutantPrefab: {fileID: 8349188879760959778, guid: dbe4c4c96771fd040aac54f8086ae25e, type: 3}
+    evolvedPrefab: {fileID: 1519206505793023915, guid: ea4328512f0ff414bbaee22bdcb7a022, type: 3}
+    slots: 1
+    groupMin: 1
+    groupMax: 1
+    groupSpread: 0
+  stages:
+  - name: "\uC232 \uB358\uC804 1 (+ \uADF8 \uC55E \uAE38)"
+    evolvedChance: 0
+    weights:
+    - species: 0
+      weight: 3
+    - species: 2
+      weight: 1
+  - name: "\uC232 \uB358\uC804 2 (+ \uADF8 \uC55E \uAE38)"
+    evolvedChance: 0.25
+    weights:
+    - species: 0
+      weight: 3
+    - species: 2
+      weight: 1
+    - species: 1
+      weight: 1
+    - species: 3
+      weight: 1
+  - name: "\uC232 \uB358\uC804 3 (+ \uADF8 \uC55E \uAE38)"
+    evolvedChance: 0.5
+    weights:
+    - species: 0
+      weight: 2
+    - species: 2
+      weight: 1
+    - species: 1
+      weight: 2
+    - species: 3
+      weight: 2

@@ -23,7 +23,8 @@ namespace Game
 
         [SerializeField] private FloorTuning tuning;
         [SerializeField] private PlayerVitals player;
-        [SerializeField] private GameObject enemyPrefab;
+        [Tooltip("적 종 · 프리팹 · 던전 순서별 비중(단계 = 던전 순서)")]
+        [SerializeField] private EnemyRoster roster;
         [Tooltip("층을 세운 뒤 적이 다닐 길을 굽는다")]
         [SerializeField] private NavMeshSurface navMesh;
         [SerializeField] private RunResultScreen resultScreen;
@@ -74,6 +75,7 @@ namespace Game
         public RunStats Stats { get; private set; }
         /// <summary>잠긴 방에 아직 살아 있는 적 수.</summary>
         public int AliveEnemies => roomEnemies.Count;
+        public EnemyRoster Roster => roster;
 
         /// <summary>판이 끝난 순간(죽음 · 층 클리어). 결과 화면은 잠시 뒤에 뜬다.</summary>
         public event Action<RunStats> RunEnded;
@@ -105,7 +107,7 @@ namespace Game
             var random = new RunRandom(Seed);
             Layout = FloorGenerator.Generate(tuning.ToSettings(), random.Create(RandomPurpose.Map, dungeon));
             TreasureRoom = SpecialRoomPlanner.AssignTreasure(Layout, random.Create(RandomPurpose.Decor, dungeon));
-            Encounters = EncounterPlanner.Plan(Layout, tuning.ToEncounterSettings(), random.Create(RandomPurpose.Enemy, dungeon));
+            Encounters = EncounterPlanner.Plan(Layout, tuning.ToEncounterSettings(), roster.ToMix(), dungeon, random.Create(RandomPurpose.Enemy, dungeon));
             Rewards = RewardPlanner.Plan(Layout, tuning.ToRewardSettings(), rewardTable.ToDefinitions(), random.Create(RandomPurpose.Reward, dungeon));
             Progress = new FloorProgress(Layout);
             int battleRooms = 0;
@@ -202,9 +204,10 @@ namespace Game
                 toPlayer.y = 0f;
                 Quaternion facing = toPlayer.sqrMagnitude > 0.01f ? Quaternion.LookRotation(toPlayer) : Quaternion.identity;
 
-                GameObject enemy = Instantiate(enemyPrefab, position, facing, transform);
-                enemy.name = $"Mutant_Room{roomId}_{i}";
-                var health = enemy.GetComponent<Health>();
+                Enemy enemy = roster.Spawn(spawns[i].Kind, position, facing, transform);
+                if (enemy == null) continue;
+                enemy.name = $"{enemy.name}_Room{roomId}_{i}";
+                Health health = enemy.Health;
                 health.Died += () => OnRoomEnemyDied(health);
                 roomEnemies.Add(health);
             }

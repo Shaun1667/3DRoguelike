@@ -1,18 +1,22 @@
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using System.Collections.Generic;
+using Game.Rules;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.InputSystem;
 
 namespace Game
 {
     /// <summary>
     /// 디버그 창(에디터 · 개발 빌드 전용). 씬마다 저절로 생기므로 씬 · 프리팹에 넣지 않는다.
-    /// F1 창 열고 닫기 · F2 원펀맨 모드(적 하나를 맞히면 살아 있는 적 전부 처치) · F3 지금 모든 적 처치.
+    /// F1 창 열고 닫기 · F2 원펀맨 모드(적 하나를 맞히면 살아 있는 적 전부 처치) · F3 지금 모든 적 처치 · 종 · 모습을 골라 앞에 소환.
     /// 창이 열려 있는 동안은 커서를 풀어 버튼을 누를 수 있게 한다.
     /// </summary>
     public sealed class DebugPanel : MonoBehaviour
     {
         private const string KillSource = "원펀맨";
+        private const float SummonDistance = 7f;
+        private static readonly string[] SpeciesNames = { "오소리", "멧돼지", "멧토끼", "두꺼비" };
 
         private static DebugPanel instance;
 
@@ -25,6 +29,10 @@ namespace Game
         private FloorRun floor;
         private WorldRun world;
         private string lastAction = "";
+        private int summonSpecies;
+        private bool summonEvolved;
+        private Transform playerTransform;
+        private EnemyRoster roster;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void Create()
@@ -58,7 +66,10 @@ namespace Game
             GameObject player = GameObject.FindWithTag("Player");
             floor = FindAnyObjectByType<FloorRun>();
             world = FindAnyObjectByType<WorldRun>();
+            EnemyRosterSource source = FindAnyObjectByType<EnemyRosterSource>();
+            roster = floor != null ? floor.Roster : world != null ? world.Roster : source != null ? source.Roster : null;
             if (player == null) return;
+            playerTransform = player.transform;
             melee = player.GetComponent<PlayerMelee>();
             gun = player.GetComponent<PlayerGun>();
             controller = player.GetComponent<PlayerController>();
@@ -95,8 +106,8 @@ namespace Game
         public int KillAll(string reason)
         {
             // 처치하면 목록에서 빠지므로 복사본으로 돈다
-            var targets = new List<Mutant>(Mutant.Alive);
-            foreach (Mutant enemy in targets)
+            var targets = new List<Enemy>(Enemy.Alive);
+            foreach (Enemy enemy in targets)
             {
                 if (!enemy.IsDead) enemy.Health.TakeDamage(enemy.Health.Current, KillSource);
             }
@@ -104,9 +115,28 @@ namespace Game
             return targets.Count;
         }
 
+        /// <summary>플레이어 앞(약 7 m)에 그 종 · 모습을 소환한다. 멧토끼는 떼(가장 작은 떼). 방 클리어 판정에는 들어가지 않는다.</summary>
+        /// <returns>소환한 수</returns>
+        public int Summon(EnemySpecies species, EnemyGrade grade)
+        {
+            if (roster == null || playerTransform == null)
+            {
+                lastAction = "소환: 적 구성 표를 찾지 못함(Setup 다시 실행)";
+                return 0;
+            }
+            Vector3 forward = playerTransform.forward;
+            forward.y = 0f;
+            Vector3 position = playerTransform.position + forward.normalized * SummonDistance;
+            if (NavMesh.SamplePosition(position, out NavMeshHit hit, 4f, NavMesh.AllAreas)) position = hit.position;
+            int size = roster.TryGetEntry(species, out EnemyRoster.SpeciesEntry entry) ? entry.groupMin : 1;
+            List<Enemy> spawned = roster.SpawnGroup(new EnemyKind(species, grade), size, position, Quaternion.LookRotation(-forward.normalized), null);
+            lastAction = $"소환: {SpeciesNames[(int)species]} {(grade == EnemyGrade.Evolved ? "E 개체" : "Mutant")} {spawned.Count}마리";
+            return spawned.Count;
+        }
+
         private void OnPlayerHit(IDamageable target)
         {
-            if (onePunch && target is Health health && health.GetComponent<Mutant>() != null) KillAll("원펀맨");
+            if (onePunch && target is Health health && health.GetComponent<Enemy>() != null) KillAll("원펀맨");
         }
 
         private void SetOpen(bool value)
@@ -132,17 +162,25 @@ namespace Game
                 return;
             }
 
-            GUILayout.BeginArea(new Rect(10, 10, 320, 330), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(10, 10, 340, 440), GUI.skin.box);
             GUILayout.Label("디버그 (F1 닫기)");
             if (floor != null && floor.Layout != null)
             {
                 GUILayout.Label($"시드 {floor.Seed.ToCode()} · 방 {floor.Progress.CurrentRoom} / 보스 {floor.Layout.BossRoom.Id}");
                 GUILayout.Label($"깬 방 {floor.Stats.RoomsCleared} / {floor.Stats.BattleRooms} · 처치 {floor.Stats.Kills}");
             }
-            GUILayout.Label($"살아 있는 적 {Mutant.Alive.Count}");
+            GUILayout.Label($"살아 있는 적 {Enemy.Alive.Count}");
             bool next = GUILayout.Toggle(onePunch, " 원펀맨 모드 (F2): 한 마리 맞히면 전부 처치");
             if (next != onePunch) SetOnePunch(next);
             if (GUILayout.Button("지금 모든 적 처치 (F3)")) KillAll("버튼");
+            if (roster != null)
+            {
+                summonSpecies = GUILayout.Toolbar(summonSpecies, SpeciesNames);
+                GUILayout.BeginHorizontal();
+                summonEvolved = GUILayout.Toggle(summonEvolved, " E 개체");
+                if (GUILayout.Button("앞에 소환")) Summon((EnemySpecies)summonSpecies, summonEvolved ? EnemyGrade.Evolved : EnemyGrade.Mutant);
+                GUILayout.EndHorizontal();
+            }
             if (form != null && !form.IsMutant && GUILayout.Button("Mutant 동작으로 (Beast 높을 때 모습)"))
             {
                 form.BecomeMutant();

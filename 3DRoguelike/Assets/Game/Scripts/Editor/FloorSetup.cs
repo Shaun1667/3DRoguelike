@@ -14,15 +14,14 @@ namespace Game.EditorTools
         private const string TuningPath = "Assets/Game/Data/FloorTuning.asset";
         private const string ScenePath = CurrentRun.FloorScene;
         private const string PlayerPrefabPath = "Assets/Game/Prefabs/Player.prefab";
-        private const string EnemyPrefabPath = TestRoomSetup.EnemyPrefabPath;
         private const string MaterialFolder = "Assets/Game/Art/Floor";
 
         [MenuItem("Tools/Game/Setup Floor")]
         public static void Run()
         {
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath) == null || AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefabPath) == null)
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath) == null || AssetDatabase.LoadAssetAtPath<EnemyRoster>(EnemySetup.RosterPath) == null)
             {
-                TestRoomSetup.Run(); // 플레이어 · Mutant 프리팹을 만든다
+                TestRoomSetup.Run(); // 플레이어 프리팹 · 숲 적 4종 · 구성 표를 만든다
             }
 
             if (!AssetDatabase.IsValidFolder(MaterialFolder)) AssetDatabase.CreateFolder("Assets/Game/Art", "Floor");
@@ -58,7 +57,7 @@ namespace Game.EditorTools
             fields.FindProperty("rareRewardMaterial").objectReferenceValue = Lit("RewardRare", new Color(1f, 0.82f, 0.25f));
             fields.FindProperty("player").objectReferenceValue = vitals;
             fields.FindProperty("resultScreen").objectReferenceValue = resultScreen;
-            fields.FindProperty("enemyPrefab").objectReferenceValue = AssetDatabase.LoadAssetAtPath<GameObject>(EnemyPrefabPath);
+            fields.FindProperty("roster").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyRoster>(EnemySetup.RosterPath);
             fields.FindProperty("navMesh").objectReferenceValue = TestRoomSetup.AddNavMeshSurface(run.gameObject);
             fields.FindProperty("floorMaterial").objectReferenceValue = Lit("Floor", new Color(0.55f, 0.55f, 0.55f));
             fields.FindProperty("startFloorMaterial").objectReferenceValue = Lit("StartFloor", new Color(0.45f, 0.6f, 0.45f));

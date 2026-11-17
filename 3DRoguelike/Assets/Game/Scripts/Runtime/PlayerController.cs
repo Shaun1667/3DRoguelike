@@ -32,6 +32,7 @@ namespace Game
         private bool jumping;
         private Vector2 blend;
         private PlayerUpgrades upgrades;
+        private Vector3 pushVelocity;
 
         private void Awake()
         {
@@ -51,6 +52,13 @@ namespace Game
 
         /// <summary>디버그 · 확인용: 입력 없이 달리기를 켠다.</summary>
         public bool DebugForceSprint { get; set; }
+
+        /// <summary>밀림(멧돼지 돌진 등). 수평 속도를 더하고 <see cref="PlayerTuning.pushDecay"/>로 줄어든다. 벽에는 막힌다.</summary>
+        public void Push(Vector3 velocity)
+        {
+            velocity.y = 0f;
+            pushVelocity += velocity;
+        }
 
         private void OnEnable()
         {
@@ -109,7 +117,9 @@ namespace Game
             {
                 verticalVelocity += tuning.gravity * Time.deltaTime;
             }
-            Vector3 horizontal = (transform.right * input.x + transform.forward * input.y) * tuning.moveSpeed * upgrades.Scale(Rules.UpgradeStat.MoveSpeed) + roll.Velocity;
+            Vector3 horizontal = (transform.right * input.x + transform.forward * input.y) * tuning.moveSpeed * upgrades.Scale(Rules.UpgradeStat.MoveSpeed) + roll.Velocity + pushVelocity;
+            pushVelocity *= Mathf.Exp(-tuning.pushDecay * Time.deltaTime);
+            if (pushVelocity.sqrMagnitude < 0.01f) pushVelocity = Vector3.zero;
             controller.Move((horizontal + Vector3.up * verticalVelocity) * Time.deltaTime);
         }
 

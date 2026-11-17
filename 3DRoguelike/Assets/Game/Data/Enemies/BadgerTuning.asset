@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a1e4f781c1886a40aa6508daa65751b, type: 3}
+  m_Name: BadgerTuning
+  m_EditorClassIdentifier: Game.Runtime::Game.BadgerTuning
+  displayName: "\uC624\uC18C\uB9AC Mutant"
+  evolvedDisplayName: "\uC624\uC18C\uB9AC E \uAC1C\uCCB4"
+  maxHealth: 30
+  evolvedHealthMultiplier: 1.8
+  moveSpeed: 3
+  turnSpeed: 540
+  repathInterval: 0.2
+  spawnTime: 1
+  extraAttackEvery: 2
+  windupLeanAngle: 25
+  strikeLeanAngle: 20
+  hitFlashTime: 0.08
+  corpseTime: 1
+  attackName: "\uD560\uD034\uAE30"
+  attackStartRange: 1.8
+  windupTime: 1
+  hitRange: 2.2
+  hitAngle: 100
+  damage: 10
+  recoverTime: 1.3
+  comboName: "3\uC5F0\uC18D \uD560\uD034\uAE30"
+  comboHits: 3
+  comboInterval: 0.55
+  comboDamage: 8
+  comboStep: 0.6
+  comboRecoverTime: 1.6

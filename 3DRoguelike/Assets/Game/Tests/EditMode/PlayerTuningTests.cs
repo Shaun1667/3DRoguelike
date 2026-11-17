@@ -22,6 +22,7 @@ namespace Game.Tests
             Assert.That(tuning.animationBlendSpeed, Is.EqualTo(8f));
             Assert.That(tuning.walkPlaybackSpeed, Is.EqualTo(2.4f));
             Assert.That(tuning.mutantFormBeast, Is.EqualTo(10));
+            Assert.That(tuning.pushDecay, Is.EqualTo(5f));
             Assert.That(tuning.playerMaxHealth, Is.EqualTo(100));
             Assert.That(tuning.hitInvulnerableTime, Is.EqualTo(0.5f));
             Assert.That(tuning.hitFlashTime, Is.EqualTo(0.08f));
@@ -48,29 +49,7 @@ namespace Game.Tests
             Assert.That(tuning.aimArmLength, Is.EqualTo(0.55f));
         }
 
-        /// <summary>BALANCE.md 9번.</summary>
-        [Test]
-        public void MutantTuning_MatchesBalance()
-        {
-            var tuning = AssetDatabase.LoadAssetAtPath<MutantTuning>("Assets/Game/Data/MutantTuning.asset");
-
-            Assert.That(tuning, Is.Not.Null);
-            Assert.That(tuning.maxHealth, Is.EqualTo(30));
-            Assert.That(tuning.moveSpeed, Is.EqualTo(3f));
-            Assert.That(tuning.turnSpeed, Is.EqualTo(540f));
-            Assert.That(tuning.repathInterval, Is.EqualTo(0.2f));
-            Assert.That(tuning.spawnTime, Is.EqualTo(1f));
-            Assert.That(tuning.attackStartRange, Is.EqualTo(1.8f));
-            Assert.That(tuning.windupTime, Is.EqualTo(1f));
-            Assert.That(tuning.hitRange, Is.EqualTo(2.2f));
-            Assert.That(tuning.hitAngle, Is.EqualTo(100f));
-            Assert.That(tuning.damage, Is.EqualTo(10));
-            Assert.That(tuning.recoverTime, Is.EqualTo(1.3f));
-            Assert.That(tuning.windupLeanAngle, Is.EqualTo(25f));
-            Assert.That(tuning.strikeLeanAngle, Is.EqualTo(20f));
-            Assert.That(tuning.hitFlashTime, Is.EqualTo(0.08f));
-            Assert.That(tuning.corpseTime, Is.EqualTo(1f));
-        }
+        // 적 수치(BALANCE.md 9 · 14번)는 EnemyTuningTests
 
         /// <summary>BALANCE.md 7 · 8 · 10번. 7번은 FloorGeneratorTests.BalanceSettings, 10번은 EncounterPlannerTests.BalanceSettings와도 같아야 한다.</summary>
         [Test]

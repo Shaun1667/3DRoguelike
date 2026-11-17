@@ -22,11 +22,7 @@ namespace Game.EditorTools
         private const string PlayerPrefabPath = "Assets/Game/Prefabs/Player.prefab";
         private const string ScenePath = "Assets/Game/Scenes/TestRoom.unity";
         private const string TracerMaterialPath = "Assets/Game/Art/Tracer.mat";
-        private const string EnemyMaterialPath = "Assets/Game/Art/Mutant.mat";
-        private const string WarningMaterialPath = "Assets/Game/Art/Warning.mat";
         private const string GoraniMaterialPath = "Assets/Game/Art/Gorani/Gorani_Mat.mat";
-        private const string EnemyTuningPath = "Assets/Game/Data/MutantTuning.asset";
-        internal const string EnemyPrefabPath = "Assets/Game/Prefabs/Mutant.prefab";
 
         private const float RoomSize = 24f;
         private const float WallHeight = 4f;
@@ -38,14 +34,13 @@ namespace Game.EditorTools
             ModelPrefabSetup.Run();
             EnableFlash(AssetDatabase.LoadAssetAtPath<Material>(GoraniMaterialPath));
             PlayerTuning tuning = LoadOrCreateTuning();
-            MutantTuning enemyTuning = LoadOrCreateEnemyTuning();
             AnimatorController controller = BuildController(tuning, ControllerPath, NormalMotions);
             AnimatorController mutantController = null;
             if (HasClips(MutantMotions)) mutantController = BuildController(tuning, MutantControllerPath, MutantMotions);
             else Debug.LogWarning($"[TestRoomSetup] Mutant 동작 파일({MutantMotions.Walk} · {MutantMotions.Run} · {MutantMotions.Jump}.fbx)이 없어 Mutant 모습은 빼고 만듭니다.");
             GameObject playerPrefab = BuildPlayerPrefab(tuning, controller, mutantController);
-            GameObject enemyPrefab = BuildMutantPrefab(enemyTuning);
-            BuildScene(playerPrefab, enemyPrefab);
+            EnemySetup.Run(); // 숲 적 4종 수치 · 프리팹 · 구성 표
+            BuildScene(playerPrefab);
             BuildSceneList.Ensure(ScenePath, first: false);
             AssetDatabase.SaveAssets();
             Debug.Log("[TestRoomSetup] 시험 방 생성: " + ScenePath);
@@ -64,17 +59,8 @@ namespace Game.EditorTools
             return tuning;
         }
 
-        private static MutantTuning LoadOrCreateEnemyTuning()
-        {
-            var tuning = AssetDatabase.LoadAssetAtPath<MutantTuning>(EnemyTuningPath);
-            if (tuning != null) return tuning;
-            AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<MutantTuning>(), EnemyTuningPath);
-            AssetDatabase.SaveAssets();
-            return AssetDatabase.LoadAssetAtPath<MutantTuning>(EnemyTuningPath);
-        }
-
         /// <summary>HitFlash가 프로퍼티 블록으로 켤 수 있도록 발광을 검은색으로 켜 둔다.</summary>
-        private static void EnableFlash(Material material)
+        internal static void EnableFlash(Material material)
         {
             material.EnableKeyword("_EMISSION");
             material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
@@ -92,7 +78,7 @@ namespace Game.EditorTools
             return material;
         }
 
-        private static Material LoadOrCreateUnlit(string path, Color color)
+        internal static Material LoadOrCreateUnlit(string path, Color color)
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material != null) return material;
@@ -441,65 +427,8 @@ namespace Game.EditorTools
             return prefab;
         }
 
-        /// <summary>회색 도형 Mutant. 피벗은 발밑. 몸(캡슐 + 앞을 보여 주는 코), 나타나기 예고 원, 할퀴기 범위 예고.</summary>
-        private static GameObject BuildMutantPrefab(MutantTuning tuning)
-        {
-            Material bodyMaterial = LoadOrCreateLit(EnemyMaterialPath, new Color(0.4f, 0.42f, 0.32f));
-            EnableFlash(bodyMaterial);
-            Material warningMaterial = LoadOrCreateUnlit(WarningMaterialPath, new Color(0.8f, 0.15f, 0.1f));
-
-            var root = new GameObject("Mutant");
-            var capsule = root.AddComponent<CapsuleCollider>();
-            capsule.height = 1.8f;
-            capsule.radius = 0.45f;
-            capsule.center = new Vector3(0f, 0.9f, 0f);
-
-            var agent = root.AddComponent<NavMeshAgent>();
-            agent.radius = 0.45f;
-            agent.height = 1.8f;
-            agent.baseOffset = 0f;
-            agent.enabled = false; // 나타날 때 켠다. NavMesh를 굽기 전에 켜지면 경고가 난다
-
-            var body = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            Object.DestroyImmediate(body.GetComponent<Collider>());
-            body.name = "Body";
-            body.transform.SetParent(root.transform, false);
-            body.transform.localPosition = new Vector3(0f, 0.9f, 0f);
-            body.transform.localScale = new Vector3(0.9f, 0.9f, 0.9f);
-            body.GetComponent<Renderer>().sharedMaterial = bodyMaterial;
-
-            var snout = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            Object.DestroyImmediate(snout.GetComponent<Collider>());
-            snout.name = "Snout";
-            snout.transform.SetParent(body.transform, false);
-            snout.transform.localPosition = new Vector3(0f, 0.45f, 0.5f);
-            snout.transform.localScale = new Vector3(0.35f, 0.2f, 0.3f);
-            snout.GetComponent<Renderer>().sharedMaterial = bodyMaterial;
-
-            GameObject spawnWarning = FlatMarker(root.transform, "SpawnWarning", PrimitiveType.Cylinder, Vector3.zero, new Vector3(1.6f, 0.005f, 1.6f), warningMaterial);
-            float halfAngle = Mathf.Min(tuning.hitAngle, 180f) * 0.5f * Mathf.Deg2Rad;
-            float width = 2f * tuning.hitRange * Mathf.Sin(halfAngle);
-            GameObject attackWarning = FlatMarker(root.transform, "AttackWarning", PrimitiveType.Cube,
-                new Vector3(0f, 0f, tuning.hitRange * 0.5f), new Vector3(width, 0.005f, tuning.hitRange), warningMaterial);
-
-            var health = root.AddComponent<Health>();
-            var flash = root.AddComponent<HitFlash>();
-            var fields = new SerializedObject(root.AddComponent<Mutant>());
-            fields.FindProperty("tuning").objectReferenceValue = tuning;
-            fields.FindProperty("health").objectReferenceValue = health;
-            fields.FindProperty("flash").objectReferenceValue = flash;
-            fields.FindProperty("body").objectReferenceValue = body;
-            fields.FindProperty("spawnWarning").objectReferenceValue = spawnWarning;
-            fields.FindProperty("attackWarning").objectReferenceValue = attackWarning;
-            fields.ApplyModifiedPropertiesWithoutUndo();
-
-            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(root, EnemyPrefabPath);
-            Object.DestroyImmediate(root);
-            return prefab;
-        }
-
         /// <summary>바닥에 붙은 얇은 예고 표시. 충돌 · 그림자 없음.</summary>
-        private static GameObject FlatMarker(Transform parent, string name, PrimitiveType shape, Vector3 position, Vector3 scale, Material material)
+        internal static GameObject FlatMarker(Transform parent, string name, PrimitiveType shape, Vector3 position, Vector3 scale, Material material)
         {
             var marker = GameObject.CreatePrimitive(shape);
             Object.DestroyImmediate(marker.GetComponent<Collider>());
@@ -552,7 +481,7 @@ namespace Game.EditorTools
             return LoadOrCreateUnlit(TracerMaterialPath, new Color(1f, 0.85f, 0.4f));
         }
 
-        private static void BuildScene(GameObject playerPrefab, GameObject enemyPrefab)
+        private static void BuildScene(GameObject playerPrefab)
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             BuildLighting();
@@ -563,9 +492,14 @@ namespace Game.EditorTools
             Canvas hud = BuildCamera(player);
             HudSetup.BuildHud(hud, player.GetComponent<PlayerVitals>(), floor: null);
 
-            var enemy = (GameObject)PrefabUtility.InstantiatePrefab(enemyPrefab);
+            // 연습용 오소리 Mutant 1마리. 다른 종은 디버그 창(F1)의 '앞에 소환'으로
+            var enemy = (GameObject)PrefabUtility.InstantiatePrefab(EnemySetup.LoadPrefab(Rules.EnemySpecies.Badger, Rules.EnemyGrade.Mutant));
             enemy.transform.position = new Vector3(0f, 0f, 2f);
             enemy.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+            // 구성 표는 새 씬을 연 뒤에 불러온다(FloorSetup과 같은 이유)
+            var source = new SerializedObject(new GameObject("Enemies").AddComponent<EnemyRosterSource>());
+            source.FindProperty("roster").objectReferenceValue = AssetDatabase.LoadAssetAtPath<EnemyRoster>(EnemySetup.RosterPath);
+            source.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
         }

@@ -22,6 +22,8 @@ namespace Game
         [Min(0f)] public float walkPlaybackSpeed = 2.4f;
         [Tooltip("Beast가 이 값 이상이고 Human보다 높으면 걷기 · 달리기 · 점프가 Mutant 동작으로 바뀐다(그 판 동안)")]
         [Min(0)] public int mutantFormBeast = 10;
+        [Tooltip("밀림(멧돼지 돌진 등)이 줄어드는 빠르기(1/초). 밀리는 거리 = 처음 속도 ÷ 이 값")]
+        [Min(0.1f)] public float pushDecay = 5f;
 
         [Header("체력")]
         [Min(1)] public int playerMaxHealth = 100;
