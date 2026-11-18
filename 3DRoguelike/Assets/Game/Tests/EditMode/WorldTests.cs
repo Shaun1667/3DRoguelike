@@ -162,8 +162,22 @@ namespace Game.Tests
             Assert.That(tuning.dungeons[2].routeDistance, Is.EqualTo(900f));
             Assert.That(tuning.gateAfterEntrance, Is.EqualTo(70f));
             Assert.That(tuning.entranceRadius, Is.EqualTo(2.5f));
-            Assert.That(tuning.encounters.Length, Is.EqualTo(6));
-            Assert.That(tuning.encounterTriggerRange, Is.EqualTo(22f));
+            // 길 위 무리 13곳(결정 2026-11-17: 더 일찍 · 더 자주) — 자리 1지역 2·2·3·3·3, 2지역 2·3·3·4, 3지역 3·3·4·4
+            float[] encounterDistances = { 38f, 90f, 150f, 205f, 255f, 410f, 465f, 520f, 570f, 710f, 765f, 820f, 870f };
+            int[] encounterCounts = { 2, 2, 3, 3, 3, 2, 3, 3, 4, 3, 3, 4, 4 };
+            int[] encounterStages = { 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2 };
+            Assert.That(tuning.encounters.Length, Is.EqualTo(13));
+            int slots = 0;
+            for (int i = 0; i < tuning.encounters.Length; i++)
+            {
+                Assert.That(tuning.encounters[i].routeDistance, Is.EqualTo(encounterDistances[i]), $"무리 {i}");
+                Assert.That(tuning.encounters[i].count, Is.EqualTo(encounterCounts[i]), $"무리 {i}");
+                Assert.That(tuning.DungeonAhead(i), Is.EqualTo(encounterStages[i]), $"무리 {i} 단계");
+                slots += tuning.encounters[i].count;
+            }
+            Assert.That(slots, Is.EqualTo(39));
+            Assert.That(tuning.encounterTriggerRange, Is.EqualTo(26f));
+            Assert.That(tuning.encounterSpread, Is.EqualTo(3f));
             Assert.That(tuning.treeCount, Is.EqualTo(900));
             Assert.That(tuning.treeKinds.Length, Is.EqualTo(3));
             Assert.That(tuning.treeKinds[0].id, Is.EqualTo("Oak"));
@@ -192,6 +206,28 @@ namespace Game.Tests
             Assert.That(tuning.fogStart, Is.EqualTo(70f));
             Assert.That(tuning.fogEnd, Is.EqualTo(320f));
             Assert.That(tuning.skyExposure, Is.EqualTo(1.1f));
+
+            // 길 위 무리: 던전 입구 앞뒤 20 m 밖, 좌우 5~10 m, 관문 고개 밖(골짜기가 옆 자리 + 10 m보다 넓음), 다음 지역 무리는 그 관문 뒤
+            for (int i = 0; i < tuning.encounters.Length; i++)
+            {
+                WorldTuning.EncounterSite site = tuning.encounters[i];
+                float side = System.Math.Abs(site.sideOffset);
+                Assert.That(side, Is.InRange(5f, 10f), $"무리 {i} 옆");
+                Assert.That(tuning.ValleyHalfWidthAt(site.routeDistance), Is.GreaterThan(side + tuning.encounterSpread + 10f), $"무리 {i} 골짜기 폭");
+                foreach (WorldTuning.DungeonSite dungeon in tuning.dungeons)
+                {
+                    Assert.That(System.Math.Abs(site.routeDistance - dungeon.routeDistance), Is.GreaterThan(20f), $"무리 {i} · {dungeon.displayName}");
+                }
+                int stage = tuning.DungeonAhead(i);
+                if (stage > 0) Assert.That(site.routeDistance, Is.GreaterThan(tuning.GateDistance(stage - 1)), $"무리 {i}는 관문 {stage} 뒤");
+                if (i > 0) Assert.That(site.sideOffset * tuning.encounters[i - 1].sideOffset, Is.LessThan(0f), $"무리 {i} 좌우 번갈아");
+            }
+            // 시작 자리(길 6 m)에서 첫 무리까지 트리거 거리 + 5 m 넘게 — 시작하자마자 나타나지 않게
+            WorldRoute worldRoute = tuning.ToRoute();
+            (float startX, float startZ) = worldRoute.PointAt(6f);
+            (float firstX, float firstZ) = worldRoute.BesideAt(tuning.encounters[0].routeDistance, tuning.encounters[0].sideOffset);
+            float toFirst = (float)System.Math.Sqrt((firstX - startX) * (firstX - startX) + (firstZ - startZ) * (firstZ - startZ));
+            Assert.That(toFirst, Is.GreaterThan(tuning.encounterTriggerRange + 5f));
 
             // 입구는 골짜기가 좁아지기 전(관문 고개 밖)에 있어야 한다
             foreach (WorldTuning.DungeonSite site in tuning.dungeons)

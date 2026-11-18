@@ -79,23 +79,44 @@ MonoBehaviour:
   entranceRadius: 2.5
   nextRegionLabel: "\uD3D0\uD5C8 \uB3C4\uC2DC \u2014 \uC900\uBE44 \uC911"
   encounters:
-  - routeDistance: 110
+  - routeDistance: 38
     sideOffset: 8
     count: 2
-  - routeDistance: 210
-    sideOffset: -10
-    count: 3
-  - routeDistance: 420
-    sideOffset: 6
-    count: 2
-  - routeDistance: 510
+  - routeDistance: 90
     sideOffset: -8
-    count: 3
-  - routeDistance: 700
+    count: 2
+  - routeDistance: 150
     sideOffset: 10
     count: 3
-  - routeDistance: 800
+  - routeDistance: 205
     sideOffset: -6
+    count: 3
+  - routeDistance: 255
+    sideOffset: 8
+    count: 3
+  - routeDistance: 410
+    sideOffset: -7
+    count: 2
+  - routeDistance: 465
+    sideOffset: 9
+    count: 3
+  - routeDistance: 520
+    sideOffset: -5
+    count: 3
+  - routeDistance: 570
+    sideOffset: 8
     count: 4
-  encounterTriggerRange: 22
+  - routeDistance: 710
+    sideOffset: -6
+    count: 3
+  - routeDistance: 765
+    sideOffset: 9
+    count: 3
+  - routeDistance: 820
+    sideOffset: -7
+    count: 4
+  - routeDistance: 870
+    sideOffset: 6
+    count: 4
+  encounterTriggerRange: 26
   encounterSpread: 3

@@ -141,18 +141,28 @@ namespace Game
         [Tooltip("마지막 관문 너머 안내(다음 지역은 준비 중)")]
         public string nextRegionLabel = "폐허 도시 — 준비 중";
 
-        [Header("길 위 적 무리")]
+        [Header("길 위 적 무리 (지역마다 관문 고개 밖 · 던전 입구 앞뒤 20 m 밖)")]
         public EncounterSite[] encounters =
         {
-            new EncounterSite { routeDistance = 110f, sideOffset = 8f, count = 2 },
-            new EncounterSite { routeDistance = 210f, sideOffset = -10f, count = 3 },
-            new EncounterSite { routeDistance = 420f, sideOffset = 6f, count = 2 },
-            new EncounterSite { routeDistance = 510f, sideOffset = -8f, count = 3 },
-            new EncounterSite { routeDistance = 700f, sideOffset = 10f, count = 3 },
-            new EncounterSite { routeDistance = 800f, sideOffset = -6f, count = 4 },
+            // 1지역(던전 1 앞)
+            new EncounterSite { routeDistance = 38f, sideOffset = 8f, count = 2 },
+            new EncounterSite { routeDistance = 90f, sideOffset = -8f, count = 2 },
+            new EncounterSite { routeDistance = 150f, sideOffset = 10f, count = 3 },
+            new EncounterSite { routeDistance = 205f, sideOffset = -6f, count = 3 },
+            new EncounterSite { routeDistance = 255f, sideOffset = 8f, count = 3 },
+            // 2지역(관문 1 뒤, 던전 2 앞)
+            new EncounterSite { routeDistance = 410f, sideOffset = -7f, count = 2 },
+            new EncounterSite { routeDistance = 465f, sideOffset = 9f, count = 3 },
+            new EncounterSite { routeDistance = 520f, sideOffset = -5f, count = 3 },
+            new EncounterSite { routeDistance = 570f, sideOffset = 8f, count = 4 },
+            // 3지역(관문 2 뒤, 던전 3 앞)
+            new EncounterSite { routeDistance = 710f, sideOffset = -6f, count = 3 },
+            new EncounterSite { routeDistance = 765f, sideOffset = 9f, count = 3 },
+            new EncounterSite { routeDistance = 820f, sideOffset = -7f, count = 4 },
+            new EncounterSite { routeDistance = 870f, sideOffset = 6f, count = 4 },
         };
         [Tooltip("플레이어가 이 거리 안에 오면 무리가 나타난다(m)")]
-        [Min(1f)] public float encounterTriggerRange = 22f;
+        [Min(1f)] public float encounterTriggerRange = 26f;
         [Tooltip("무리 안 적끼리 간격(m)")]
         [Min(0.5f)] public float encounterSpread = 3f;
 
