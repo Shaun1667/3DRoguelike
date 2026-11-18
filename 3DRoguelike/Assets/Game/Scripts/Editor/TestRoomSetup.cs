@@ -39,6 +39,7 @@ namespace Game.EditorTools
             AnimatorController mutantController = null;
             if (HasClips(MutantMotions)) mutantController = BuildController(tuning, MutantControllerPath, MutantMotions, hands);
             else Debug.LogWarning($"[TestRoomSetup] Mutant 동작 파일({MutantMotions.Walk} · {MutantMotions.Run} · {MutantMotions.Jump}.fbx)이 없어 Mutant 모습은 빼고 만듭니다.");
+            GoraniFurSetup.BuildAssets(); // 머리 · 손 털(셸) 메시 · 재질
             GameObject playerPrefab = BuildPlayerPrefab(tuning, controller, mutantController, hands);
             EnemySetup.Run(); // 숲 적 4종 수치 · 프리팹 · 구성 표
             BuildScene(playerPrefab);
@@ -507,6 +508,7 @@ private static ChildMotion Diagonal(AnimatorController controller, string name, 
             var animator = visual.GetComponent<Animator>();
             animator.runtimeAnimatorController = controller;
             animator.applyRootMotion = false;
+            GoraniFurSetup.AddTo(visual); // 머리 · 손 털. 보통 · Mutant 모습이 같이 쓴다
 
             var cameraTarget = new GameObject("CameraTarget").transform;
             cameraTarget.SetParent(root.transform, false);
