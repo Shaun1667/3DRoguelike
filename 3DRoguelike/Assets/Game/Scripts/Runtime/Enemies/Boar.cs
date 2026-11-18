@@ -64,7 +64,7 @@ namespace Game
                 case State.Chasing:
                     if (!CanAct)
                     {
-                        StopMoving();
+                        WaitForPlayer();
                         return;
                     }
                     Vector3 offset = ToPlayer;

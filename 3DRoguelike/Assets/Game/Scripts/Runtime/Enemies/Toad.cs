@@ -51,6 +51,14 @@ namespace Game
                     Position();
                     break;
                 case State.WindingUp:
+                    // 플레이어가 안전 지대(마을)로 들어가면 쏘지 않고 그만둔다
+                    if (PlayerIsSafe)
+                    {
+                        HideWarnings();
+                        Pose(0f);
+                        state = State.Positioning;
+                        break;
+                    }
                     // 예고: 몸을 젖히며 부푼다
                     Pose(-tuning.windupLeanAngle * TimerProgress(tuning.windupTime));
                     if (TimerDone) Fire();
@@ -71,7 +79,7 @@ namespace Game
         {
             if (!CanAct)
             {
-                StopMoving();
+                WaitForPlayer();
                 return;
             }
             Vector3 offset = ToPlayer;

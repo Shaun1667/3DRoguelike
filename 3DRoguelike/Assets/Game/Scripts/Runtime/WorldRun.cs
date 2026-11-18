@@ -99,8 +99,10 @@ namespace Game
         {
             if (leaving || Session.Stats.Outcome != RunOutcome.Playing) return;
             Vector3 position = playerTransform.position;
+            SafeZone safeZone = SafeZone.Protecting(position);
 
-            for (int i = 0; i < encounterSites.Length; i++)
+            // 안전 지대(마을) 안에서는 길 위 무리가 나타나지 않는다 — 나오면 평소처럼 나타남 거리로 본다
+            for (int i = 0; safeZone == null && i < encounterSites.Length; i++)
             {
                 if (!started[i] && Flat(encounterSites[i].position - position).magnitude <= tuning.encounterTriggerRange) SpawnEncounter(i);
             }
@@ -116,6 +118,7 @@ namespace Game
             {
                 nextObjectiveTime = Time.unscaledTime + 0.25f;
                 objective.text = ObjectiveText(position, next);
+                if (safeZone != null) objective.text = $"{safeZone.DisplayName} · 안전 지대\n{objective.text}";
             }
         }
 

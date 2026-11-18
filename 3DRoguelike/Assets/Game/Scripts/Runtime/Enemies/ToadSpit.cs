@@ -47,7 +47,8 @@ namespace Game
         private void Land()
         {
             Health target = shot.target;
-            if (target != null && !target.IsDead)
+            // 안전 지대(마을) 안의 플레이어는 맞지 않는다
+            if (target != null && !target.IsDead && !SafeZone.Protects(target.transform.position))
             {
                 Vector3 offset = target.transform.position - shot.to;
                 bool near = Mathf.Abs(offset.y) < 1.5f;

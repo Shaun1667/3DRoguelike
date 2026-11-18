@@ -33,6 +33,7 @@ namespace Game
                 return;
             }
             if (target == null || target.IsDead || Time.time < nextTickTime) return;
+            if (SafeZone.Protects(target.transform.position)) return; // 안전 지대(마을) 안
 
             Vector3 offset = target.transform.position - transform.position;
             if (Mathf.Abs(offset.y) > 1.5f) return; // 뛰어넘는 중

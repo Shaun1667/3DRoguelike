@@ -1,0 +1,430 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cdbad0c8914071642b73b89bafe6f060, type: 3}
+  m_Name: VillageTuning
+  m_EditorClassIdentifier: Game.Runtime::Game.VillageTuning
+  displayName: "\uC232\uC18D \uB9C8\uC744"
+  routeDistance: 488
+  sideOffset: -22
+  radius: 28
+  flatFade: 8
+  treeClearance: 2
+  plazaCenter: {x: -3, y: 0}
+  plazaRadius: 9
+  villageDirt: 0.65
+  fenceRadius: 27
+  gateLineX: 17
+  gateHalfWidth: 3.2
+  fenceHeight: 1.9
+  fenceSegment: 2.5
+  safeZoneEnterMargin: 1
+  safeZoneEnemyMargin: 4
+  safeZoneNavMeshStrip: 1.5
+  fireColor: {r: 1, g: 0.55, b: 0.25, a: 1}
+  fireIntensity: 3
+  fireRange: 9
+  houseMetallicScale: 0.6
+  houseSmoothnessScale: 0.6
+  houseAlbedoSize: 2048
+  houseDetailSize: 1024
+  houseModels:
+  - id: Shack
+    modelFile: House_Shack
+    height: 4.3
+    frontYaw: 0
+    pivotOffset: {x: 0, y: 0, z: 0}
+    door: {x: 0, y: 3.3}
+    colliders:
+    - center: {x: -0.02, y: 1.5, z: -0.67}
+      size: {x: 4.05, y: 3, z: 3.55}
+      yaw: 0
+    - center: {x: 0, y: 0.33, z: 1.62}
+      size: {x: 4, y: 0.66, z: 1.05}
+      yaw: 0
+    - center: {x: 0, y: 0.225, z: 2.3}
+      size: {x: 1.2, y: 0.45, z: 0.3}
+      yaw: 0
+    - center: {x: 0, y: 0.115, z: 2.6}
+      size: {x: 1.2, y: 0.23, z: 0.3}
+      yaw: 0
+  - id: Container
+    modelFile: House_Container
+    height: 4.1
+    frontYaw: 0
+    pivotOffset: {x: 0, y: 0, z: 0}
+    door: {x: 1.7, y: 2.6}
+    colliders:
+    - center: {x: 0, y: 1.5, z: -0.85}
+      size: {x: 5.5, y: 3, z: 2.5}
+      yaw: 0
+    - center: {x: 0.6, y: 0.29, z: 1.2}
+      size: {x: 3.6, y: 0.58, z: 1.6}
+      yaw: 0
+    - center: {x: -0.1, y: 0.7, z: 2}
+      size: {x: 2.2, y: 1.4, z: 0.2}
+      yaw: 0
+    - center: {x: 2.62, y: 0.15, z: 1.2}
+      size: {x: 0.45, y: 0.3, z: 1.6}
+      yaw: 0
+  - id: TwoStory
+    modelFile: House_TwoStory
+    height: 7
+    frontYaw: -90
+    pivotOffset: {x: 0, y: 0, z: 0}
+    door: {x: 0.4, y: 2.9}
+    colliders:
+    - center: {x: 0.05, y: 1.7, z: -0.45}
+      size: {x: 3.5, y: 3.4, z: 3.3}
+      yaw: 0
+    - center: {x: -0.05, y: 4.2, z: -0.05}
+      size: {x: 4.3, y: 2.4, z: 4.7}
+      yaw: 0
+    - center: {x: 0.4, y: 0.35, z: 1.45}
+      size: {x: 1.6, y: 0.7, z: 0.5}
+      yaw: 0
+    - center: {x: 0.4, y: 0.225, z: 1.82}
+      size: {x: 1.6, y: 0.45, z: 0.25}
+      yaw: 0
+    - center: {x: 0.4, y: 0.11, z: 2.12}
+      size: {x: 1.6, y: 0.22, z: 0.35}
+      yaw: 0
+    - center: {x: -1.95, y: 1.2, z: 2}
+      size: {x: 0.6, y: 2.4, z: 0.5}
+      yaw: 0
+  - id: Hall
+    modelFile: House_Hall
+    height: 6
+    frontYaw: 0
+    pivotOffset: {x: 0, y: 0, z: 0}
+    door: {x: 0, y: 6.6}
+    colliders:
+    - center: {x: 0.07, y: 1.8, z: -0.17}
+      size: {x: 7.05, y: 3.6, z: 10.85}
+      yaw: 0
+    - center: {x: 3, y: 0.75, z: 5.6}
+      size: {x: 1.3, y: 1.5, z: 0.9}
+      yaw: 0
+    - center: {x: -2.6, y: 0.25, z: 5.6}
+      size: {x: 1, y: 0.5, z: 0.7}
+      yaw: 0
+  houses:
+  - name: House1
+    position: {x: 9.256711, y: 10.284601}
+    model: Container
+    size: {x: 5, y: 4}
+    wallHeight: 2.6
+    turn: 0
+  - name: House2
+    position: {x: -0.22162843, y: 15.756924}
+    model: Shack
+    size: {x: 5, y: 4}
+    wallHeight: 2.6
+    turn: 0
+  - name: House3
+    position: {x: -10.263846, y: 14.256105}
+    model: TwoStory
+    size: {x: 5, y: 4}
+    wallHeight: 2.6
+    turn: 0
+  - name: Hall
+    position: {x: -19, y: -0.0000013987644}
+    model: Hall
+    size: {x: 5, y: 4}
+    wallHeight: 2.6
+    turn: 0
+  - name: House5
+    position: {x: -14.890317, y: -10.70609}
+    model: Shack
+    size: {x: 5, y: 4}
+    wallHeight: 2.6
+    turn: 0
+  - name: House6
+    position: {x: -6.386907, y: -13.58414}
+    model: Container
+    size: {x: 5, y: 4}
+    wallHeight: 2.6
+    turn: 0
+  - name: House7
+    position: {x: 3.761891, y: -14.500925}
+    model: TwoStory
+    size: {x: 5, y: 4}
+    wallHeight: 2.6
+    turn: 0
+  - name: House8
+    position: {x: 10.856405, y: -8.000003}
+    model: Shack
+    size: {x: 5, y: 4}
+    wallHeight: 2.6
+    turn: 0
+  props:
+  - name: FireRing
+    shape: 1
+    position: {x: -3, y: 0}
+    elevation: 0.1
+    size: {x: 1.8, y: 0.2, z: 1.8}
+    rotation: {x: 0, y: 0, z: 0}
+    material: Stone
+    collide: 0
+  - name: FireLogA
+    shape: 0
+    position: {x: -3, y: 0}
+    elevation: 0.25
+    size: {x: 1.3, y: 0.18, z: 0.18}
+    rotation: {x: 0, y: 30, z: 8}
+    material: Wood
+    collide: 0
+  - name: FireLogB
+    shape: 0
+    position: {x: -3, y: 0}
+    elevation: 0.25
+    size: {x: 1.3, y: 0.18, z: 0.18}
+    rotation: {x: 0, y: -40, z: -8}
+    material: Wood
+    collide: 0
+  - name: FireEmbers
+    shape: 2
+    position: {x: -3, y: 0}
+    elevation: 0.22
+    size: {x: 0.7, y: 0.3, z: 0.7}
+    rotation: {x: 0, y: 0, z: 0}
+    material: Ember
+    collide: 0
+  - name: BenchN
+    shape: 1
+    position: {x: -3, y: 2.6}
+    elevation: 0.25
+    size: {x: 0.45, y: 2.2, z: 0.45}
+    rotation: {x: 0, y: 0, z: 90}
+    material: Wood
+    collide: 1
+  - name: BenchSW
+    shape: 1
+    position: {x: -5.25, y: -1.3}
+    elevation: 0.25
+    size: {x: 0.45, y: 2.2, z: 0.45}
+    rotation: {x: 0, y: 60, z: 90}
+    material: Wood
+    collide: 1
+  - name: BenchSE
+    shape: 1
+    position: {x: -0.75, y: -1.3}
+    elevation: 0.25
+    size: {x: 0.45, y: 2.2, z: 0.45}
+    rotation: {x: 0, y: 120, z: 90}
+    material: Wood
+    collide: 1
+  - name: WellBase
+    shape: 1
+    position: {x: 3.5, y: 6.5}
+    elevation: 0.45
+    size: {x: 1.6, y: 0.9, z: 1.6}
+    rotation: {x: 0, y: 0, z: 0}
+    material: Stone
+    collide: 1
+  - name: WellWater
+    shape: 1
+    position: {x: 3.5, y: 6.5}
+    elevation: 0.91
+    size: {x: 1.2, y: 0.02, z: 1.2}
+    rotation: {x: 0, y: 0, z: 0}
+    material: Dark
+    collide: 0
+  - name: WellPostA
+    shape: 0
+    position: {x: 2.75, y: 6.5}
+    elevation: 1.2
+    size: {x: 0.15, y: 1.6, z: 0.15}
+    rotation: {x: 0, y: 0, z: 0}
+    material: Wood
+    collide: 1
+  - name: WellPostB
+    shape: 0
+    position: {x: 4.25, y: 6.5}
+    elevation: 1.2
+    size: {x: 0.15, y: 1.6, z: 0.15}
+    rotation: {x: 0, y: 0, z: 0}
+    material: Wood
+    collide: 1
+  - name: WellRoof
+    shape: 0
+    position: {x: 3.5, y: 6.5}
+    elevation: 2.05
+    size: {x: 1.9, y: 0.12, z: 1.1}
+    rotation: {x: 0, y: 0, z: 0}
+    material: Roof
+    collide: 0
+  - name: TowerLegA
+    shape: 0
+    position: {x: 11.9, y: -15.9}
+    elevation: 2.5
+    size: {x: 0.25, y: 5, z: 0.25}
+    rotation: {x: 0, y: 0, z: 0}
+    material: Wood
+    collide: 1
+  - name: TowerLegB
+    shape: 0
+    position: {x: 14.1, y: -15.9}
+    elevation: 2.5
+    size: {x: 0.25, y: 5, z: 0.25}
+    rotation: {x: 0, y: 0, z: 0}
+    material: Wood
+    collide: 1
+  - name: TowerLegC
+    shape: 0
+    position: {x: 11.9, y: -18.1}
+    elevation: 2.5
+    size: {x: 0.25, y: 5, z: 0.25}
+    rotation: {x: 0, y: 0, z: 0}
+    material: Wood
+    collide: 1
+  - name: TowerLegD
+    shape: 0
+    position: {x: 14.1, y: -18.1}
+    elevation: 2.5
+    size: {x: 0.25, y: 5, z: 0.25}
+    rotation: {x: 0, y: 0, z: 0}
+    material: Wood
+    collide: 1
+  - name: TowerDeck
+    shape: 0
+    position: {x: 13, y: -17}
+    elevation: 4
+    size: {x: 2.8, y: 0.2, z: 2.8}
+    rotation: {x: 0, y: 0, z: 0}
+    material: Wood
+    collide: 1
+  - name: TowerRail
+    shape: 0
+    position: {x: 13, y: -17}
+    elevation: 4.55
+    size: {x: 2.8, y: 0.9, z: 2.8}
+    rotation: {x: 0, y: 0, z: 0}
+    material: Plank
+    collide: 0
+  - name: TowerRoof
+    shape: 0
+    position: {x: 13, y: -17}
+    elevation: 6
+    size: {x: 3.2, y: 0.15, z: 3.2}
+    rotation: {x: 0, y: 45, z: 0}
+    material: Roof
+    collide: 0
+  - name: CrateA
+    shape: 0
+    position: {x: 14.4, y: 4.7}
+    elevation: 0.4
+    size: {x: 0.8, y: 0.8, z: 0.8}
+    rotation: {x: 0, y: 15, z: 0}
+    material: Plank
+    collide: 1
+  - name: CrateB
+    shape: 0
+    position: {x: 15.3, y: 5.6}
+    elevation: 0.35
+    size: {x: 0.7, y: 0.7, z: 0.7}
+    rotation: {x: 0, y: -10, z: 0}
+    material: Plank
+    collide: 1
+  - name: CrateC
+    shape: 0
+    position: {x: 14.8, y: 5.1}
+    elevation: 1.05
+    size: {x: 0.6, y: 0.5, z: 0.6}
+    rotation: {x: 0, y: 35, z: 0}
+    material: Plank
+    collide: 1
+  - name: Barrel
+    shape: 1
+    position: {x: 14.6, y: -4.6}
+    elevation: 0.5
+    size: {x: 0.7, y: 1, z: 0.7}
+    rotation: {x: 0, y: 0, z: 0}
+    material: Metal
+    collide: 1
+  - name: Woodpile
+    shape: 0
+    position: {x: -14.2, y: 9.6}
+    elevation: 0.45
+    size: {x: 2.2, y: 0.9, z: 0.9}
+    rotation: {x: 0, y: 65, z: 0}
+    material: Wood
+    collide: 1
+  - name: Garden
+    shape: 0
+    position: {x: -8, y: -21}
+    elevation: 0.08
+    size: {x: 4, y: 0.16, z: 3}
+    rotation: {x: 0, y: 20, z: 0}
+    material: Soil
+    collide: 0
+  - name: GardenRowA
+    shape: 0
+    position: {x: -8.4, y: -20.2}
+    elevation: 0.25
+    size: {x: 3.4, y: 0.25, z: 0.35}
+    rotation: {x: 0, y: 20, z: 0}
+    material: Crop
+    collide: 0
+  - name: GardenRowB
+    shape: 0
+    position: {x: -7.6, y: -21.8}
+    elevation: 0.25
+    size: {x: 3.4, y: 0.25, z: 0.35}
+    rotation: {x: 0, y: 20, z: 0}
+    material: Crop
+    collide: 0
+  residents:
+  - species: Fox
+    position: {x: 1.2286167, y: 1.5390905}
+    yaw: -85
+  - species: Hare
+    position: {x: -1.4609094, y: 4.2286167}
+    yaw: 135
+  - species: Magpie
+    position: {x: -5.2500005, y: 3.8971143}
+    yaw: 120
+  - species: Tiger
+    position: {x: -7.3466663, y: 1.1646861}
+    yaw: 105
+  - species: RaccoonDog
+    position: {x: -6.6861844, y: -2.5810938}
+    yaw: 120
+  - species: Otter
+    position: {x: -3.3922007, y: -4.4828763}
+    yaw: -60
+  - species: Toad
+    position: {x: 0.44719943, y: -2.892545}
+    yaw: 80
+  - species: Badger
+    position: {x: 6.17, y: 9.92}
+    yaw: -137
+  - species: Boar
+    position: {x: -0.79, y: 12.51}
+    yaw: -120
+  - species: LeopardCat
+    position: {x: -9.3, y: 11.49}
+    yaw: 91
+  - species: Goshawk
+    position: {x: -12.4, y: -0}
+    yaw: 105
+  - species: Wolf
+    position: {x: -12.44, y: -8.5}
+    yaw: 74
+  - species: Marten
+    position: {x: -4.11, y: -11.47}
+    yaw: 96
+  - species: Goral
+    position: {x: 2.9, y: -11.7}
+    yaw: -62
+  - species: Bear
+    position: {x: 13.5, y: -4}
+    yaw: 70

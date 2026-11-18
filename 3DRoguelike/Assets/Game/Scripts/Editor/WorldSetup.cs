@@ -40,11 +40,13 @@ namespace Game.EditorTools
             // 새 씬을 연 뒤에 불러온다(FloorSetup과 같은 이유: 앞에서 만든 에셋 참조가 끊기지 않게)
             WorldTuning tuning = LoadOrCreateTuning();
             WorldRoute route = tuning.ToRoute();
+            VillageTuning village = VillageSetup.LoadOrCreateTuning();
+            VillageSetup.Area villageArea = VillageSetup.AreaOf(village, route);
             TestRoomSetup.BuildLighting();
             BuildAtmosphere(tuning); // BuildLighting의 앰비언트를 월드용으로 덮어쓴다(시험 방은 그대로)
 
             var root = new GameObject("World");
-            Terrain terrain = BuildTerrain(tuning, route, root.transform);
+            Terrain terrain = BuildTerrain(tuning, route, villageArea, root.transform);
             var sites = new List<Vector3>();
 
             Transform[] entrances = new Transform[tuning.dungeons.Length];
@@ -65,7 +67,8 @@ namespace Game.EditorTools
             Transform[] encounterSites = BuildEncounterSites(tuning, route, terrain, root.transform);
             foreach (Transform site in encounterSites) sites.Add(site.position);
 
-            BuildTrees(tuning, route, terrain, root.transform, sites, entrances);
+            BuildTrees(tuning, route, terrain, root.transform, sites, entrances, villageArea);
+            VillageSetup.Build(village, villageArea, tuning, route, terrain, root.transform, font); // 마을 집 · 울타리 · 주민도 NavMesh에 구멍을 낸다
 
             // 관문을 세우기 전에 굽는다 — 관문이 열리면 지나갈 길이 이미 NavMesh에 있게
             BakeNavMesh(root);
@@ -154,7 +157,7 @@ namespace Game.EditorTools
         // ---------- 지형 ----------
 
         /// <summary>길을 따라 넓은 골짜기, 그 둘레는 못 오르는 절벽. 관문 둘레에서 골짜기가 좁은 고개가 된다.</summary>
-        private static Terrain BuildTerrain(WorldTuning tuning, WorldRoute route, Transform parent)
+        private static Terrain BuildTerrain(WorldTuning tuning, WorldRoute route, VillageSetup.Area village, Transform parent)
         {
             float reach = tuning.valleyHalfWidth + tuning.cliffWidth + tuning.terrainMargin;
             float minX = float.MaxValue, maxX = float.MinValue, minZ = float.MaxValue, maxZ = float.MinValue;
@@ -168,30 +171,11 @@ namespace Game.EditorTools
             float width = maxX - minX, length = maxZ - minZ;
             float height = tuning.cliffHeight + tuning.groundBumps + 1f;
 
-            var flatSites = new List<Vector2>();
-            foreach (WorldTuning.DungeonSite site in tuning.dungeons)
-            {
-                (float x, float z) = route.BesideAt(site.routeDistance, site.sideOffset);
-                flatSites.Add(new Vector2(x, z));
-            }
-
             // 에셋을 먼저 만든 뒤 높이 · 레이어 · 칠하기를 넣는다 — 메모리에서 칠한 뒤 CreateAsset하면 칠한 값(SplatAlpha)이 파일에 남지 않았다
             if (AssetDatabase.LoadAssetAtPath<TerrainData>(TerrainDataPath) != null) AssetDatabase.DeleteAsset(TerrainDataPath);
             var data = new TerrainData { heightmapResolution = tuning.heightmapResolution };
             data.size = new Vector3(width, height, length);
             AssetDatabase.CreateAsset(data, TerrainDataPath);
-            int res = data.heightmapResolution;
-            var heights = new float[res, res];
-            for (int zi = 0; zi < res; zi++)
-            {
-                float z = minZ + length * zi / (res - 1);
-                for (int xi = 0; xi < res; xi++)
-                {
-                    float x = minX + width * xi / (res - 1);
-                    heights[zi, xi] = HeightAt(tuning, route, flatSites, x, z) / height;
-                }
-            }
-            data.SetHeights(0, 0, heights);
 
             // 레이어 순서 = alphamap 채널: 0 숲 바닥 · 1 흙길 · 2 절벽 바위 · 3 오염 토양(URP Terrain/Lit 한 패스 4층)
             data.terrainLayers = new[]
@@ -202,24 +186,10 @@ namespace Game.EditorTools
                 Layer("PollutedSoil", GroundTexture("Ground_PollutedSoil"), tuning.pollutedSoilTile, tuning.groundSmoothness),
             };
             data.alphamapResolution = 512;
-            int alphaRes = data.alphamapResolution;
-            var alpha = new float[alphaRes, alphaRes, 4];
-            for (int zi = 0; zi < alphaRes; zi++)
-            {
-                float z = minZ + length * (zi + 0.5f) / alphaRes;
-                for (int xi = 0; xi < alphaRes; xi++)
-                {
-                    float x = minX + width * (xi + 0.5f) / alphaRes;
-                    GroundWeights(tuning, route, flatSites, x, z, out float forest, out float trail, out float rock, out float polluted);
-                    alpha[zi, xi, 0] = forest;
-                    alpha[zi, xi, 1] = trail;
-                    alpha[zi, xi, 2] = rock;
-                    alpha[zi, xi, 3] = polluted;
-                }
-            }
-            data.SetAlphamaps(0, 0, alpha);
+            FillTerrain(tuning, route, village, data, minX, minZ, width, length, height);
             EditorUtility.SetDirty(data);
             AssetDatabase.SaveAssetIfDirty(data);
+
 
             GameObject terrainObject = Terrain.CreateTerrainGameObject(data);
             terrainObject.name = "Terrain";
@@ -230,7 +200,51 @@ namespace Game.EditorTools
             return terrain;
         }
 
-        private static float HeightAt(WorldTuning tuning, WorldRoute route, List<Vector2> flatSites, float x, float z)
+        /// <summary>
+        /// 높이 · 바닥 칠하기. Setup World가 새 지형에, Setup Village가 열린 지형에 부른다(같은 값이면 같은 결과).
+        /// width · length · height는 지형 크기(m), minX · minZ는 지형 원점.
+        /// </summary>
+        internal static void FillTerrain(WorldTuning tuning, WorldRoute route, VillageSetup.Area village, TerrainData data, float minX, float minZ, float width, float length, float height)
+        {
+            var flatSites = new List<Vector2>();
+            foreach (WorldTuning.DungeonSite site in tuning.dungeons)
+            {
+                (float x, float z) = route.BesideAt(site.routeDistance, site.sideOffset);
+                flatSites.Add(new Vector2(x, z));
+            }
+
+            int res = data.heightmapResolution;
+            var heights = new float[res, res];
+            for (int zi = 0; zi < res; zi++)
+            {
+                float z = minZ + length * zi / (res - 1);
+                for (int xi = 0; xi < res; xi++)
+                {
+                    float x = minX + width * xi / (res - 1);
+                    heights[zi, xi] = HeightAt(tuning, route, flatSites, village, x, z) / height;
+                }
+            }
+            data.SetHeights(0, 0, heights);
+
+            int alphaRes = data.alphamapResolution;
+            var alpha = new float[alphaRes, alphaRes, 4];
+            for (int zi = 0; zi < alphaRes; zi++)
+            {
+                float z = minZ + length * (zi + 0.5f) / alphaRes;
+                for (int xi = 0; xi < alphaRes; xi++)
+                {
+                    float x = minX + width * (xi + 0.5f) / alphaRes;
+                    GroundWeights(tuning, route, flatSites, village, x, z, out float forest, out float trail, out float rock, out float polluted);
+                    alpha[zi, xi, 0] = forest;
+                    alpha[zi, xi, 1] = trail;
+                    alpha[zi, xi, 2] = rock;
+                    alpha[zi, xi, 3] = polluted;
+                }
+            }
+            data.SetAlphamaps(0, 0, alpha);
+        }
+
+        private static float HeightAt(WorldTuning tuning, WorldRoute route, List<Vector2> flatSites, VillageSetup.Area village, float x, float z)
         {
             float d = route.DistanceFrom(x, z, out float along);
             float half = tuning.ValleyHalfWidthAt(along);
@@ -240,6 +254,7 @@ namespace Game.EditorTools
             foreach (Vector2 site in flatSites) nearSite = Mathf.Min(nearSite, Vector2.Distance(site, new Vector2(x, z)));
             // 길 · 입구 근처는 평평하게, 골짜기 안쪽만 완만한 굴곡
             float weight = Smooth01((d - tuning.pathHalfWidth - 2f) / 12f) * Smooth01((nearSite - SiteFlatRadius) / 10f);
+            if (village != null) weight *= village.FlatWeight(x, z); // 마을 안은 평지
             float bumps = Mathf.PerlinNoise(x * tuning.bumpScale + 100f, z * tuning.bumpScale + 100f) * tuning.groundBumps * weight;
             return cliff + bumps;
         }
@@ -248,7 +263,7 @@ namespace Game.EditorTools
         /// 바닥 레이어 무게(합 1). 절벽은 바위, 길은 흙길, 던전 입구 둘레(pollutedRadius, 경계는 노이즈로 들쭉날쭉)는 오염 토양,
         /// 나머지는 숲 바닥에 약한 노이즈로 흙을 조금(forestDirtMix) 섞는다. 길 위는 오염보다 흙길이 먼저다.
         /// </summary>
-        private static void GroundWeights(WorldTuning tuning, WorldRoute route, List<Vector2> flatSites, float x, float z,
+        private static void GroundWeights(WorldTuning tuning, WorldRoute route, List<Vector2> flatSites, VillageSetup.Area village, float x, float z,
             out float forest, out float trail, out float rock, out float polluted)
         {
             float d = route.DistanceFrom(x, z, out float along);
@@ -266,6 +281,7 @@ namespace Game.EditorTools
 
             float ground = rest - polluted;
             float dirtSpots = Smooth01((Mathf.PerlinNoise(x * tuning.forestDirtNoiseScale + 500f, z * tuning.forestDirtNoiseScale + 500f) - 0.35f) / 0.4f) * tuning.forestDirtMix;
+            if (village != null) dirtSpots = Mathf.Max(dirtSpots, village.DirtAt(x, z)); // 마을 안은 흙바닥 · 광장
             trail += ground * dirtSpots;
             forest = ground * (1f - dirtSpots);
 
@@ -451,7 +467,7 @@ namespace Game.EditorTools
         /// 골짜기 안 흙길 밖에 나무(VARCO 모델 프리팹, 줄기 충돌). 종류는 treeKinds 무게로 섞고, 던전 입구 둘레는 weightNearDungeon.
         /// 고정 시드라 매번 같은 자리. 프리팹이 없는 종류는 회색 도형으로 그린다.
         /// </summary>
-        private static void BuildTrees(WorldTuning tuning, WorldRoute route, Terrain terrain, Transform parent, List<Vector3> sites, Transform[] entrances)
+        private static void BuildTrees(WorldTuning tuning, WorldRoute route, Terrain terrain, Transform parent, List<Vector3> sites, Transform[] entrances, VillageSetup.Area village)
         {
             TreeSetup.Run();
             var forest = new GameObject("Trees").transform;
@@ -466,7 +482,7 @@ namespace Game.EditorTools
             var random = new System.Random(tuning.treeSeed);
             var taken = new HashSet<Vector2Int>();
             var counts = new int[prefabs.Length];
-            int placed = 0;
+            int placed = 0, cleared = 0;
             for (int attempt = 0; attempt < tuning.treeCount * 8 && placed < tuning.treeCount; attempt++)
             {
                 float x = origin.x + (float)random.NextDouble() * size.x;
@@ -483,6 +499,13 @@ namespace Game.EditorTools
                 float scale = Mathf.Lerp(tuning.treeScaleRange.x, tuning.treeScaleRange.y, (float)random.NextDouble());
                 Quaternion rotation = Quaternion.Euler(0f, (float)random.NextDouble() * 360f, 0f);
                 Vector3 ground = OnGround(terrain, (x, z));
+                // 마을 안 나무는 세우지 않는다. 난수 · 칸 · 번호는 그대로 쓰고 지나가 마을 밖 나무 자리는 마을이 없을 때와 같다(Setup Village가 열린 씬에서 지우는 것과 같은 결과)
+                if (village != null && village.ClearsTree(x, z))
+                {
+                    placed++;
+                    cleared++;
+                    continue;
+                }
 
                 Transform tree;
                 if (kind >= 0 && prefabs[kind] != null)
@@ -501,7 +524,7 @@ namespace Game.EditorTools
             }
             var summary = new System.Text.StringBuilder();
             for (int i = 0; i < counts.Length; i++) summary.Append($" · {tuning.treeKinds[i].id} {counts[i]}");
-            Debug.Log($"[WorldSetup] 나무 {placed}그루{summary}");
+            Debug.Log($"[WorldSetup] 나무 {placed - cleared}그루{summary} · 마을 자리라 안 세운 나무 {cleared}그루");
         }
 
         private static int PickTreeKind(WorldTuning.TreeKind[] kinds, bool nearDungeon, double roll)
@@ -569,6 +592,57 @@ namespace Game.EditorTools
             AssetDatabase.CreateAsset(surface.navMeshData, NavMeshPath);
         }
 
+        /// <summary>
+        /// 열린 씬의 월드 NavMesh를 같은 에셋(WorldNavMesh.asset)에 다시 굽는다(Setup Village). 에셋을 새로 만들면 GUID가 바뀌어
+        /// 저장 안 한 씬과 어긋나므로 내용만 바꾼다. Setup World와 같이 관문 · 가장자리 벽은 빼고 굽는다(관문은 World 밖이라 안 모인다).
+        /// </summary>
+        internal static void UpdateNavMeshInPlace(GameObject root)
+        {
+            var surface = root.GetComponent<NavMeshSurface>();
+            if (surface == null || surface.navMeshData == null)
+            {
+                Debug.LogError("[WorldSetup] World에 NavMeshSurface · NavMesh 에셋이 없습니다. Tools/Game/Setup World로 다시 만드세요.");
+                return;
+            }
+            Transform bounds = root.transform.Find("Bounds");
+            bool boundsActive = bounds != null && bounds.gameObject.activeSelf;
+            if (bounds != null) bounds.gameObject.SetActive(false);
+            try
+            {
+                var sources = new List<UnityEngine.AI.NavMeshBuildSource>();
+                UnityEngine.AI.NavMeshBuilder.CollectSources(root.transform, surface.layerMask, surface.useGeometry, surface.defaultArea,
+                    new List<UnityEngine.AI.NavMeshBuildMarkup>(), sources);
+                AppendModifierVolumes(root, surface.agentTypeID, sources); // 안전 지대(마을) NavMesh 구멍 — surface.BuildNavMesh와 같게
+                bool ok = UnityEngine.AI.NavMeshBuilder.UpdateNavMeshData(surface.navMeshData, surface.GetBuildSettings(), sources, surface.navMeshData.sourceBounds);
+                if (!ok) Debug.LogError("[WorldSetup] NavMesh를 다시 굽지 못했습니다.");
+                EditorUtility.SetDirty(surface.navMeshData);
+                surface.RemoveData();
+                surface.AddData();
+            }
+            finally
+            {
+                if (bounds != null) bounds.gameObject.SetActive(boundsActive);
+            }
+        }
+
+        /// <summary>root 아래 NavMeshModifierVolume을 굽기 소스로 넣는다(NavMeshSurface가 Children으로 모을 때와 같은 모양).</summary>
+        private static void AppendModifierVolumes(GameObject root, int agentTypeID, List<UnityEngine.AI.NavMeshBuildSource> sources)
+        {
+            foreach (NavMeshModifierVolume volume in root.GetComponentsInChildren<NavMeshModifierVolume>())
+            {
+                if (!volume.isActiveAndEnabled || !volume.AffectsAgentType(agentTypeID)) continue;
+                Transform t = volume.transform;
+                Vector3 scale = t.lossyScale;
+                sources.Add(new UnityEngine.AI.NavMeshBuildSource
+                {
+                    shape = UnityEngine.AI.NavMeshBuildSourceShape.ModifierBox,
+                    transform = Matrix4x4.TRS(t.TransformPoint(volume.center), t.rotation, Vector3.one),
+                    size = new Vector3(volume.size.x * Mathf.Abs(scale.x), volume.size.y * Mathf.Abs(scale.y), volume.size.z * Mathf.Abs(scale.z)),
+                    area = volume.area,
+                });
+            }
+        }
+
         // ---------- 도움 ----------
 
         private static Vector3 OnGround(Terrain terrain, (float x, float z) point)
@@ -593,7 +667,7 @@ namespace Game.EditorTools
         }
 
         /// <summary>월드에 떠 있는 글자. TextMeshPro는 +z를 바라보는 쪽에서 읽힌다.</summary>
-        private static void Label(Transform parent, TMP_FontAsset font, string text, Vector3 localPosition, Quaternion localRotation)
+        internal static void Label(Transform parent, TMP_FontAsset font, string text, Vector3 localPosition, Quaternion localRotation)
         {
             var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshPro)).GetComponent<TextMeshPro>();
             label.transform.SetParent(parent, false);

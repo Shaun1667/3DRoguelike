@@ -33,6 +33,7 @@ namespace Game
         private float appearTime;
         private float nextRepathTime;
         private int attacksStarted;
+        private Vector3 homePosition;
 
         /// <summary>살아 있는 적 전부(나타나는 중 포함, 종 무관). 디버그 창의 원펀맨 · 모두 처치가 쓴다.</summary>
         public static IReadOnlyList<Enemy> Alive => alive;
@@ -113,6 +114,7 @@ namespace Game
                 return;
             }
             Tick();
+            KeepOutOfSafeZones();
         }
 
         private void Appear()
@@ -126,7 +128,15 @@ namespace Game
             {
                 Agent.Warp(hit.position);
             }
+            homePosition = SafeZone.OutsideForEnemies(transform.position);
             OnAppear();
+        }
+
+        /// <summary>안전 지대(마을 등) 안에 들어와 있으면 밖으로 민다. 보통은 NavMesh 구멍이 먼저 막는다.</summary>
+        private void KeepOutOfSafeZones()
+        {
+            if (dead || !Agent.enabled || !Agent.isOnNavMesh) return;
+            if (SafeZone.KeepsOut(transform.position, out Vector3 outside)) Agent.Move(Flat(outside - transform.position));
         }
 
         private void OnDied()
@@ -143,8 +153,27 @@ namespace Game
 
         // ---------- 종 클래스가 쓰는 도움 ----------
 
-        /// <summary>쫓거나 공격할 수 있다(플레이어가 살아 있고 NavMesh 위).</summary>
-        protected bool CanAct => Player != null && !Player.IsDead && Agent.isOnNavMesh;
+        /// <summary>쫓거나 공격할 수 있다(플레이어가 살아 있고 안전 지대 밖, 적은 NavMesh 위).</summary>
+        protected bool CanAct => Player != null && !Player.IsDead && !PlayerIsSafe && Agent.isOnNavMesh;
+
+        /// <summary>플레이어가 안전 지대(마을 등) 안에 있다 — 쫓지도 공격하지도 않는다.</summary>
+        protected bool PlayerIsSafe => Player != null && SafeZone.Protects(Player.transform.position);
+
+        /// <summary>
+        /// 쫓을 수 없을 때(<see cref="CanAct"/>가 false). 플레이어가 안전 지대 안이면 나타났던 자리로 돌아가 서 있고,
+        /// 아니면(죽음 · 없음) 그 자리에 멈춘다. 플레이어가 나오면 종 클래스가 다시 쫓는다.
+        /// </summary>
+        protected void WaitForPlayer()
+        {
+            if (!PlayerIsSafe || !Agent.isOnNavMesh)
+            {
+                StopMoving();
+                return;
+            }
+            Pose(0f);
+            if (Flat(homePosition - transform.position).magnitude <= Agent.stoppingDistance + Agent.radius) StopMoving();
+            else MoveTo(homePosition);
+        }
 
         /// <summary>플레이어까지(높이 뺌).</summary>
         protected Vector3 ToPlayer => Flat(Player.transform.position - transform.position);
@@ -157,7 +186,7 @@ namespace Game
             if (!Agent.isOnNavMesh) return;
             Agent.isStopped = false;
             if (Time.time < nextRepathTime) return;
-            Agent.SetDestination(destination);
+            Agent.SetDestination(SafeZone.OutsideForEnemies(destination));
             nextRepathTime = Time.time + Tuning.repathInterval;
         }
 
@@ -224,7 +253,7 @@ namespace Game
         /// <summary>플레이어에게 피해. 사망 원인은 '{이름}의 {공격}'. 실제로 체력이 줄었으면 true(구르기 무적 · 맞은 뒤 무적이면 false).</summary>
         protected bool HitPlayer(int damage, string attackName)
         {
-            if (Player == null || Player.IsDead) return false;
+            if (Player == null || Player.IsDead || PlayerIsSafe) return false;
             int before = Player.Current;
             Player.TakeDamage(damage, $"{DisplayName}의 {attackName}");
             return Player.Current < before;
