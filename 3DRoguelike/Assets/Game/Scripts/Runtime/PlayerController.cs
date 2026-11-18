@@ -13,6 +13,7 @@ namespace Game
         private static readonly int MoveXId = Animator.StringToHash("MoveX");
         private static readonly int MoveYId = Animator.StringToHash("MoveY");
         private static readonly int MoveSpeedId = Animator.StringToHash("MoveSpeed");
+        private static readonly int MoveAmountId = Animator.StringToHash("MoveAmount");
         private static readonly int JumpId = Animator.StringToHash("Jump");
 
         [SerializeField] private PlayerTuning tuning;
@@ -31,6 +32,7 @@ namespace Game
         private float verticalVelocity;
         private bool jumping;
         private Vector2 blend;
+        private float moveAmount;
         private PlayerUpgrades upgrades;
         private Vector3 pushVelocity;
 
@@ -82,10 +84,7 @@ namespace Game
             float speed = IsSprinting ? tuning.sprintMultiplier : 1f;
             if (jumpAction.WasPressedThisFrame()) TryJump(locked);
             Move(input * speed);
-            // 앞으로 달릴 때만 MoveY가 1을 넘어 달리기 동작으로 넘어간다(옆 · 뒤로 달리면 걷기 동작을 빨리 재생)
-            Animate(IsSprinting && input.y > 0f ? new Vector2(input.x, input.y * speed) : input);
-            // 이동 속도 강화만큼 동작도 빨리 재생해 발이 미끄러지지 않게 한다
-            animator.SetFloat(MoveSpeedId, speed * upgrades.Scale(Rules.UpgradeStat.MoveSpeed));
+            Animate(input, speed);
         }
 
         private void Look(Vector2 delta)
@@ -123,11 +122,29 @@ namespace Game
             controller.Move((horizontal + Vector3.up * verticalVelocity) * Time.deltaTime);
         }
 
-        private void Animate(Vector2 input)
+/// <summary>
+        /// 이동 동작. 방향 트리에는 방향만 넣고(MoveX · MoveY, 걷기는 길이 1, 달리기는 길이 sprintMultiplier로 어느 방향이든 달리기 동작으로 넘어간다),
+        /// 움직이는지는 MoveAmount(0 대기 ~ 1 이동)로, 빠르기는 상태 배속 MoveSpeed로 넣는다.
+        /// 조준 중이거나 스틱을 덜 밀어 느리게 갈 때 대기 동작이 섞이면 발이 미끄러지므로, 걷기 동작을 그만큼 천천히 재생한다.
+        /// </summary>
+        private void Animate(Vector2 input, float speed)
         {
-            blend = Vector2.MoveTowards(blend, input, tuning.animationBlendSpeed * Time.deltaTime);
+            float amount = input.magnitude;
+            bool moving = amount > 0.01f;
+            float step = tuning.animationBlendSpeed * Time.deltaTime;
+            if (moving)
+            {
+                Vector2 direction = input / amount;
+                if (IsSprinting) direction *= speed; // 달리기 링(반지름 sprintMultiplier): 어느 방향이든 달리기 동작
+                // 서 있다가 출발할 때는 방향을 바로 잡는다(가운데에서부터 돌려 오지 않는다)
+                blend = moveAmount > 0f ? Vector2.MoveTowards(blend, direction, step) : direction;
+            }
+            moveAmount = Mathf.MoveTowards(moveAmount, moving ? 1f : 0f, step);
             animator.SetFloat(MoveXId, blend.x);
             animator.SetFloat(MoveYId, blend.y);
+            animator.SetFloat(MoveAmountId, moveAmount);
+            // 이동 속도 강화만큼 동작도 빨리 재생해 발이 미끄러지지 않게 한다
+            animator.SetFloat(MoveSpeedId, speed * upgrades.Scale(Rules.UpgradeStat.MoveSpeed) * (moving ? amount : 1f));
         }
     }
 }

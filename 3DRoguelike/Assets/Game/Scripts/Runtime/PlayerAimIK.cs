@@ -8,6 +8,7 @@ namespace Game
     {
         [SerializeField] private PlayerTuning tuning;
         [SerializeField] private PlayerGun gun;
+        [SerializeField] private HandPoseTable hands;
 
         private Animator animator;
         private Transform shoulder;
@@ -33,7 +34,8 @@ namespace Game
 
             Vector3 direction = (gun.AimPoint - shoulder.position).normalized;
             animator.SetIKPosition(AvatarIKGoal.RightHand, shoulder.position + direction * tuning.aimArmLength);
-            animator.SetIKRotation(AvatarIKGoal.RightHand, Quaternion.LookRotation(direction));
+            // 손바닥이 안쪽을 보게 조준 방향을 축으로 돌린다(권총 손잡이를 잡는 손목)
+            animator.SetIKRotation(AvatarIKGoal.RightHand, Quaternion.LookRotation(direction) * Quaternion.Euler(0f, 0f, hands.gripRoll));
             animator.SetLookAtPosition(gun.AimPoint);
         }
     }

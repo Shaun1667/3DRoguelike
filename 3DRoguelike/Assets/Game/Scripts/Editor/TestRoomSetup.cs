@@ -34,11 +34,12 @@ namespace Game.EditorTools
             ModelPrefabSetup.Run();
             EnableFlash(AssetDatabase.LoadAssetAtPath<Material>(GoraniMaterialPath));
             PlayerTuning tuning = LoadOrCreateTuning();
-            AnimatorController controller = BuildController(tuning, ControllerPath, NormalMotions);
+            HandPoseTable hands = HandPoseSetup.LoadOrCreateTable();
+            AnimatorController controller = BuildController(tuning, ControllerPath, NormalMotions, hands);
             AnimatorController mutantController = null;
-            if (HasClips(MutantMotions)) mutantController = BuildController(tuning, MutantControllerPath, MutantMotions);
+            if (HasClips(MutantMotions)) mutantController = BuildController(tuning, MutantControllerPath, MutantMotions, hands);
             else Debug.LogWarning($"[TestRoomSetup] Mutant 동작 파일({MutantMotions.Walk} · {MutantMotions.Run} · {MutantMotions.Jump}.fbx)이 없어 Mutant 모습은 빼고 만듭니다.");
-            GameObject playerPrefab = BuildPlayerPrefab(tuning, controller, mutantController);
+            GameObject playerPrefab = BuildPlayerPrefab(tuning, controller, mutantController, hands);
             EnemySetup.Run(); // 숲 적 4종 수치 · 프리팹 · 구성 표
             BuildScene(playerPrefab);
             BuildSceneList.Ensure(ScenePath, first: false);
@@ -107,7 +108,7 @@ namespace Game.EditorTools
             public MotionSet(string walk, string run, string jump) { Walk = walk; Run = run; Jump = jump; }
         }
 
-        private static readonly MotionSet NormalMotions = new MotionSet("Walk", "Run", "Jump");
+        private static readonly MotionSet NormalMotions = new MotionSet("Walk", "Jog Forward", "Jump");
         private static readonly MotionSet MutantMotions = new MotionSet("Mutant Walk", "Mutant Run", "Mutant Jump");
         private const string MutantControllerPath = "Assets/Game/Art/Gorani/Gorani_Mutant.controller";
 
@@ -123,41 +124,78 @@ namespace Game.EditorTools
             return true;
         }
 
-        private static AnimatorController BuildController(PlayerTuning tuning, string path, MotionSet motions)
+private static AnimatorController BuildController(PlayerTuning tuning, string path, MotionSet motions, HandPoseTable hands)
         {
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
             if (controller == null) controller = AnimatorController.CreateAnimatorControllerAtPath(path);
 
             EnsureParameter(controller, "MoveX", AnimatorControllerParameterType.Float);
             EnsureParameter(controller, "MoveY", AnimatorControllerParameterType.Float);
+            EnsureParameter(controller, "MoveAmount", AnimatorControllerParameterType.Float);
+            EnsureParameter(controller, DiagonalMixParameter, AnimatorControllerParameterType.Float);
 
             AnimatorStateMachine machine = controller.layers[0].stateMachine;
             BlendTree tree = FindState(machine, "Move")?.motion as BlendTree;
             if (tree == null) controller.CreateBlendTreeInController("Move", out tree, 0);
+            DestroyNestedTrees(tree); // 안쪽 트리는 매번 새로 만든다(컨트롤러 파일에 남은 것이 쌓이지 않게)
 
-            tree.blendType = BlendTreeType.FreeformDirectional2D;
-            tree.blendParameter = "MoveX";
-            tree.blendParameterY = "MoveY";
+            // 이동 상태 = 1D(MoveAmount): 0 대기, 1 방향 트리(MoveX · MoveY, 방향만 넣는다).
+            // 대기(8초)를 방향 트리에 그대로 섞으면 길이 맞춤 때문에 발이 몇 배 느려지므로(대각선 · 조준 이동) 따로 둔다.
             float walk = tuning.walkPlaybackSpeed;
+            float sprint = tuning.sprintMultiplier;
             EnsureLoop(motions.Walk);
             EnsureLoop(motions.Run);
+            foreach (var jog in JogRing) EnsureLoop(jog.clip);
+            ChildMotion forward = Child(motions.Walk, 0f, 1f, MoveTimeScale(motions.Walk, walk, 1f));
+            ChildMotion back = Child("Walking Backward", 0f, -1f, MoveTimeScale("Walking Backward", walk, 1f));
+            ChildMotion left = Child("Left Strafe Walking", -1f, 0f, MoveTimeScale("Left Strafe Walking", walk, 1f));
+            ChildMotion right = Child("Right Strafe Walking", 1f, 0f, MoveTimeScale("Right Strafe Walking", walk, 1f));
+            // 방향 트리 가운데(방향을 뒤집을 때만 지나간다): 대기 동작을 걷기 한 걸음 길이에 맞춰 넣어 발 박자를 늦추지 않게 한다
+            AnimationClip idle = LoadClip("Idle");
+            float stride = forward.motion.averageDuration / forward.timeScale;
+
+            var ring = new System.Collections.Generic.List<ChildMotion>
+            {
+                Child("Idle", 0f, 0f, idle.averageDuration / stride),
+                forward,
+                back,
+                left,
+                right,
+                Diagonal(controller, "ForwardLeft", -1f, 1f, 1f, forward, left),
+                Diagonal(controller, "ForwardRight", 1f, 1f, 1f, forward, right),
+                // 뒤 대각선은 반대쪽 옆걸음을 거꾸로 재생해 섞는다. 같은 쪽 옆걸음을 그대로 섞으면 다리가 서로 반대로 가서 제자리걸음이 된다
+                Diagonal(controller, "BackLeft", -1f, -1f, 1f, back, Reversed(right)),
+                Diagonal(controller, "BackRight", 1f, -1f, 1f, back, Reversed(left)),
+                // 달리기 링(반지름 sprintMultiplier): 걷기 링과 같은 8방향. 앞은 모습별 달리기 클립, 나머지 7방향은 Jog 세트의 방향별 전용 클립을 두 모습이 같이 쓴다
+                RunChild(motions.Run, 0f, 1f, walk, sprint),
+            };
+            foreach (var jog in JogRing) ring.Add(RunChild(jog.clip, jog.x, jog.y, walk, sprint));
+
+            BlendTree directions = NestedTree(controller, "Directions");
+            directions.blendType = BlendTreeType.FreeformDirectional2D;
+            directions.blendParameter = "MoveX";
+            directions.blendParameterY = "MoveY";
+            directions.children = ring.ToArray();
+            EditorUtility.SetDirty(directions);
+
+
+            tree.blendType = BlendTreeType.Simple1D;
+            tree.blendParameter = "MoveAmount";
+            tree.useAutomaticThresholds = false;
             tree.children = new[]
             {
-                Child("Idle", 0f, 0f, 1f),
-                Child(motions.Walk, 0f, 1f, ForwardTimeScale(motions.Walk, walk, 1f)),
-                Child(motions.Run, 0f, tuning.sprintMultiplier, ForwardTimeScale(motions.Run, walk, tuning.sprintMultiplier)),
-                Child("Walking Backward", 0f, -1f, walk),
-                Child("Left Strafe Walking", -1f, 0f, walk),
-                Child("Right Strafe Walking", 1f, 0f, walk),
+                new ChildMotion { motion = idle, threshold = 0f, timeScale = 1f },
+                new ChildMotion { motion = directions, threshold = 1f, timeScale = 1f },
             };
             EditorUtility.SetDirty(tree);
-            // Shift 달리기: 앞으로 달릴 때 PlayerController가 MoveY를 sprintMultiplier까지 올려 달리기 동작으로 넘어간다.
-            // MoveSpeed(평소 1, 달릴 때 sprintMultiplier)는 상태 전체 배속이라, 옆 · 뒤로 달릴 때는 걷기 동작이 빨라진다
+            // Shift 달리기: PlayerController가 방향(MoveX · MoveY)의 길이를 sprintMultiplier까지 올려 어느 방향이든 달리기 링으로 넘어간다.
+            // MoveSpeed(평소 1, 달릴 때 sprintMultiplier, 조준 · 스틱을 덜 밀 때는 그만큼 작게)는 상태 전체 배속이다
             EnsureParameter(controller, "MoveSpeed", AnimatorControllerParameterType.Float);
             AnimatorControllerParameter[] parameters = controller.parameters;
             foreach (AnimatorControllerParameter parameter in parameters)
             {
                 if (parameter.name == "MoveSpeed") parameter.defaultFloat = 1f;
+                if (parameter.name == DiagonalMixParameter) parameter.defaultFloat = 0.5f;
             }
             controller.parameters = parameters;
             AnimatorState moveState = FindState(machine, "Move");
@@ -170,6 +208,7 @@ namespace Game.EditorTools
             AnimatorControllerLayer[] layers = controller.layers;
             layers[0].iKPass = true; // 조준 중 오른팔 IK
             controller.layers = layers;
+            HandPoseSetup.AddLayer(controller, hands); // 손가락은 모든 동작 위에 손 모양 레이어로 덮는다
             EditorUtility.SetDirty(controller);
             return controller;
         }
@@ -281,22 +320,136 @@ namespace Game.EditorTools
         }
 
         /// <summary>
-        /// 앞으로 가는 클립(걷기 · 달리기)의 배속. 기준 걷기 클립이 walkPlaybackSpeed에서 moveSpeed에 발이 맞았으므로,
-        /// 클립이 앞으로 가는 속도의 비율로 맞추면 어느 클립이든 발이 맞는다. 달릴 때는 상태 배속 MoveSpeed가 sprintMultiplier를 곱하므로 여기서는 곱하지 않는다.
+        /// 이동 클립(걷기 · 달리기 · 옆걸음 · 뒷걸음)의 배속. 기준 걷기 클립이 walkPlaybackSpeed에서 moveSpeed에 발이 맞았으므로,
+        /// 클립이 가는 속도(수평 크기)의 비율로 맞추면 어느 클립이든 발이 맞는다. 달릴 때는 상태 배속 MoveSpeed가 sprintMultiplier를 곱하므로 여기서는 곱하지 않는다.
         /// </summary>
         /// <param name="stateSpeed">이 클립을 쓸 때의 상태 배속(걷기 1, 달리기 sprintMultiplier). 제자리 클립일 때 원래 속도로 되돌리는 데만 쓴다.</param>
-        private static float ForwardTimeScale(string clip, float walkPlayback, float stateSpeed)
+private static float MoveTimeScale(string clip, float walkPlayback, float stateSpeed)
         {
-            float speed = LoadClip(clip).averageSpeed.z;
+            Vector3 average = LoadClip(clip).averageSpeed;
+            float speed = new Vector2(average.x, average.z).magnitude;
             if (speed <= 0.01f)
             {
                 // 제자리 동작이면 속도가 0이다. 그때는 상태 배속을 빼서 클립 원래 속도로 재생한다
-                Debug.LogWarning($"[TestRoomSetup] '{clip}' 클립이 앞으로 가지 않아(In Place) 원래 속도로 재생합니다. Mixamo에서 In Place를 끄고 받으면 발이 맞습니다.");
+                Debug.LogWarning($"[TestRoomSetup] '{clip}' 클립이 움직이지 않아(In Place) 원래 속도로 재생합니다. Mixamo에서 In Place를 끄고 받으면 발이 맞습니다.");
                 return 1f / Mathf.Max(stateSpeed, 0.01f);
             }
             float scale = walkPlayback * ReferenceWalkClipSpeed / speed;
             Debug.Log($"[TestRoomSetup] '{clip}' 배속 {scale:0.00} (클립 속도 {speed:0.00})");
             return scale;
+        }
+
+        // 달리기 링의 앞을 뺀 7방향(Mixamo Jog 세트, 팔을 내리고 뛴다). 방향마다 전용 클립이 있어 섞거나 거꾸로 재생하지 않는다.
+        // 보통 모습과 Mutant 모습이 같이 쓴다. 보통 모습의 앞 달리기(Jog Forward)도 같은 세트다. x · y = 가는 방향(오른쪽 · 앞)
+        private static readonly (string clip, float x, float y)[] JogRing =
+        {
+            ("Jog Backward", 0f, -1f),
+            ("Jog Left", -1f, 0f),
+            ("Jog Right", 1f, 0f),
+            ("Jog Forward Left", -1f, 1f),
+            ("Jog Forward Right", 1f, 1f),
+            ("Jog Backward Left", -1f, -1f),
+            ("Jog Backward Right", 1f, -1f),
+        };
+
+        /// <summary>
+        /// 달리기 클립의 배속. 클립 속도 비율(MoveTimeScale)만으로는 달리기 클립마다 디딘 발이 미끄러지는 정도가 달라서,
+        /// 디딘 발 속도 ÷ 이동 속도가 앞걷기(약 0.82)와 같아지도록 클립별로 잰 보정값을 곱한다(Jog 세트는 2026-11-18, Mutant Run은 2026-11-17에 고라니 뼈대에서 잰 값).
+        /// 재는 법: 달리기 링의 그 방향 자리에서 발(발목 · 발끝 뼈의 가운데)이 가장 낮은 높이 + 1 cm 안에 있는 동안의 수평 속도를 이동 방향으로 평균한다.
+        /// 클립을 바꾸면 다시 재야 한다. 표에 없는 클립은 1.
+        /// </summary>
+        private static float RunTimeScale(string clip, float walkPlayback, float stateSpeed)
+        {
+            float fix;
+            if (!RunStrideFix.TryGetValue(clip, out fix)) fix = 1f;
+            return MoveTimeScale(clip, walkPlayback, stateSpeed) * fix;
+        }
+
+        private static readonly System.Collections.Generic.Dictionary<string, float> RunStrideFix = new System.Collections.Generic.Dictionary<string, float>
+        {
+            { "Mutant Run", 0.82f },
+            { "Jog Forward", 1.02f },
+            { "Jog Backward", 1.06f },
+            { "Jog Left", 1.065f },
+            { "Jog Right", 1.085f },
+            { "Jog Forward Left", 1.08f },
+            { "Jog Forward Right", 1.08f },
+            { "Jog Backward Left", 1.04f },
+            { "Jog Backward Right", 1.08f },
+        };
+
+        /// <summary>
+        /// 달리기 클립의 시작 위치(한 바퀴 = 1). Jog 세트는 클립마다 먼저 디디는 발이 달라서(앞 왼쪽 · 앞 오른쪽 · 오른쪽 · 뒤 오른쪽이 반 바퀴 어긋난다)
+        /// 그대로 두면 이웃한 방향 사이에서 두 클립이 서로 지워져 제자리걸음이 된다. 왼발을 디디는 때가 모두 바퀴의 0.5(걷기 클립들과 같다)가 되게 맞춘다.
+        /// 값 = 그 클립에서 왼발을 디디는 때 − 0.5(2026-11-18에 잰 값). 클립을 바꾸면 다시 재야 한다. 표에 없는 클립은 0.
+        /// </summary>
+        private static readonly System.Collections.Generic.Dictionary<string, float> RunCycleOffset = new System.Collections.Generic.Dictionary<string, float>
+        {
+            { "Mutant Run", 0.01f },
+            { "Jog Forward", 0.96f },
+            { "Jog Backward", 0.04f },
+            { "Jog Left", 0.03f },
+            { "Jog Right", 0.55f },
+            { "Jog Forward Left", 0.425f },
+            { "Jog Forward Right", 0.48f },
+            { "Jog Backward Left", 0f },
+            { "Jog Backward Right", 0.535f },
+        };
+
+        /// <summary>달리기 링의 한 자리. x · y = 가는 방향(길이는 링 반지름으로 맞춘다).</summary>
+        private static ChildMotion RunChild(string clip, float x, float y, float walkPlayback, float radius)
+        {
+            Vector2 at = new Vector2(x, y).normalized * radius;
+            ChildMotion child = Child(clip, at.x, at.y, RunTimeScale(clip, walkPlayback, radius));
+            float offset;
+            if (RunCycleOffset.TryGetValue(clip, out offset)) child.cycleOffset = offset;
+            return child;
+        }
+
+        /// <summary>대각선 자리의 안쪽 트리가 두 동작을 반씩 섞는 데 쓰는 파라미터. 값은 0.5로 두고 아무도 바꾸지 않는다.</summary>
+        private const string DiagonalMixParameter = "DiagonalMix";
+
+        /// <summary>
+        /// 대각선 동작 = 두 동작을 반씩 섞은 것. 옆걸음 클립은 골반을 가는 쪽으로 66도쯤 돌린 앞걸음이라, 앞걸음과 섞으면 보폭이 거의 그대로인 대각선 걸음이 된다.
+        /// 대각선 전용 클립이 생기면 이 자리에 그 클립을 넣는다.
+        /// </summary>
+private static ChildMotion Diagonal(AnimatorController controller, string name, float x, float y, float radius, ChildMotion a, ChildMotion b)
+        {
+            BlendTree mix = NestedTree(controller, name);
+            mix.blendType = BlendTreeType.Simple1D;
+            mix.blendParameter = DiagonalMixParameter;
+            mix.useAutomaticThresholds = false;
+            a.threshold = 0f;
+            b.threshold = 1f;
+            mix.children = new[] { a, b };
+            EditorUtility.SetDirty(mix);
+            // 안쪽 트리에는 timeScale이 먹지 않는다(배속은 안에 든 클립의 것을 따른다)
+            return new ChildMotion { motion = mix, position = new Vector2(x, y).normalized * radius, timeScale = 1f };
+        }
+
+        /// <summary>거꾸로 재생한다(왼쪽 옆걸음을 거꾸로 = 골반을 왼쪽으로 돌린 채 오른쪽으로 가는 뒷걸음).</summary>
+        private static ChildMotion Reversed(ChildMotion child)
+        {
+            child.timeScale = -child.timeScale;
+            return child;
+        }
+
+        private static BlendTree NestedTree(AnimatorController controller, string name)
+        {
+            var tree = new BlendTree { name = name, hideFlags = HideFlags.HideInHierarchy };
+            AssetDatabase.AddObjectToAsset(tree, controller);
+            return tree;
+        }
+
+        private static void DestroyNestedTrees(BlendTree tree)
+        {
+            foreach (ChildMotion child in tree.children)
+            {
+                if (!(child.motion is BlendTree nested)) continue;
+                DestroyNestedTrees(nested);
+                Object.DestroyImmediate(nested, true);
+            }
+            tree.children = new ChildMotion[0];
         }
 
         /// <summary>새로 넣은 Mixamo 동작을 걷기와 같은 설정(반복, 회전 · 높이 고정)으로 가져온다. 이미 맞으면 다시 가져오지 않는다.</summary>
@@ -341,7 +494,7 @@ namespace Game.EditorTools
             controller.AddParameter(name, type);
         }
 
-        private static GameObject BuildPlayerPrefab(PlayerTuning tuning, AnimatorController controller, AnimatorController mutantController)
+        private static GameObject BuildPlayerPrefab(PlayerTuning tuning, AnimatorController controller, AnimatorController mutantController, HandPoseTable hands)
         {
             var root = new GameObject("Player") { tag = "Player" };
             var body = root.AddComponent<CharacterController>();
@@ -391,7 +544,14 @@ namespace Game.EditorTools
             var ikFields = new SerializedObject(aimIK);
             ikFields.FindProperty("tuning").objectReferenceValue = tuning;
             ikFields.FindProperty("gun").objectReferenceValue = gun;
+            ikFields.FindProperty("hands").objectReferenceValue = hands;
             ikFields.ApplyModifiedPropertiesWithoutUndo();
+
+            var handFields = new SerializedObject(visual.AddComponent<PlayerHandPose>()); // 조준 · 근접 때 손 모양
+            handFields.FindProperty("poses").objectReferenceValue = hands;
+            handFields.FindProperty("gun").objectReferenceValue = gun;
+            handFields.FindProperty("melee").objectReferenceValue = melee;
+            handFields.ApplyModifiedPropertiesWithoutUndo();
 
             var player = root.AddComponent<PlayerController>();
             var fields = new SerializedObject(player);
@@ -460,12 +620,22 @@ namespace Game.EditorTools
             pistol = new GameObject("Pistol").transform;
             pistol.SetParent(root, false);
             body.transform.SetParent(pistol, false);
-            body.transform.localPosition = new Vector3(0f, -0.02f, 0.14f);
-            body.transform.localScale = new Vector3(0.04f, 0.07f, 0.2f);
+            // 자리는 오른손 손목 기준(z = 조준 방향, y = 위). 조준 중 손바닥이 왼쪽을 보므로(HandPoseTable.gripRoll) 총은 손목보다 왼쪽 4 cm
+            body.transform.localPosition = new Vector3(-0.04f, 0.088f, 0.19f);
+            body.transform.localScale = new Vector3(0.042f, 0.045f, 0.26f);
+
+            // 손잡이: 권총 쥐는 손 모양(HandPoseTable.grip)의 손바닥 안에 들어가는 자리
+            var grip = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            Object.DestroyImmediate(grip.GetComponent<Collider>());
+            grip.name = "PistolGrip";
+            grip.transform.SetParent(pistol, false);
+            grip.transform.localPosition = new Vector3(-0.04f, 0.012f, 0.125f);
+            grip.transform.localRotation = Quaternion.Euler(12f, 0f, 0f);
+            grip.transform.localScale = new Vector3(0.036f, 0.11f, 0.055f);
 
             muzzle = new GameObject("Muzzle").transform;
             muzzle.SetParent(pistol, false);
-            muzzle.localPosition = new Vector3(0f, -0.01f, 0.25f);
+            muzzle.localPosition = new Vector3(-0.04f, 0.088f, 0.33f);
 
             tracer = new GameObject("Tracer").AddComponent<LineRenderer>();
             tracer.transform.SetParent(root, false);
