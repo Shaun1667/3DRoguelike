@@ -107,6 +107,7 @@ namespace Game
             state = State.WindingUp;
             StartTimer(tuning.windupTime);
             ShowLane(0f);
+            PlayAnimation(EnemyAnim.ChargeWindup);
         }
 
         /// <summary>예고 진행(0~1): 몸을 뒤로 젖히고 돌진 길이 앞으로 뻗는다.</summary>
@@ -125,6 +126,7 @@ namespace Game
             travelled = 0f;
             hitThisCharge = false;
             state = State.Charging;
+            PlayAnimation(EnemyAnim.Charge);
         }
 
         private void Charge()
@@ -155,8 +157,13 @@ namespace Game
                 state = State.SlamWindup;
                 StartTimer(tuning.slamWindupTime);
                 ShowSlam(0f);
+                PlayAnimation(EnemyAnim.Slam); // 끝이 내려찍는 순간
             }
-            else Recover(tuning.recoverTime);
+            else
+            {
+                Recover(tuning.recoverTime);
+                PlayLocomotion();
+            }
         }
 
         /// <summary>내려찍기 예고(0~1): 몸을 젖히고 둥근 범위가 넓어진다.</summary>
@@ -173,6 +180,7 @@ namespace Game
             Pose(tuning.strikeLeanAngle);
             if (PlayerWithin(transform.position, tuning.slamRadius)) HitPlayer(tuning.slamDamage, tuning.slamName);
             Recover(tuning.slamRecoverTime);
+            PlayAnimation(EnemyAnim.SlamRecover);
         }
 
         private void BeginStun()
@@ -181,6 +189,7 @@ namespace Game
             stunMark.SetActive(true);
             state = State.Stunned;
             StartTimer(tuning.stunTime);
+            PlayAnimation(EnemyAnim.Stun, 0.15f);
         }
 
         private void Recover(float duration)
@@ -193,6 +202,7 @@ namespace Game
         private void ResumeChase()
         {
             Pose(0f);
+            PlayLocomotion();
             state = State.Chasing;
         }
     }

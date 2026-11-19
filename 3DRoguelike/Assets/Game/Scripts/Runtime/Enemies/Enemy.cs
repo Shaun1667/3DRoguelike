@@ -22,6 +22,8 @@ namespace Game
         [SerializeField] private GameObject body;
         [Tooltip("나타나기 전 바닥 표시")]
         [SerializeField] private GameObject spawnWarning;
+        [Tooltip("리깅 모델(E 개체 · 네 발 Mutant)의 Animator(상태 이름은 EnemyAnim). 없으면(정적 모델 · 임시 도형) 몸 기울이기 연출만 쓴다")]
+        [SerializeField] private Animator animator;
 
         private static readonly List<Enemy> alive = new List<Enemy>();
 
@@ -96,12 +98,14 @@ namespace Game
         private void OnEnable()
         {
             health.Died += OnDied;
+            health.Damaged += OnDamaged;
             if (!dead) alive.Add(this);
         }
 
         private void OnDisable()
         {
             health.Died -= OnDied;
+            health.Damaged -= OnDamaged;
             alive.Remove(this);
         }
 
@@ -115,6 +119,7 @@ namespace Game
             }
             Tick();
             KeepOutOfSafeZones();
+            if (HasAnimator) animator.SetFloat(EnemyAnim.Speed, Agent.enabled ? Agent.velocity.magnitude : 0f, 0.1f, Time.deltaTime);
         }
 
         private void Appear()
@@ -139,16 +144,31 @@ namespace Game
             if (SafeZone.KeepsOut(transform.position, out Vector3 outside)) Agent.Move(Flat(outside - transform.position));
         }
 
-        private void OnDied()
+private void OnDied()
         {
             dead = true;
             alive.Remove(this);
-            body.SetActive(false);
             spawnWarning.SetActive(false);
             HideWarnings();
             bodyCollider.enabled = false;
             Agent.enabled = false;
+            if (appeared && HasAnimator)
+            {
+                // 동작이 있는 모델(E 개체 · Mutant): 판정 · 목록 · 보상은 지금 바로 끝나고, 몸만 남아 죽는 동작을 보여 준 뒤 사라진다
+                Pose(0f);
+                animator.SetLayerWeight(EnemyAnim.HitLayer, 0f);
+                animator.CrossFadeInFixedTime(EnemyAnim.Death, 0.1f, 0, 0f);
+                Destroy(gameObject, Tuning.evolvedCorpseTime);
+                return;
+            }
+            body.SetActive(false);
             Destroy(gameObject, Tuning.corpseTime);
+        }
+
+        private void OnDamaged(int amount)
+        {
+            if (dead || !HasAnimator || !animator.isActiveAndEnabled) return;
+            animator.Play(EnemyAnim.Hit, EnemyAnim.HitLayer, 0f); // 더하기 레이어 — 하던 동작(예고 · 공격)은 끊기지 않는다
         }
 
         // ---------- 종 클래스가 쓰는 도움 ----------
@@ -227,11 +247,37 @@ namespace Game
         }
 
         /// <summary>몸 자세. 앞뒤 기울기(양수 = 앞으로 숙임)는 발밑을 축으로, lift는 위로 뜨는 높이(m).</summary>
-        protected void Pose(float leanAngle, float lift = 0f)
+protected void Pose(float leanAngle, float lift = 0f)
         {
+            if (HasAnimator)
+            {
+                // 동작이 있는 모델: 젖히기 · 숙이기 · 웅크림은 동작이 맡고, 위로 뜨는 높이만 코드가 준다(수치 에셋의 각도는 그대로 둔다)
+                leanAngle = 0f;
+                lift = Mathf.Max(0f, lift);
+            }
             Quaternion tilt = Quaternion.Euler(leanAngle, 0f, 0f);
             body.transform.localRotation = tilt;
             body.transform.localPosition = tilt * bodyRestPosition + Vector3.up * lift;
+        }
+
+        /// <summary>동작이 있는 모델인가(E 개체 · 네 발 Mutant 리깅 모델). 아니면 동작 호출은 모두 아무것도 하지 않는다.</summary>
+        protected bool HasAnimator => animator != null;
+
+        /// <summary>동작 상태로 넘어간다(<see cref="EnemyAnim"/>의 해시). 상태 길이는 Setup이 수치 에셋 시간에 맞춰 두었다.</summary>
+        protected void PlayAnimation(int state, float fade = 0.08f)
+        {
+            if (!HasAnimator || !animator.isActiveAndEnabled) return;
+            animator.CrossFadeInFixedTime(state, fade, 0, 0f);
+        }
+
+        /// <summary>대기/이동 동작으로 돌아간다(이미 그 상태거나 그리로 넘어가는 중이면 그대로).</summary>
+        protected void PlayLocomotion()
+        {
+            if (!HasAnimator || !animator.isActiveAndEnabled) return;
+            bool changing = animator.IsInTransition(0);
+            int target = changing ? animator.GetNextAnimatorStateInfo(0).shortNameHash : animator.GetCurrentAnimatorStateInfo(0).shortNameHash;
+            if (target == EnemyAnim.Locomotion) return;
+            animator.CrossFadeInFixedTime(EnemyAnim.Locomotion, 0.2f, 0);
         }
 
         protected void StartTimer(float duration) => StateEnd = Time.time + duration;

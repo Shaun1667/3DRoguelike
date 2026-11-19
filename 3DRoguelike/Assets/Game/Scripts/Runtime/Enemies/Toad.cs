@@ -56,6 +56,7 @@ namespace Game
                     {
                         HideWarnings();
                         Pose(0f);
+                        PlayLocomotion();
                         state = State.Positioning;
                         break;
                     }
@@ -68,6 +69,7 @@ namespace Game
                     if (TimerDone)
                     {
                         Pose(0f);
+                        PlayLocomotion();
                         state = State.Positioning;
                     }
                     break;
@@ -127,6 +129,7 @@ namespace Game
             }
             state = State.WindingUp;
             StartTimer(tuning.windupTime);
+            PlayAnimation(EnemyAnim.SpitWindup); // 끝이 뱉는 순간
         }
 
         private void Fire()
@@ -155,6 +158,7 @@ namespace Game
                 });
             }
             Pose(tuning.strikeLeanAngle);
+            PlayAnimation(EnemyAnim.Spit);
             state = State.Recovering;
             StartTimer(tuning.recoverTime);
             nextAttackTime = Time.time + Mathf.Max(tuning.attackInterval, tuning.recoverTime);

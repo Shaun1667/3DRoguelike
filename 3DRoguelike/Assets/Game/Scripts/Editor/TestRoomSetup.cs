@@ -16,6 +16,8 @@ namespace Game.EditorTools
     public static class TestRoomSetup
     {
         private const string TuningPath = "Assets/Game/Data/PlayerTuning.asset";
+        private const string MeleeEffectPath = "Assets/Game/Art/Effects/ClawSlash/Player_ClawSlash.prefab";
+
         private const string ClipFolder = "Assets/Game/Art/Gorani/Animation";
         private const string ControllerPath = "Assets/Game/Art/Gorani/Gorani.controller";
         private const string GoraniPrefabPath = "Assets/Game/Prefabs/Gorani.prefab";
@@ -51,22 +53,23 @@ namespace Game.EditorTools
         private static PlayerTuning LoadOrCreateTuning()
         {
             var tuning = AssetDatabase.LoadAssetAtPath<PlayerTuning>(TuningPath);
-            if (tuning != null)
+            if (tuning == null)
             {
-                EditorUtility.SetDirty(tuning); // 새로 생긴 필드를 파일에 남긴다
-                return tuning;
+                tuning = ScriptableObject.CreateInstance<PlayerTuning>();
+                AssetDatabase.CreateAsset(tuning, TuningPath);
             }
-            tuning = ScriptableObject.CreateInstance<PlayerTuning>();
-            AssetDatabase.CreateAsset(tuning, TuningPath);
+            // 근접 이펙트는 비어 있을 때만 채운다(다른 것으로 바꿔 둔 값은 그대로 둔다)
+            if (tuning.meleeEffect == null) tuning.meleeEffect = AssetDatabase.LoadAssetAtPath<GameObject>(MeleeEffectPath);
+            EditorUtility.SetDirty(tuning); // 새로 생긴 필드를 파일에 남긴다
             return tuning;
         }
 
         /// <summary>HitFlash가 프로퍼티 블록으로 켤 수 있도록 발광을 검은색으로 켜 둔다.</summary>
         internal static void EnableFlash(Material material)
         {
-            material.EnableKeyword("_EMISSION");
-            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
             material.SetColor("_EmissionColor", Color.black);
+            material.EnableKeyword("_EMISSION");
             EditorUtility.SetDirty(material);
         }
 

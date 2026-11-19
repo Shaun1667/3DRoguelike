@@ -32,8 +32,10 @@ namespace Game
         [Tooltip("공격할 때 앞으로 숙이는 각도. 빈틈 동안 천천히 선다")]
         [Range(0f, 60f)] public float strikeLeanAngle = 20f;
         [Min(0f)] public float hitFlashTime = 0.08f;
-        [Tooltip("죽은 뒤 사라질 때까지(초)")]
+        [Tooltip("동작이 없는 모델(정적 모델 · 임시 도형): 죽은 뒤 사라질 때까지(초)")]
         [Min(0f)] public float corpseTime = 1f;
+        [Tooltip("동작이 있는 모델(E 개체 · 네 발 Mutant 리깅 모델): 죽은 뒤 쓰러지는 동작을 보여 주고 사라질 때까지(초). 판정 · 보상은 죽는 순간 끝난다. 바꾸면 Setup Test Room 다시 실행(죽는 동작 빠르기)")]
+        [Min(0f)] public float evolvedCorpseTime = 2.2f;
 
         public int HealthFor(EnemyGrade grade)
         {

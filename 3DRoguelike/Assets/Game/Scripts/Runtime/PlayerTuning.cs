@@ -42,6 +42,11 @@ namespace Game
         [Min(0f)] public float meleeLockTime = 0.75f;
         [Tooltip("공격 동작 재생 배속. Setup 메뉴가 컨트롤러에 넣는다")]
         [Min(0f)] public float meleePlaybackSpeed = 3f;
+        [Tooltip("때리는 순간 생기는 할퀴기 이펙트 (ClawSlashEffect, 까치 보스전에서 가져옴). 비우면 안 나온다. 왼손 공격은 좌우를 뒤집어 긋는다")]
+        public GameObject meleeEffect;
+        [Tooltip("이펙트가 생기는 자리. 플레이어 발밑 기준 (x 오른쪽, y 위, z 앞)")]
+        public Vector3 meleeEffectOffset = new Vector3(0f, 0.8f, 0.3f);
+        [Min(0f)] public float meleeEffectScale = 0.6f;
 
         [Header("권총")]
         [Min(0)] public int pistolDamage = 6;

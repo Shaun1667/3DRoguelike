@@ -73,6 +73,7 @@ namespace Game
                         attackWarning.SetActive(false);
                         Strike(tuning.damage, tuning.attackName);
                         Recover(tuning.recoverTime);
+                        PlayAnimation(EnemyAnim.AttackRecover);
                     }
                     break;
                 case State.Combo:
@@ -96,6 +97,7 @@ namespace Game
             state = State.WindingUp;
             StartTimer(tuning.windupTime);
             ShowWindup(0f);
+            PlayAnimation(EnemyAnim.Attack); // 예고 동작의 끝이 할퀴는 순간(한 번 · 3연속 첫 번째 공통)
         }
 
         /// <summary>예고 진행(0~1): 몸을 뒤로 젖히고, 바닥 범위가 발밑에서 앞으로 차오른다. 다 차면 할퀸다.</summary>
@@ -117,10 +119,13 @@ namespace Game
             {
                 state = State.Combo;
                 StartTimer(tuning.comboInterval);
+                // 다음 할퀴기 동작: 끝이 다음에 맞히는 순간(간격 뒤)
+                PlayAnimation(comboLeft == tuning.comboHits - 1 ? EnemyAnim.Combo2 : EnemyAnim.Combo3);
                 return;
             }
             attackWarning.SetActive(false);
             Recover(tuning.comboRecoverTime);
+            PlayAnimation(EnemyAnim.ComboRecover);
         }
 
         private void Strike(int damage, string attackName)
@@ -143,6 +148,7 @@ namespace Game
         private void ResumeChase()
         {
             Pose(0f);
+            PlayLocomotion();
             state = State.Chasing;
         }
     }

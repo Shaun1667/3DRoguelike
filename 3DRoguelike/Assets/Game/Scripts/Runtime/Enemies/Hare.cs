@@ -85,6 +85,7 @@ namespace Game
             landingWarning.SetActive(true);
             state = State.Crouching;
             StartTimer(crouchDuration);
+            PlayAnimation(slam ? EnemyAnim.SlamCrouch : EnemyAnim.Crouch);
         }
 
         private void BeginLeap()
@@ -96,6 +97,7 @@ namespace Game
             if (!slam) landingWarning.SetActive(false);
             state = State.Leaping;
             StartTimer(leapTime);
+            PlayAnimation(slam ? EnemyAnim.SlamLeap : EnemyAnim.Leap);
         }
 
         private void Leap()
@@ -118,8 +120,13 @@ namespace Game
                 landingWarning.SetActive(false);
                 if (PlayerWithin(transform.position, tuning.slamRadius)) HitPlayer(tuning.slamDamage, tuning.slamName);
                 Recover(tuning.slamRecoverTime);
+                PlayAnimation(EnemyAnim.SlamLand);
             }
-            else Recover(tuning.recoverTime);
+            else
+            {
+                Recover(tuning.recoverTime);
+                PlayAnimation(EnemyAnim.Land);
+            }
         }
 
         private void Recover(float duration)
@@ -132,6 +139,7 @@ namespace Game
         private void ResumeChase()
         {
             Pose(0f);
+            PlayLocomotion();
             state = State.Chasing;
         }
     }

@@ -410,7 +410,7 @@ namespace Game.EditorTools
         }
 
         /// <summary>renderers 경계를 space(집) 기준으로(집은 Y축만 돌아 있어 모델 돌림은 경계 상자 모서리로 충분).</summary>
-        private static Bounds LocalBounds(Transform space, Renderer[] renderers)
+        internal static Bounds LocalBounds(Transform space, Renderer[] renderers)
         {
             var bounds = new Bounds();
             bool first = true;

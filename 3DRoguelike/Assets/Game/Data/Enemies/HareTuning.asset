@@ -25,6 +25,7 @@ MonoBehaviour:
   strikeLeanAngle: 25
   hitFlashTime: 0.08
   corpseTime: 1
+  evolvedCorpseTime: 2.2
   attackName: "\uB4E4\uC774\uBC1B\uAE30"
   leapStartRange: 5
   crouchTime: 0.5

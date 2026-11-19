@@ -32,6 +32,9 @@ MonoBehaviour:
   meleeHitDelay: 0.35
   meleeLockTime: 0.75
   meleePlaybackSpeed: 3
+  meleeEffect: {fileID: 6366276276271905385, guid: f5ae42b812239034b8eb862cb3c66e5a, type: 3}
+  meleeEffectOffset: {x: 0, y: 0.8, z: 0.3}
+  meleeEffectScale: 0.6
   pistolDamage: 6
   pistolFireInterval: 0.22
   pistolMagazine: 12

@@ -22,8 +22,15 @@ namespace Game.EditorTools
         public static GameObject LoadModel(VillageTuning.HouseModel model)
         {
             string path = ModelPath(model);
+            if (!ConfigureStaticModel(path)) return null;
+            return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+        }
+
+        /// <summary>정적 메시로 가져오기: 뼈 · 애니메이션 · 카메라 · 조명 · 재질 · 충돌체 없음. 모델이 없으면 false. 숲 적 모델(<see cref="EnemySetup"/>)도 쓴다.</summary>
+        internal static bool ConfigureStaticModel(string path)
+        {
             var importer = AssetImporter.GetAtPath(path) as ModelImporter;
-            if (importer == null) return null;
+            if (importer == null) return false;
             bool changed = importer.animationType != ModelImporterAnimationType.None || importer.importAnimation || importer.importCameras
                 || importer.importLights || importer.materialImportMode != ModelImporterMaterialImportMode.None || importer.isReadable
                 || importer.addCollider || importer.importBlendShapes;
@@ -39,7 +46,7 @@ namespace Game.EditorTools
                 importer.importBlendShapes = false;
                 importer.SaveAndReimport();
             }
-            return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            return true;
         }
 
         /// <summary>집 재질(URP Lit, 알베도 · 노멀 · 금속/매끄러움). 텍스처가 없으면 null.</summary>
@@ -82,7 +89,7 @@ namespace Game.EditorTools
             return material;
         }
 
-        private static Texture2D ConfigureTexture(string path, bool srgb, int maxSize, bool normal, bool keepAlpha = false)
+        internal static Texture2D ConfigureTexture(string path, bool srgb, int maxSize, bool normal, bool keepAlpha = false)
         {
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);
             TextureImporterType type = normal ? TextureImporterType.NormalMap : TextureImporterType.Default;
@@ -104,7 +111,7 @@ namespace Game.EditorTools
             return AssetDatabase.LoadAssetAtPath<Texture2D>(path);
         }
 
-        private static Texture2D MetallicSmoothness(string ormPath, string path, float metallicScale, float smoothnessScale, int maxSize)
+        internal static Texture2D MetallicSmoothness(string ormPath, string path, float metallicScale, float smoothnessScale, int maxSize)
         {
             var source = new Texture2D(2, 2);
             source.LoadImage(File.ReadAllBytes(ormPath));

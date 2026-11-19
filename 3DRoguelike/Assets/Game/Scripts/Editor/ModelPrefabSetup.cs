@@ -54,13 +54,17 @@ namespace Game.EditorTools
         /// 그래서 동작 FBX 자신의 뼈대 구조 · 위치는 두고, mixamorig 뼈의 기본 회전만 고라니 값으로 바꿔 아바타를 만든다.
         /// 이미 맞으면 다시 가져오지 않는다.
         /// </summary>
-        private static void UseGoraniAvatarForClips()
+        private static void UseGoraniAvatarForClips() => UseGoraniAvatarForClips(GoraniClipFolder);
+
+        /// <summary>그 폴더의 Mixamo 동작 FBX(뼈대만, mixamorig 이름)를 고라니 동작과 같은 방식으로 Humanoid로 가져온다(적 E 개체 동작: EnemyAnimationSetup). 바꾼 파일 수를 돌려준다.
+        /// subfolders가 false면 그 폴더 바로 아래 파일만(아래 폴더에 다른 뼈대의 동작이 있을 때 — 네 발 Mutant 동작은 Generic).</summary>
+        internal static int UseGoraniAvatarForClips(string clipFolder, bool subfolders = true)
         {
             var goraniImporter = AssetImporter.GetAtPath(GoraniModel) as ModelImporter;
             if (goraniImporter == null || goraniImporter.humanDescription.human == null || goraniImporter.humanDescription.human.Length == 0)
             {
                 Debug.LogError("[ModelPrefabSetup] 고라니 휴머노이드 설정을 찾지 못했습니다: " + GoraniModel);
-                return;
+                return 0;
             }
             HumanDescription source = goraniImporter.humanDescription;
             var rest = new Dictionary<string, SkeletonBone>();
@@ -68,9 +72,10 @@ namespace Game.EditorTools
             Quaternion hipsWorld = RestWorldRotation(source.skeleton, "mixamorig:Hips");
 
             int changed = 0;
-            foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { GoraniClipFolder }))
+            foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { clipFolder }))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (!subfolders && System.IO.Path.GetDirectoryName(path).Replace('\\', '/') != clipFolder) continue;
                 if (!(AssetImporter.GetAtPath(path) is ModelImporter importer)) continue;
                 var model = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 if (model == null) continue;
@@ -112,7 +117,8 @@ namespace Game.EditorTools
                 importer.SaveAndReimport();
                 changed++;
             }
-            Debug.Log($"[ModelPrefabSetup] 동작 FBX 아바타 기준 자세를 고라니로: {changed}개 바꿈");
+            Debug.Log($"[ModelPrefabSetup] 동작 FBX 아바타 기준 자세를 고라니로({clipFolder}): {changed}개 바꿈");
+            return changed;
         }
 
         /// <summary>뼈대 목록에서 이름이 같은 뼈의 기본 자세 월드 회전(부모 이름을 따라 곱한다).</summary>

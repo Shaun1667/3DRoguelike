@@ -27,6 +27,7 @@ namespace Game
         private InputAction attackAction;
         private PlayerUpgrades upgrades;
         private bool nextIsLeft;
+        private bool hitIsLeft;
         private bool hitPending;
         private float hitTime;
         private float lockEndTime;
@@ -52,6 +53,7 @@ namespace Game
             if (hitPending && Time.time >= hitTime)
             {
                 hitPending = false;
+                SpawnEffect(hitIsLeft);
                 ApplyHit();
             }
         }
@@ -63,10 +65,21 @@ namespace Game
             lockEndTime = Time.time + tuning.meleeLockTime;
             hitTime = Time.time + tuning.meleeHitDelay;
             hitPending = true;
+            hitIsLeft = nextIsLeft;
             animator.SetBool(AttackLeftId, nextIsLeft);
             animator.SetTrigger(AttackId);
             nextIsLeft = !nextIsLeft;
             return true;
+        }
+
+        private void SpawnEffect(bool left)
+        {
+            if (tuning.meleeEffect == null) return;
+            Vector3 at = transform.TransformPoint(tuning.meleeEffectOffset);
+            GameObject fx = Instantiate(tuning.meleeEffect, at, transform.rotation);
+            // 왼손이면 좌우를 뒤집어 반대 방향으로 긋는다
+            float s = tuning.meleeEffectScale;
+            fx.transform.localScale = new Vector3(left ? -s : s, s, s);
         }
 
         private void ApplyHit()

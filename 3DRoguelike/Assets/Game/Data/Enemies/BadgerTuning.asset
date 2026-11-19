@@ -25,6 +25,7 @@ MonoBehaviour:
   strikeLeanAngle: 20
   hitFlashTime: 0.08
   corpseTime: 1
+  evolvedCorpseTime: 2.2
   attackName: "\uD560\uD034\uAE30"
   attackStartRange: 1.8
   windupTime: 1
