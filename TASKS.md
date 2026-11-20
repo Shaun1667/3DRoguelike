@@ -1,14 +1,15 @@
 # TASKS.md
 
 ## 진행 요약 (2026-11-10 기준 — 새 세션은 여기부터 읽는다)
-**최신 (2026-11-19): 숲 적 8종 그레이박스 → VARCO 모델(로우폴리 6.7~8.8천 삼각형, URPLab 리토폴로지 + 굽기) · E 개체 4종 Mixamo 리깅 + 동작 · 네 발 Mutant 4종 Blender 리깅 + 절차식 동작 30개(대기 · 이동 · 종별 공격 · 맞음 · 죽음 · 기절) · 맞음 번쩍임 고침 · 근접 할퀴기 이펙트(까치 보스전에서 가져옴, 텍스처는 새로 그림). 커밋 안 함. 남은 것: 두꺼비 Mutant 달리기 발 미끄러짐(클립 다시 만들기), 멧토끼 Mutant 달리기 재생 상한(×2.0, 15% 미끄러짐), 멧돼지 E 돌진 미끄러짐, 오소리 E 연타 순간 이동, 오소리 Mutant 겨드랑이 웨이트, 두꺼비 시야 판정(NavMesh.Raycast)으로 못 쏘고 왔다 갔다 한 실행 1회, 테스트 실행.**
+**최신 (2026-11-20): 작업 환경을 옮기려고 지금 상태 그대로 `phase2-floor`에 커밋 · 푸시함.** 이번 묶음(dcd4abe 이후): 발 미끄러짐 고침 · E 달리기를 고른 걸음 클립(Jog Forward / Run / Fast Run, Mutant Run 안 씀)으로 교체 · 오소리 Mutant 웨이트 · 텍스처 밝히기 · 멧토끼(Mutant) 도약 선딜레이 1초 · 후딜레이 2초(E 내려찍기는 0.8 / 1.0 그대로) · 고라니 보통 점프 → "Standing Jump"(17–37프레임, 회전 기준 Body Orientation, 재생 0.96배). 남은 것: 오소리 Mutant 가슴 밑 어두운 막대(Unity에서 면 찾아 Blender로 고치기), 고라니 점프 착지 때 발 9~11 cm 미끄러짐, 오소리 E 연타 순간 이동, 두꺼비 시야 판정, 두꺼비 E 침 뱉기는 옛 동작, Village_Ember 머티리얼 발광 꺼짐(EnableFlash와 같은 원인), 테스트 실행(EnemyTuningTests 기대값은 고침), `Gorani*.controller`는 BuildController 부를 때마다 고아 전이 9개씩 쌓임(동작 영향 없음).
+**최신 (2026-11-19): 숲 적 8종 그레이박스 → VARCO 모델(로우폴리 6.7~8.8천 삼각형, URPLab 리토폴로지 + 굽기) · E 개체 4종 Mixamo 리깅 + 동작 · 네 발 Mutant 4종 Blender 리깅 + 절차식 동작 30개(대기 · 이동 · 종별 공격 · 맞음 · 죽음 · 기절) · 맞음 번쩍임 고침 · 근접 할퀴기 이펙트(까치 보스전에서 가져옴, 텍스처는 새로 그림). 커밋 안 함. 발 미끄러짐 고침(정속 구간 비율: 두꺼비 Mutant 1.0→0.13, 멧토끼 Mutant 0.23→0.14, 멧돼지 E 돌진 0.88→0.20, E 달리기 0.21~0.29 — 멧돼지 · 두꺼비 E는 Jog Forward로 교체, 커밋 안 함). 남은 것: 오소리 E 연타 순간 이동, 오소리 Mutant 가슴 밑면 어두운 텍스처가 팔 틈으로 막대처럼 보임(텍스처 밝히기 추천, 결정 대기), 두꺼비 시야 판정(NavMesh.Raycast)으로 못 쏘고 왔다 갔다 한 실행 1회, 테스트 실행.**
 **최신 (2026-11-18): 숲 월드 길 488 m에 E-07 마을(우호적 · 안전 지대) — VARCO 주민 15종(Mixamo 리깅 · 대기 동작 · 셸 털 12종 · Verlet 꼬리 3종) · VARCO 집 4종 8채. 플레이로 걸어 보기 전. 새로 받은 PC에서는 `Tools/Game/Setup Villagers`를 한 번 실행해야 주민 털 · 꼬리 메시가 생긴다(용량 때문에 커밋 제외). 남은 결정: 마을 안에서 플레이어 공격 막을지, 주민 대기 동작 다양화.**
 **최신 (2026-11-17): 숲 길 위 적 무리 6곳 → 13곳 · 첫 무리 38 m · 나타나는 거리 26 m(커밋 안 함) — 3-2b 항목.**
 **최신 (2026-11-17): 숲 월드 나무를 VARCO 모델 3종(신갈나무 · 소나무 · 돌연변이 + 잎 카드)으로 교체(커밋 안 함) — 3-2b 항목.**
 **최신 (2026-11-16): 3-3 숲 적 4종 구현(커밋 안 함) — 확인 방법은 3-3 항목.**
 **최신 (2026-11-13): 다른 PC에서 이어 하려고 지금 상태 그대로 `phase2-floor`에 커밋 · 푸시함(플레이 확인 전).**
 - 3-2b 숲 월드 · 던전 입장: 구현 · 컴파일 확인 끝, **플레이 확인 안 함** — `Tools/Game/Setup Floor` → `Setup World` → World Play로 확인
-- 3-2a 동작 교체: Mixamo FBX 6개 넣고 Setup Test Room까지 끝(경고 · 오류 없음), **플레이 확인 안 함**. Mixamo "Jumping"이 뛰어내리는 동작이라 점프 모양이 어색할 수 있음 → 어색하면 Mixamo에서 제자리 점프를 다시 받거나 예전 Jump.fbx(커밋 da686ad 판)로 되돌림
+- 3-2a 동작 교체: Mixamo FBX 6개 넣고 Setup Test Room까지 끝(경고 · 오류 없음), **플레이 확인 안 함**. Mixamo "Jumping"이 뛰어내리는 동작이라 점프 모양이 어색할 수 있음 → 어색하면 Mixamo에서 제자리 점프를 다시 받거나 예전 Jump.fbx(커밋 da686ad 판)로 되돌림 → 2026-11-20 보통 모습 점프를 "Standing Jump"(공중 구간 17–37)로 바꿈
 - 3-3 적 4종: **구현 끝(2026-11-16) — 공통 `Enemy` + 4종 Mutant/E 8개(E 추가 공격 포함) · 단계별 구성 표 · 디버그 소환, 임시 도형. 플레이 확인 · 테스트 실행 · 커밋 전.** 설계는 아래 3-3 항목. 모델은 VARCO 플로우 "Evolution"(94102acd…)에 Mutant 15종 3D 완료, 네 발 리그는 멧돼지 · 멧토끼 · 두꺼비 완료 · 오소리 실패(Blender 수동 리그 예정), VARCO 동작(Animate)은 화면에서 실행되는지 사용자 확인 대기
 - 테스트는 3-1부터 아직 한 번도 실행 안 함(작성만). 커밋 전 돌려 볼 것
 - 로컬 전용 · 커밋 안 함: `Packages/manifest.json` · `packages-lock.json`(MCP for Unity, Claude Hand Tools 로컬 경로 줄), `manifest.json.claude-hand.bak`. 다른 PC에서는 그 PC 설정대로
@@ -200,6 +201,7 @@
   - 2026-11-13: Mixamo FBX 6개(Walking · Standard Run · Jumping / Mutant Walking · Mutant Run · Mutant Jumping, Without Skin · 30fps)를 Walk · Run · Jump / Mutant Walk · Mutant Run · Mutant Jump.fbx로 넣고 Setup Test Room 실행(경고 · 오류 없음, Gorani_Mutant.controller 생성). 덮어쓴 Walk · Jump의 예전 .meta 클립 구간을 새 길이에 맞춤
   - 문제: Mixamo "Jumping"은 0.54m 높이에서 앞으로 뛰어내리는 동작이라 게임 점프와 모양이 안 맞을 수 있음(공중 25–43프레임만 쓰도록 자름, speed 0.866). 예전 Jump.fbx는 프로젝트 밖 백업에 있음 — 사용자 플레이 확인 뒤 결정
   - 2026-11-17: 동작 FBX 6개를 Mixamo 기본 캐릭터 Y Bot으로 다시 받음(Without Skin · 30fps) — 사용자 "걸을 때 손 모양이 이상해", 13일 받을 때 손가락을 갈고리처럼 구부린 ENEMY_TIMEPRIEST가 선택돼 있었음. 원본 길이 같아 클립 구간 그대로(점프 이륙 25 · 착지 약 41 확인), Setup Model Prefabs · Setup Test Room · Setup World 다시 실행(배속 Walk 2.13 · Run 0.86 · Mutant Walk 2.99 · Mutant Run 2.01), 캡처 `Assets/Screenshots/hand_walk_ybot.png`
+  - 2026-11-20: 보통 모습 점프를 Mixamo "Standing Jump"로 바꿈(사용자가 후보 5개 중 C4 선택) — `Art/Gorani/Animation/Standing Jump.fbx`, 클립 `Gorani_StandingJump`, 프레임 17–37(0.667초, 공중 구간만: 모델에서 잰 이륙 20 · 첫 발 접지 36, 몸 높이가 서 있을 때와 같은 17에서 시작), 루트 설정은 Jump.fbx와 같되 회전 기준만 Body Orientation, Jump 상태 speed 0.962. `TestRoomSetup.NormalMotions`의 점프 = "Standing Jump". `Gorani.controller`만 `BuildController`로 다시 만듦(Setup Test Room 전체는 실행 안 함). 예전 `Jump.fbx`는 이제 쓰는 곳이 없지만 남겨 둠. Mutant 점프는 그대로. World Play 스텝 확인: 정점 뒤 다리 접고 착지 전 폄, 이 클립은 몸이 정면에서 오른쪽으로 약 58° 돌아가 있어 `Standing Jump.fbx.meta`만 `keepOriginalOrientation: 0`(Body Orientation)으로 함 — 점프 중 엉덩이 yaw 56–62° → 1–7°(Idle 5°), 착지 프레임 발끝 −1.7 / −2.6 cm, 착지 블렌드 발 미끄러짐 왼 11 cm(그대로) · 오른 22 → 9 cm. 남은 것(클립 자세): 왼발 미끄러짐, 정점 어깨 비틀림 최대 −16°, 공중에서 엉덩이가 최대 17 cm 뒤
   - 2026-11-17 손 포즈 레이어 (사용자 "손 모양이 여전히 이상해, 다듬어 줄 수 있어?"): 동작마다 손가락 모양이 제각각(달리기는 주먹, 예전 클립은 약지 · 새끼 커브 없음)이라, 손가락만 덮는 애니메이터 레이어 `Hands`(마스크 `Fingers.mask`, weight 1)가 모든 동작 위에 평소 손(살짝 쥔 모양)을 덮음. 조준 중 오른손은 권총 쥔 손(`HandGrip`), 근접 공격 중 양손은 할퀴는 손(`HandClaw`) — `PlayerHandPose`가 섞는 값만 넘김. 값은 `Data/HandPoses.asset`(`HandPoseTable`), 클립 · 레이어는 `HandPoseSetup`(Setup Test Room이 부름). 조준 손목을 손바닥이 안쪽을 보게 돌리고(`gripRoll` -90, `PlayerAimIK`) 도형 권총에 손잡이를 달아 손 안에 들어가게 함(총구 자리 바뀜). Setup Test Room · Setup World 다시 실행, 콘솔 오류 0, 캡처 `Assets/Screenshots/hand_{idle|walk|run|mutantwalk|aim|attack}_v2.png` — 플레이 확인 대기 · 커밋 안 함. 남은 문제: 대기(Idle) 동작에서 손이 허벅지 · 주머니에 반쯤 묻힘(팔 자세 문제, 손가락과 무관)
   - 남은 것: 플레이 확인(걷기 · 달리기 발 맞음, 점프 모양, Mutant 모습 전환, Mutant Run 빠르기 배속 2.01) + 손 모양(대기 · 걷기 · 달리기 · 조준 · 근접)
   - 테스트 작성, 실행 안 함: `TendencyFormTests` 6개, `PlayerTuningTests`에 mutantFormBeast
@@ -252,4 +254,5 @@
 - [ ] 멈추고 30분 플레이 → 진단 → 기획 수정
 
 ## 다른 PC에서 할 일
-- 없음
+- 받은 뒤 `Tools/Game/Setup Villagers` 한 번(주민 털 · 꼬리 메시, 용량 때문에 커밋 제외)
+- 커밋 안 한 로컬 파일(이 PC에만 있음): `Packages/manifest.json` · `packages-lock.json`의 로컬 경로 줄, `manifest.json.claude-hand.bak`, `Art/Fonts/NotoSansKR SDF.asset`(폰트 아틀라스 자동 갱신), `Scenes/TestRoom.unity`(설정 메뉴 재생성 흔적), `Gorani_Mutant.controller`(고아 전이만 늘어남), `Art/Gorani/Animation/Run Back · Forward · Left · Right.fbx`(서서 달리기 후보, 안 씀), `Assets/Screenshots/`

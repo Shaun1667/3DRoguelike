@@ -77,13 +77,13 @@ namespace Game.Tests
             var t = Load<HareTuning>("HareTuning");
             AssertCommon(t, 12, 4.2f, 540f);
             Assert.That(t.leapStartRange, Is.EqualTo(5f));
-            Assert.That(t.crouchTime, Is.EqualTo(0.5f));
+            Assert.That(t.crouchTime, Is.EqualTo(1f));
             Assert.That(t.leapDistance, Is.EqualTo(6f));
             Assert.That(t.leapTime, Is.EqualTo(0.4f));
             Assert.That(t.leapHeight, Is.EqualTo(0.8f));
             Assert.That(t.hitRadius, Is.EqualTo(0.9f));
             Assert.That(t.damage, Is.EqualTo(6));
-            Assert.That(t.recoverTime, Is.EqualTo(0.8f));
+            Assert.That(t.recoverTime, Is.EqualTo(2f));
             Assert.That(t.slamCrouchTime, Is.EqualTo(0.8f));
             Assert.That(t.slamLeapDistance, Is.EqualTo(8f));
             Assert.That(t.slamLeapTime, Is.EqualTo(0.8f));

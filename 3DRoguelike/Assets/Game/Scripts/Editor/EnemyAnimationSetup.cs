@@ -28,13 +28,11 @@ namespace Game.EditorTools
         private const string WalkClipPath = "Assets/Game/Art/Gorani/Animation/Mutant Walk.fbx";
         private static readonly string[] RunClipPaths =
         {
-            "Assets/Game/Art/Gorani/Animation/Mutant Run.fbx",  // Y Bot 1.8 m/s — 몸 숙인 괴물 달리기(될 수 있으면 이것)
+            // 몸 숙인 괴물 달리기(Mutant Run)는 빼다(결정 2026-11-19, 사용자): 발을 오래 디디고 몸이 멈췄다 나가는 동작이라 일정한 빠르기로 밀면 발이 끌렸다. 빠르기가 고른 클립만 둔다
             "Assets/Game/Art/Gorani/Animation/Jog Forward.fbx", // 2.4 m/s
             "Assets/Game/Art/Gorani/Animation/Run.fbx",         // 4.2 m/s
             "Assets/Game/Art/Gorani/Animation/Fast Run.fbx",    // 4.9 m/s
         };
-        /// <summary>괴물 달리기(첫 후보)를 이 재생 빠르기까지는 그대로 쓴다. 더 빨라야 하면 원래 빠르기가 가장 가까운 후보.</summary>
-        private const float PreferredRunMaxRate = 1.65f;
 
         // 동작 파일(Art/Enemies/Animation/{이름}.fbx)
         private const string Idle = "E_Idle_Mutant";
@@ -62,6 +60,9 @@ namespace Game.EditorTools
         private const float MinRunRate = 0.75f;
         private const float MaxRunRate = 1.8f;
 
+        /// <summary>컨트롤러를 만드는 동안만: 땅 빠르기를 잴 리깅 모델 · 그 배율(TryBuild가 넣는다. 없으면 재지 않고 어림값).</summary>
+        private static GameObject measureModel;
+        private static float measureScale = 1f;
         /// <summary>동작 파일의 한 구간(프레임, 30fps) → 클립 하나. seconds 동안 재생(0이면 원래 빠르기).</summary>
         private struct Part
         {
@@ -132,7 +133,10 @@ namespace Game.EditorTools
                 {
                     var t = (BoarTuning)tuning;
                     list.Add(S(EnemyAnim.ChargeWindupState, P(Roar, 18, 54, t.windupTime)));
-                    AnimationClip chargeRun = PickRun(t.chargeSpeed / stride, 1f, 2f, out float chargeRate);
+                    AnimationClip chargeRun = PickRun(t.chargeSpeed / stride, 1f, 2f, out float chargeRate, stride);
+                    // 돌진은 빠르기가 커서 어림(클립 평균 빠르기 × 걸음 길이)으로는 발이 많이 미끄러졌다 → 이 모델에서 디딘 발이 몸(엉덩이) 기준으로 뒤로 가는 빠르기를 재서 맞춘다
+                    float chargeGround = GroundSpeed(measureModel, chargeRun, "Hips") * measureScale;
+                    if (chargeGround > 0.5f) chargeRate = Mathf.Clamp(t.chargeSpeed / chargeGround, 0.75f, 2f);
                     list.Add(new Sequence { state = EnemyAnim.ChargeState, clip = chargeRun, speed = chargeRate });
                     // 두 손을 드는 구간 + 내려찍는 구간(가운데 들고 버티는 16프레임은 뺀다 — 예고가 0.5초라)
                     list.Add(S(EnemyAnim.SlamState, P(Overhead, 18, 27, t.slamWindupTime * 0.54f), P(Overhead, 40, 47, t.slamWindupTime * 0.46f)));
@@ -309,7 +313,10 @@ namespace Game.EditorTools
             holder.localPosition = new Vector3(0f, -bottom * scale, 0f) + offset;
 
             float stride = animator.humanScale * scale; // Y Bot 걸음 → 이 모델 걸음 길이
+            measureModel = model;
+            measureScale = scale;
             animator.runtimeAnimatorController = BuildController(species, tuning, stride);
+            measureModel = null;
             animator.applyRootMotion = false;
             animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
             animator.updateMode = AnimatorUpdateMode.Normal;
@@ -395,14 +402,14 @@ namespace Game.EditorTools
             // 대기 ↔ 걷기 ↔ 달리기
             AnimationClip idle = LoadClip($"{ClipFolder}/{Idle}.fbx", IdlePart.ClipName);
             AnimationClip walk = LoadClip(WalkClipPath, null);
-            AnimationClip run = PickRun(tuning.moveSpeed / stride, MinRunRate, MaxRunRate, out float runRate);
+            AnimationClip run = PickRun(tuning.moveSpeed / stride, MinRunRate, MaxRunRate, out float runRate, stride);
             AnimatorState locomotion = controller.CreateBlendTreeInController(EnemyAnim.LocomotionState, out BlendTree tree, 0);
             tree.blendType = BlendTreeType.Simple1D;
             tree.blendParameter = EnemyAnim.SpeedParameter;
             tree.useAutomaticThresholds = false;
             var children = new List<ChildMotion> { new ChildMotion { motion = idle, threshold = 0f, timeScale = 1f } };
-            float walkSpeed = walk != null ? Mathf.Abs(walk.averageSpeed.z) * stride : 0f;
-            float runNatural = run != null ? Mathf.Abs(run.averageSpeed.z) * stride : 0f;
+            float walkSpeed = NaturalSpeed(walk, stride);
+            float runNatural = NaturalSpeed(run, stride);
             float runSpeed = tuning.moveSpeed;
             if (run != null && runNatural > 0.01f)
             {
@@ -489,7 +496,7 @@ namespace Game.EditorTools
         /// 달리기 클립 고르기. wanted = 이 모델이 내야 하는 빠르기를 Y Bot 크기로 환산한 값(m/s ÷ 걸음 길이).
         /// 괴물 달리기로 될 만하면 그것, 아니면 재생 빠르기가 1에 가장 가까운 후보. rate = 재생 빠르기(범위 안으로 자른다).
         /// </summary>
-        private static AnimationClip PickRun(float wanted, float minRate, float maxRate, out float rate)
+        private static AnimationClip PickRun(float wanted, float minRate, float maxRate, out float rate, float stride = 1f)
         {
             AnimationClip best = null;
             float bestCost = float.MaxValue;
@@ -497,14 +504,9 @@ namespace Game.EditorTools
             for (int i = 0; i < RunClipPaths.Length; i++)
             {
                 AnimationClip clip = LoadClip(RunClipPaths[i], null);
-                float natural = clip != null ? Mathf.Abs(clip.averageSpeed.z) : 0f;
+                float natural = NaturalSpeed(clip, stride) / stride;
                 if (natural < 0.01f) continue;
                 float needed = wanted / natural;
-                if (i == 0 && needed <= PreferredRunMaxRate)
-                {
-                    rate = Mathf.Clamp(needed, minRate, maxRate);
-                    return clip;
-                }
                 float cost = Mathf.Abs(Mathf.Log(Mathf.Max(0.01f, needed)));
                 if (cost >= bestCost) continue;
                 bestCost = cost;
@@ -513,6 +515,20 @@ namespace Game.EditorTools
             }
             return best;
         }
+
+        /// <summary>
+        /// 이동 클립이 이 모델에서 어울리는 이동 빠르기(m/s). 컨트롤러를 만드는 중이면(measureModel) 이 모델에 클립을 샘플해 디딘 발이 엉덩이 기준으로 뒤로 가는 빠르기를 잰다
+        /// (클립 평균 빠르기 × 걸음 길이 어림은 이 모델들에서 실제보다 작게 나와 발이 헛돌았다). 못 재면 어림값.
+        /// </summary>
+        private static float NaturalSpeed(AnimationClip clip, float stride)
+        {
+            if (clip == null) return 0f;
+            float estimate = Mathf.Abs(clip.averageSpeed.z) * stride;
+            if (measureModel == null) return estimate;
+            float measured = GroundSpeed(measureModel, clip, "Hips") * measureScale;
+            return measured > 0.2f ? measured : estimate;
+        }
+
 
         // ---------- Mutant(네 발, Generic 리그) ----------
 
@@ -746,7 +762,7 @@ namespace Game.EditorTools
         /// 제자리 이동 클립에서 발이 땅을 미는 빠르기(모델 단위/초) = 이 클립이 어울리는 이동 빠르기.
         /// 발 뼈(FrontFoot_ · HindFoot_)가 낮게 있으면서(자기 높이 범위의 아래 1/4) 뒤로 가는 구간의 거리 ÷ 시간. 못 재면 0.
         /// </summary>
-        private static float GroundSpeed(GameObject model, AnimationClip clip)
+        private static float GroundSpeed(GameObject model, AnimationClip clip, string reference = null)
         {
             if (model == null || clip == null || clip.length < 0.01f) return 0f;
             GameObject probe = Object.Instantiate(model);
@@ -756,7 +772,7 @@ namespace Game.EditorTools
                 var feet = new List<Transform>();
                 foreach (Transform t in probe.GetComponentsInChildren<Transform>(true))
                 {
-                    if (t.name.StartsWith("FrontFoot_") || t.name.StartsWith("HindFoot_")) feet.Add(t);
+                    if (t.name.StartsWith("FrontFoot_") || t.name.StartsWith("HindFoot_") || t.name.EndsWith("LeftToeBase") || t.name.EndsWith("RightToeBase")) feet.Add(t);
                 }
                 if (feet.Count == 0) return 0f;
                 int steps = Mathf.Max(8, Mathf.RoundToInt(clip.length * clip.frameRate));
@@ -765,7 +781,18 @@ namespace Game.EditorTools
                 for (int i = 0; i <= steps; i++)
                 {
                     clip.SampleAnimation(probe, dt * i);
-                    for (int f = 0; f < feet.Count; f++) positions[f, i] = probe.transform.InverseTransformPoint(feet[f].position);
+                    // Humanoid 클립은 샘플할 때 몸이 앞으로 나간다 → 기준 뼈(엉덩이)에서 본 발 위치로 잰다(높이는 그대로)
+                    Vector3 origin = Vector3.zero;
+                    if (reference != null)
+                    {
+                        foreach (Transform bone in probe.GetComponentsInChildren<Transform>(true))
+                        {
+                            if (!bone.name.EndsWith(reference)) continue;
+                            origin = new Vector3(bone.position.x, 0f, bone.position.z);
+                            break;
+                        }
+                    }
+                    for (int f = 0; f < feet.Count; f++) positions[f, i] = feet[f].position - origin; // 프로브는 원점 · 회전 없음(루트 모션으로 프로브가 움직여도 기준 뼈를 빼면 같다)
                 }
                 float moved = 0f, time = 0f;
                 for (int f = 0; f < feet.Count; f++)

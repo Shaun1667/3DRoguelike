@@ -28,13 +28,13 @@ MonoBehaviour:
   evolvedCorpseTime: 2.2
   attackName: "\uB4E4\uC774\uBC1B\uAE30"
   leapStartRange: 5
-  crouchTime: 0.5
+  crouchTime: 1
   leapDistance: 6
   leapTime: 0.4
   leapHeight: 0.8
   hitRadius: 0.9
   damage: 6
-  recoverTime: 0.8
+  recoverTime: 2
   slamName: "\uB0B4\uB824\uCC0D\uAE30"
   slamCrouchTime: 0.8
   slamLeapDistance: 8

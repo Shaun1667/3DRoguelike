@@ -112,7 +112,9 @@ namespace Game.EditorTools
             public MotionSet(string walk, string run, string jump) { Walk = walk; Run = run; Jump = jump; }
         }
 
-        private static readonly MotionSet NormalMotions = new MotionSet("Walk", "Jog Forward", "Jump");
+        // 보통 모습 점프 = Mixamo "Standing Jump"의 공중 구간만(프레임 17–37, FBX .meta의 clipAnimations). 발이 뜨는 것은 20, 첫 발이 닿는 것은 36이지만,
+        // 위아래 이동이 루트 모션으로 빠질 때 몸 높이 기준이 첫 프레임이라 서 있을 때와 몸 높이가 같은 17에서 시작한다. 도움닫기 · 착지 동작은 뺐다(2026-11-20)
+        private static readonly MotionSet NormalMotions = new MotionSet("Walk", "Jog Forward", "Standing Jump");
         private static readonly MotionSet MutantMotions = new MotionSet("Mutant Walk", "Mutant Run", "Mutant Jump");
         private const string MutantControllerPath = "Assets/Game/Art/Gorani/Gorani_Mutant.controller";
 
