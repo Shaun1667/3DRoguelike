@@ -194,7 +194,7 @@ namespace Game.EditorTools
             material.SetFloat("_BumpScale", 1f);
             material.EnableKeyword("_NORMALMAP");
             material.SetTexture("_MetallicGlossMap", metallicSmooth);
-            material.SetFloat("_Smoothness", 1f); // 맵의 알파 × 이 값
+            material.SetFloat("_Smoothness", 0.4f); // 맵의 알파 × 이 값 (2026-11-24 1 → 0.4: 맵 알파가 임포트에서 1로 들어와 줄기 전체가 젖은 듯 번들거렸음)
             material.SetFloat("_SmoothnessTextureChannel", 0f);
             material.EnableKeyword("_METALLICSPECGLOSSMAP");
             material.SetFloat("_Cull", (float)CullMode.Back);
