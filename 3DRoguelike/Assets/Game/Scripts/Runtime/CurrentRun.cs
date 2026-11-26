@@ -32,9 +32,11 @@ namespace Game
         }
 
         /// <summary>월드 씬이 부른다. 진행 중인 판이 있으면 그대로, 없거나 끝났으면 새 판.</summary>
-        public static RunSession EnsureSession(int dungeonCount, Func<RunSeed> chooseSeed)
+        /// <param name="lastDungeonOpensNextRegion">마지막 던전 뒤에 다음 지역이 있는가(<see cref="WorldTuning.LastDungeonOpensRegion"/>)</param>
+        public static RunSession EnsureSession(int dungeonCount, bool lastDungeonOpensNextRegion, Func<RunSeed> chooseSeed)
         {
-            if (Session != null && Session.Stats.Outcome == RunOutcome.Playing && Session.World.DungeonCount == dungeonCount) return Session;
+            if (Session != null && Session.Stats.Outcome == RunOutcome.Playing && Session.World.DungeonCount == dungeonCount
+                && Session.LastDungeonOpensNextRegion == lastDungeonOpensNextRegion) return Session;
             RunSeed seed;
             if (pendingSeed.HasValue)
             {
@@ -42,7 +44,7 @@ namespace Game
                 pendingSeed = null;
             }
             else seed = chooseSeed();
-            Session = new RunSession(seed, dungeonCount);
+            Session = new RunSession(seed, dungeonCount, lastDungeonOpensNextRegion);
             startTime = Time.time;
             Debug.Log($"[CurrentRun] 새 판 · 시드 {seed.ToCode()} · 던전 {dungeonCount}개");
             return Session;

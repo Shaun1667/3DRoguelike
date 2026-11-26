@@ -17,11 +17,186 @@ MonoBehaviour:
   - {x: 0, y: 120}
   - {x: 60, y: 240}
   - {x: 40, y: 380}
-  - {x: -50, y: 500}
-  - {x: -40, y: 640}
-  - {x: 40, y: 760}
-  - {x: 30, y: 880}
-  - {x: 0, y: 980}
+  - {x: 40, y: 700}
+  regions:
+  - id: Forest
+    displayName: "\uC232"
+    startDistance: 0
+    blendDistance: 1
+    ambientColor: {r: 0.42, g: 0.42, b: 0.38, a: 1}
+    fogColor: {r: 0.5, g: 0.55, b: 0.48, a: 1}
+    fogStart: 70
+    fogEnd: 320
+    treeDensity: 1
+    groundLayers: []
+    alphamapResolution: 0
+    roadHalfWidth: 0
+    sideWidth: 0
+    roadWear: 0
+    wearNoiseScale: 0
+    mixAmount: 0
+    mixNoiseScale: 0
+    groundBumps: 0
+    outerRise: 0
+    outerRiseStartWidth: {x: 0, y: 0}
+    layoutSeed: 0
+    prefabFolder: 
+    layoutMargin: {x: 0, y: 0}
+    clearLaneHalfWidth: 0
+    streetRows: []
+    props: []
+    boundaryHalfWidth: 0
+    gateProps: []
+    endProps: []
+  - id: City
+    displayName: "\uD3D0\uD5C8 \uB3C4\uC2DC"
+    startDistance: 385
+    blendDistance: 40
+    ambientColor: {r: 0.44, g: 0.44, b: 0.45, a: 1}
+    fogColor: {r: 0.58, g: 0.56, b: 0.52, a: 1}
+    fogStart: 30
+    fogEnd: 200
+    treeDensity: 0
+    groundLayers:
+    - Assets/Game/Art/City/Ground/City_Asphalt.terrainlayer
+    - Assets/Game/Art/City/Ground/City_Sidewalk.terrainlayer
+    - Assets/Game/Art/City/Ground/City_RubbleConcrete.terrainlayer
+    - Assets/Game/Art/City/Ground/City_WeedyPavement.terrainlayer
+    alphamapResolution: 2048
+    roadHalfWidth: 7
+    sideWidth: 4
+    roadWear: 0.45
+    wearNoiseScale: 0.09
+    mixAmount: 0.55
+    mixNoiseScale: 0.06
+    groundBumps: 0.15
+    outerRise: 9
+    outerRiseStartWidth: {x: 44, y: 36}
+    layoutSeed: 11
+    prefabFolder: Assets/Game/Prefabs/World/City
+    layoutMargin: {x: 30, y: 12}
+    clearLaneHalfWidth: 2.5
+    streetRows:
+    - frontOffset: 12.5
+      offsetJitter: 0.8
+      gap: {x: 1.5, y: 4.5}
+      emptyChance: 0.12
+      yawJitter: 2
+      kinds:
+      - id: City_Shop
+        weight: 60
+      - id: City_Apartment
+        weight: 40
+    - frontOffset: 28
+      offsetJitter: 3
+      gap: {x: 4, y: 12}
+      emptyChance: 0.25
+      yawJitter: 6
+      kinds:
+      - id: City_Apartment
+        weight: 70
+      - id: City_Shop
+        weight: 30
+    props:
+    - every: 24
+      side: {x: 4, y: 5.6}
+      yawJitter: 12
+      flipChance: 0.35
+      kinds:
+      - id: City_Car
+        weight: 1
+    - every: 70
+      side: {x: 4.2, y: 6.2}
+      yawJitter: 40
+      flipChance: 0.5
+      kinds:
+      - id: City_Barrier
+        weight: 50
+      - id: City_Debris
+        weight: 50
+    - every: 16
+      side: {x: 8, y: 10.4}
+      yawJitter: 180
+      flipChance: 0
+      kinds:
+      - id: City_Barricade
+        weight: 35
+      - id: City_Debris
+        weight: 35
+      - id: City_Barrier
+        weight: 30
+    boundaryHalfWidth: 16
+    gateProps:
+    - id: City_Barrier
+      position: {x: -4.4, y: -4}
+      yaw: 0
+    - id: City_Barrier
+      position: {x: 4.4, y: -4}
+      yaw: 0
+    - id: City_Barrier
+      position: {x: -4.2, y: 4}
+      yaw: 180
+    - id: City_Barrier
+      position: {x: 4.2, y: 4}
+      yaw: 180
+    - id: City_Barricade
+      position: {x: -3.9, y: 9}
+      yaw: 15
+    - id: City_Barricade
+      position: {x: 3.9, y: 9}
+      yaw: -15
+    - id: City_Barrier
+      position: {x: -5, y: 14}
+      yaw: 90
+    - id: City_Barrier
+      position: {x: 5, y: 14}
+      yaw: -90
+    - id: City_Barrier
+      position: {x: -5.4, y: 17.5}
+      yaw: 90
+    - id: City_Barrier
+      position: {x: 5.4, y: 17.5}
+      yaw: -90
+    - id: City_Barricade
+      position: {x: -4.6, y: 22}
+      yaw: 70
+    - id: City_Debris
+      position: {x: 7.5, y: 24}
+      yaw: 30
+    - id: City_Car
+      position: {x: -6.5, y: 29}
+      yaw: 160
+    endProps:
+    - id: City_Barrier
+      position: {x: -9, y: 0}
+      yaw: 180
+    - id: City_Barrier
+      position: {x: -6, y: 0}
+      yaw: 180
+    - id: City_Barrier
+      position: {x: -3, y: 0}
+      yaw: 180
+    - id: City_Barrier
+      position: {x: 0, y: 0}
+      yaw: 180
+    - id: City_Barrier
+      position: {x: 3, y: 0}
+      yaw: 180
+    - id: City_Barrier
+      position: {x: 6, y: 0}
+      yaw: 180
+    - id: City_Barrier
+      position: {x: 9, y: 0}
+      yaw: 180
+    - id: City_Barricade
+      position: {x: -4.5, y: -3}
+      yaw: 10
+    - id: City_Barricade
+      position: {x: 2, y: -3.2}
+      yaw: -8
+    - id: City_Debris
+      position: {x: 8, y: -4}
+      yaw: 40
   valleyHalfWidth: 55
   passHalfWidth: 6
   passLength: 30
@@ -44,12 +219,41 @@ MonoBehaviour:
   pollutedNoiseScale: 0.08
   forestDirtMix: 0.15
   forestDirtNoiseScale: 0.05
-  ambientColor: {r: 0.42, g: 0.42, b: 0.38, a: 1}
-  fogColor: {r: 0.5, g: 0.55, b: 0.48, a: 1}
-  fogStart: 70
-  fogEnd: 320
   skyExposure: 1.1
   treeCount: 900
+  treeReference:
+    route:
+    - {x: 0, y: 0}
+    - {x: 0, y: 120}
+    - {x: 60, y: 240}
+    - {x: 40, y: 380}
+    - {x: -50, y: 500}
+    - {x: -40, y: 640}
+    - {x: 40, y: 760}
+    - {x: 30, y: 880}
+    - {x: 0, y: 980}
+    passDistances:
+    - 370
+    - 670
+    - 970
+    keepOut:
+    - {x: 70.14897, y: 287.75113}
+    - {x: -62.88043, y: 555.4732}
+    - {x: 50.94242, y: 830.98975}
+    - {x: 0, y: 6}
+    - {x: 8, y: 38}
+    - {x: -8, y: 90}
+    - {x: 22.36068, y: 142.36067}
+    - {x: 32.646595, y: 198.7096}
+    - {x: 67.80138, y: 241.9589}
+    - {x: 25.751268, y: 387.33163}
+    - {x: 5.55127, y: 440.93164}
+    - {x: -38.64873, y: 476.53165}
+    - {x: -40.28087, y: 523.78253}
+    - {x: -31.647402, y: 663.3455}
+    - {x: 11.341865, y: 700.7878}
+    - {x: 28.53757, y: 755.4258}
+    - {x: 42.67109, y: 800.1965}
   treePathClearance: 9
   treeSpacing: 4
   treeSeed: 7
@@ -69,15 +273,18 @@ MonoBehaviour:
   - displayName: "\uC232 \uB358\uC804 1 \u2014 \uBB34\uB108\uC9C4 \uC0AC\uC721\uC7A5"
     routeDistance: 300
     sideOffset: 18
-  - displayName: "\uC232 \uB358\uC804 2 \u2014 \uBC84\uB824\uC9C4 \uAD00\uCE21\uC18C"
-    routeDistance: 600
-    sideOffset: -18
-  - displayName: "\uC232 \uB358\uC804 3 \u2014 \uAE4A\uC740 \uC232 \uB465\uC9C0"
-    routeDistance: 900
-    sideOffset: 18
+    entrancePrefab: 
+    doorwayCenter: {x: 0, y: 0, z: 0}
+    doorwaySize: {x: 0, y: 0}
+  - displayName: "\uB3C4\uC2DC \uB358\uC804 \u2014 \uBB34\uB108\uC9C4 \uB300\uD53C\uC18C"
+    routeDistance: 630
+    sideOffset: 12.5
+    entrancePrefab: Assets/Game/Prefabs/World/City/City_Shelter.prefab
+    doorwayCenter: {x: -0.3, y: 1.1, z: -1.17}
+    doorwaySize: {x: 1.1, y: 2.2}
   gateAfterEntrance: 70
   entranceRadius: 2.5
-  nextRegionLabel: "\uD3D0\uD5C8 \uB3C4\uC2DC \u2014 \uC900\uBE44 \uC911"
+  nextRegionLabel: "\uB2E4\uC74C \uC9C0\uC5ED \u2014 \uC900\uBE44 \uC911"
   encounters:
   - routeDistance: 38
     sideOffset: 8
@@ -94,29 +301,17 @@ MonoBehaviour:
   - routeDistance: 255
     sideOffset: 8
     count: 3
-  - routeDistance: 410
-    sideOffset: -7
-    count: 2
-  - routeDistance: 465
-    sideOffset: 9
+  - routeDistance: 455
+    sideOffset: -8
     count: 3
-  - routeDistance: 520
-    sideOffset: -5
-    count: 3
-  - routeDistance: 570
+  - routeDistance: 510
     sideOffset: 8
-    count: 4
-  - routeDistance: 710
-    sideOffset: -6
     count: 3
-  - routeDistance: 765
-    sideOffset: 9
-    count: 3
-  - routeDistance: 820
+  - routeDistance: 560
     sideOffset: -7
-    count: 4
-  - routeDistance: 870
-    sideOffset: 6
+    count: 3
+  - routeDistance: 600
+    sideOffset: 7
     count: 4
   encounterTriggerRange: 26
   encounterSpread: 3

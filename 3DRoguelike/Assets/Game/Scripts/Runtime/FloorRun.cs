@@ -12,7 +12,7 @@ namespace Game
     /// <summary>
     /// 층(던전) 하나를 진행한다. 시드로 배치와 방마다 적 자리를 정해 세우고, 플레이어가 깨지 않은 방에 들어서면 문을 잠그고 적을 내보낸다.
     /// 그 방의 적을 모두 잡으면 방을 깬 것이 되어 문이 열린다.
-    /// 월드에서 들어왔으면(<see cref="CurrentRun.Session"/>) 판 기록을 이어받고, 보스 방을 깨면 월드로 돌아간다 — 마지막 던전이면 지역 클리어.
+    /// 월드에서 들어왔으면(<see cref="CurrentRun.Session"/>) 판 기록을 이어받고, 보스 방을 깨면 월드로 돌아간다(그 뒤 관문 열림) — 다음 지역이 없는 마지막 던전이면 지역 클리어.
     /// 층 씬을 바로 Play하면 던전 하나짜리 판으로, 보스 방을 깨거나 죽으면 결과 화면.
     /// </summary>
     [DefaultExecutionOrder(-100)] // 넘겨받은 체력을 HUD.Start보다 먼저 맞춘다
@@ -139,11 +139,22 @@ namespace Game
 
         private void Start()
         {
-            if (objective != null) objective.text = $"{DungeonName}  ·  마지막 방(빨간 바닥)을 깨면 {(session != null ? "밖으로" : "끝")}";
+            if (objective != null) objective.text = $"{DungeonName}  ·  마지막 방(빨간 바닥)을 깨면 {ClearGoal}";
             if (session == null) return;
             // PlayerVitals.Awake가 체력을 가득으로 만든 뒤, HUD.Start보다 먼저(실행 순서 -100)
             if (session.PlayerHealth != RunSession.FullHealth) player.Health.SetCurrent(session.PlayerHealth);
             player.GetComponent<PlayerForm>().UpdateForm(Stats.Beast, Stats.Human);
+        }
+
+        /// <summary>보스 방을 깨면: 밖으로(다음 지역이 열림) · "{지역} 클리어"(다음 지역이 없는 마지막 던전) · 끝(층 씬만).</summary>
+        private string ClearGoal
+        {
+            get
+            {
+                if (session == null) return "끝";
+                bool final = world != null && dungeon == world.dungeons.Length - 1 && !session.LastDungeonOpensNextRegion;
+                return final ? $"{world.ClearedRegionName(dungeon)} 클리어" : "밖으로";
+            }
         }
 
         private string DungeonName => session != null && world != null && dungeon < world.dungeons.Length
@@ -245,7 +256,7 @@ namespace Game
             if (session.FinishDungeon(player.Health.Current, Elapsed))
             {
                 player.DisableControls();
-                EndRun(resultDelayAfterClear); // 마지막 던전: 지역 클리어
+                EndRun(resultDelayAfterClear); // 다음 지역이 없는 마지막 던전: 지역 클리어
                 return;
             }
             StartCoroutine(ReturnToWorld());
@@ -277,7 +288,8 @@ namespace Game
         private IEnumerator ShowResultAfter(float delay)
         {
             yield return new WaitForSecondsRealtime(delay);
-            resultScreen.Show(Stats, this);
+            // 지역 클리어 제목 = 이 던전이 있는 지역 이름(예: "폐허 도시 클리어")
+            resultScreen.Show(Stats, this, session != null && world != null ? world.ClearedRegionName(dungeon) : null);
         }
 
         /// <summary>그 방에 정해 둔 보상이 있으면 방 가운데에 보상물을 놓는다(희귀는 노란색 · 조금 크게).</summary>

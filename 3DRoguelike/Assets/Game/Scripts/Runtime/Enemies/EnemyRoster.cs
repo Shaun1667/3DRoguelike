@@ -8,7 +8,8 @@ namespace Game
     /// <summary>
     /// 숲 적 구성 표(`Data/EnemyRoster.asset`, BALANCE.md 14번): 종마다 프리팹(Mutant · E 개체) · 떼 크기 · 차지하는 자리,
     /// 단계(던전 순서)마다 종 비중 · E 개체 비율. 결정 2026-11-16(사용자): 단계별로 늘리기 — 던전 1까지 오소리 위주 + 멧토끼 떼, 던전 2부터 멧돼지 · 두꺼비.
-    /// 길 위 무리는 그 앞 던전의 단계를 쓰되 Mutant만. 새 종 = species에 한 줄 + 단계마다 무게. 프리팹 칸은 `Tools/Game/Setup Test Room`이 채운다.
+    /// 결정 2026-11-25(사용자): 던전 1 방에도 멧돼지 · 두꺼비(시작 방 바로 옆 앞 방 · 길 위 무리는 오소리 · 멧토끼 그대로).
+    /// 길 위 무리는 그 앞 던전의 단계를 쓰되 Mutant만(roadWeights가 있으면 그 비중). 새 종 = species에 한 줄 + 단계마다 무게. 프리팹 칸은 `Tools/Game/Setup Test Room`이 채운다.
     /// </summary>
     [CreateAssetMenu(menuName = "Game/Enemy Roster")]
     public sealed class EnemyRoster : ScriptableObject
@@ -41,7 +42,14 @@ namespace Game
             public string name;
             [Tooltip("한 번 뽑을 때 E 개체일 확률(떼는 다 같이). 길 위 무리는 늘 0")]
             [Range(0f, 1f)] public float evolvedChance;
+            [Tooltip("던전 방 비중(앞 방 · 길 위 비중이 비면 이것)")]
             public Weight[] weights;
+            [Tooltip("시작 방에서 이 거리(문 수) 이하인 방은 nearWeights. 0이면 없음 — 첫 방이 너무 세지 않게")]
+            [Min(0)] public int nearRoomDistance;
+            [Tooltip("앞 방 비중. 비면 weights")]
+            public Weight[] nearWeights;
+            [Tooltip("이 던전 앞 길 위 무리 비중(E 개체 없음). 비면 weights")]
+            public Weight[] roadWeights;
         }
 
         public SpeciesEntry[] species =
@@ -58,16 +66,20 @@ namespace Game
             new Stage
             {
                 name = "숲 던전 1 (+ 그 앞 길)", evolvedChance = 0f,
-                weights = new[] { W(EnemySpecies.Badger, 3), W(EnemySpecies.Hare, 1) },
+                // 결정 2026-11-25(사용자) "멧돼지 두꺼비를 던전 1에 섞어줘" — 비중 · 앞 방은 정한 것(Claude, 확인 필요)
+                weights = new[] { W(EnemySpecies.Badger, 3), W(EnemySpecies.Hare, 1), W(EnemySpecies.Boar, 1), W(EnemySpecies.Toad, 1) },
+                nearRoomDistance = 1,
+                nearWeights = new[] { W(EnemySpecies.Badger, 3), W(EnemySpecies.Hare, 1) },
+                roadWeights = new[] { W(EnemySpecies.Badger, 3), W(EnemySpecies.Hare, 1) },
             },
             new Stage
             {
-                name = "숲 던전 2 (+ 그 앞 길)", evolvedChance = 0.25f,
+                name = "도시 던전 (+ 그 앞 길) — 전 숲 던전 2 단계", evolvedChance = 0.25f,
                 weights = new[] { W(EnemySpecies.Badger, 3), W(EnemySpecies.Hare, 1), W(EnemySpecies.Boar, 1), W(EnemySpecies.Toad, 1) },
             },
             new Stage
             {
-                name = "숲 던전 3 (+ 그 앞 길)", evolvedChance = 0.5f,
+                name = "세 번째 던전 (+ 그 앞 길) — 아직 없음(전 숲 던전 3 단계)", evolvedChance = 0.5f,
                 weights = new[] { W(EnemySpecies.Badger, 2), W(EnemySpecies.Hare, 1), W(EnemySpecies.Boar, 2), W(EnemySpecies.Toad, 2) },
             },
         };
@@ -84,11 +96,19 @@ namespace Game
             var tables = new List<EnemyStage>(stages.Length);
             foreach (Stage stage in stages)
             {
-                var weights = new List<(EnemySpecies, int)>(stage.weights.Length);
-                foreach (Weight weight in stage.weights) weights.Add((weight.species, weight.weight));
-                tables.Add(new EnemyStage(weights, stage.evolvedChance));
+                tables.Add(new EnemyStage(Pairs(stage.weights), stage.evolvedChance,
+                    Pairs(stage.nearWeights), stage.nearRoomDistance, Pairs(stage.roadWeights)));
             }
             return new EnemyMix(rules, tables);
+        }
+
+        /// <summary>표의 무게 줄. 비었으면 null(던전 방 비중을 씀).</summary>
+        private static List<(EnemySpecies, int)> Pairs(Weight[] weights)
+        {
+            if (weights == null || weights.Length == 0) return null;
+            var pairs = new List<(EnemySpecies, int)>(weights.Length);
+            foreach (Weight weight in weights) pairs.Add((weight.species, weight.weight));
+            return pairs;
         }
 
         public bool TryGetEntry(EnemySpecies kind, out SpeciesEntry entry)

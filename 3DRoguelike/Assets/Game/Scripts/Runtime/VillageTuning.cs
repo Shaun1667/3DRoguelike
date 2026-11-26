@@ -88,6 +88,8 @@ namespace Game
         }
 
         [Header("자리")]
+        [Tooltip("월드에 마을을 둔다. 끄면 Setup World가 마을(지형 평지 · 나무 치우기 · 집 · 주민 · 안전 지대)을 빼고 세운다 — 켜고 routeDistance · sideOffset을 맞춘 뒤 Setup World. 결정 2026-11-25(사용자): 나중에 다시 배치")]
+        public bool placeInWorld = true;
         public string displayName = "숲속 마을";
         [Tooltip("길 시작에서 마을 가운데까지 길 거리(m). 2지역(관문 1 뒤) 가운데 — 적 무리 465 m · 520 m 사이")]
         [Min(0f)] public float routeDistance = 488f;

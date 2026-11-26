@@ -122,6 +122,11 @@ namespace Game.EditorTools
             WorldTuning world = WorldSetup.LoadOrCreateTuning();
             WorldRoute route = world.ToRoute();
             VillageTuning village = LoadOrCreateTuning();
+            if (!village.placeInWorld)
+            {
+                Debug.LogWarning($"[VillageSetup] {TuningPath}의 placeInWorld가 꺼져 있어 마을을 세우지 않습니다. 켜고 routeDistance · sideOffset을 맞춘 뒤 Tools/Game/Setup World를 실행하세요.");
+                return;
+            }
             Area area = AreaOf(village, route);
             Undo.IncrementCurrentGroup();
             int group = Undo.GetCurrentGroup();

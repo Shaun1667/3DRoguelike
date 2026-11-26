@@ -49,7 +49,23 @@ MonoBehaviour:
       weight: 3
     - species: 2
       weight: 1
-  - name: "\uC232 \uB358\uC804 2 (+ \uADF8 \uC55E \uAE38)"
+    - species: 1
+      weight: 1
+    - species: 3
+      weight: 1
+    nearRoomDistance: 1
+    nearWeights:
+    - species: 0
+      weight: 3
+    - species: 2
+      weight: 1
+    roadWeights:
+    - species: 0
+      weight: 3
+    - species: 2
+      weight: 1
+  - name: "\uB3C4\uC2DC \uB358\uC804 (+ \uADF8 \uC55E \uAE38) \u2014 \uC804 \uC232
+      \uB358\uC804 2 \uB2E8\uACC4"
     evolvedChance: 0.25
     weights:
     - species: 0
@@ -60,7 +76,11 @@ MonoBehaviour:
       weight: 1
     - species: 3
       weight: 1
-  - name: "\uC232 \uB358\uC804 3 (+ \uADF8 \uC55E \uAE38)"
+    nearRoomDistance: 0
+    nearWeights: []
+    roadWeights: []
+  - name: "\uC138 \uBC88\uC9F8 \uB358\uC804 (+ \uADF8 \uC55E \uAE38) \u2014 \uC544\uC9C1
+      \uC5C6\uC74C(\uC804 \uC232 \uB358\uC804 3 \uB2E8\uACC4)"
     evolvedChance: 0.5
     weights:
     - species: 0
@@ -71,3 +91,6 @@ MonoBehaviour:
       weight: 2
     - species: 3
       weight: 2
+    nearRoomDistance: 0
+    nearWeights: []
+    roadWeights: []

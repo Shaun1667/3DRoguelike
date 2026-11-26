@@ -22,7 +22,10 @@ namespace Game.Tests
                 },
                 new[]
                 {
-                    new EnemyStage(new[] { (EnemySpecies.Badger, 3), (EnemySpecies.Hare, 1) }, 0f),
+                    // 던전 1: 방은 4종(결정 2026-11-25), 앞 방(시작 방에서 1) · 길 위는 오소리 · 멧토끼만
+                    new EnemyStage(new[] { (EnemySpecies.Badger, 3), (EnemySpecies.Hare, 1), (EnemySpecies.Boar, 1), (EnemySpecies.Toad, 1) }, 0f,
+                        new[] { (EnemySpecies.Badger, 3), (EnemySpecies.Hare, 1) }, 1,
+                        new[] { (EnemySpecies.Badger, 3), (EnemySpecies.Hare, 1) }),
                     new EnemyStage(new[] { (EnemySpecies.Badger, 3), (EnemySpecies.Hare, 1), (EnemySpecies.Boar, 1), (EnemySpecies.Toad, 1) }, 0.25f),
                     new EnemyStage(new[] { (EnemySpecies.Badger, 2), (EnemySpecies.Hare, 1), (EnemySpecies.Boar, 2), (EnemySpecies.Toad, 2) }, 0.5f),
                 });
@@ -39,13 +42,77 @@ namespace Game.Tests
             return all;
         }
 
-        [Test]
-        public void Stage0_OnlyBadgerAndHare()
+        static List<EnemyPick> ManyPicks(int stage, EnemyPlace place)
         {
-            List<EnemyPick> picks = ManyPicks(0, allowEvolved: true);
+            EnemyMix mix = BalanceMix();
+            var all = new List<EnemyPick>();
+            for (uint seed = 0; seed < 4000; seed++) all.AddRange(EnemyMixPlanner.Pick(mix, stage, place, 4, Random(seed, stage)));
+            return all;
+        }
+
+        /// <summary>결정 2026-11-25(사용자) "멧돼지 두꺼비를 던전 1에 섞어줘" — 던전 1 방에는 4종, 오소리가 가장 많다.</summary>
+        [Test]
+        public void Stage0_Rooms_AllFourSpecies_BadgerMost()
+        {
+            List<EnemyPick> picks = ManyPicks(0, EnemyPlace.Room);
+
+            Assert.That(picks.Select(p => p.Kind.Species).Distinct(),
+                Is.EquivalentTo(new[] { EnemySpecies.Badger, EnemySpecies.Boar, EnemySpecies.Hare, EnemySpecies.Toad }));
+            int badgers = picks.Count(p => p.Kind.Species == EnemySpecies.Badger);
+            foreach (EnemySpecies other in new[] { EnemySpecies.Boar, EnemySpecies.Hare, EnemySpecies.Toad })
+                Assert.That(badgers, Is.GreaterThan(picks.Count(p => p.Kind.Species == other) * 2), $"오소리 위주 · {other}");
+            Assert.That(picks.Any(p => p.Kind.Grade == EnemyGrade.Evolved), Is.False, "던전 1은 E 개체 0%");
+        }
+
+        /// <summary>던전 1 앞 방 · 길 위 무리는 예전처럼 오소리 · 멧토끼만(첫 방이 너무 세지 않게, 길 위는 그대로).</summary>
+        [TestCase(EnemyPlace.NearRoom)]
+        [TestCase(EnemyPlace.Road)]
+        public void Stage0_NearRoomsAndRoad_OnlyBadgerAndHare(EnemyPlace place)
+        {
+            List<EnemyPick> picks = ManyPicks(0, place);
 
             Assert.That(picks.Select(p => p.Kind.Species).Distinct(), Is.EquivalentTo(new[] { EnemySpecies.Badger, EnemySpecies.Hare }));
             Assert.That(picks.Count(p => p.Kind.Species == EnemySpecies.Badger), Is.GreaterThan(picks.Count / 2), "오소리 위주");
+        }
+
+        /// <summary>앞 방 · 길 위 비중을 따로 주지 않은 단계는 방 비중을 그대로 쓴다(같은 난수면 같은 결과).</summary>
+        [Test]
+        public void StageWithoutNearOrRoad_UsesRoomWeights()
+        {
+            EnemyMix mix = BalanceMix();
+            EnemyStage stage = mix.Stage(1);
+
+            Assert.That(stage.NearWeights, Is.SameAs(stage.Weights));
+            Assert.That(stage.RoadWeights, Is.SameAs(stage.Weights));
+            Assert.That(stage.RoomPlace(1), Is.EqualTo(EnemyPlace.Room));
+            Assert.That(mix.Stage(0).RoomPlace(1), Is.EqualTo(EnemyPlace.NearRoom));
+            Assert.That(mix.Stage(0).RoomPlace(2), Is.EqualTo(EnemyPlace.Room));
+            for (uint seed = 0; seed < 50; seed++)
+            {
+                string room = string.Join(" ", EnemyMixPlanner.Pick(mix, 1, 5, false, Random(seed, 1)));
+                string road = string.Join(" ", EnemyMixPlanner.Pick(mix, 1, EnemyPlace.Road, 5, Random(seed, 1)));
+                Assert.That(road, Is.EqualTo(room), $"seed {seed}");
+            }
+        }
+
+        /// <summary>던전 1 층 계획: 시작 방 바로 옆 방에는 멧돼지 · 두꺼비가 없고, 그 뒤 방에는 나온다.</summary>
+        [Test]
+        public void Plan_Stage0_NearRoomsLight_FartherRoomsMixed()
+        {
+            EnemyMix mix = BalanceMix();
+            int heavyFar = 0;
+            for (uint seed = 0; seed < 200; seed++)
+            {
+                FloorLayout layout = FloorGeneratorTests.Generate(seed, 0);
+                FloorEncounters encounters = EncounterPlanner.Plan(layout, EncounterPlannerTests.BalanceSettings(), mix, 0, Random(seed, 0));
+                foreach (FloorRoom room in layout.Rooms)
+                {
+                    bool heavy = encounters.SpawnsFor(room.Id).Any(p => p.Kind.Species == EnemySpecies.Boar || p.Kind.Species == EnemySpecies.Toad);
+                    if (room.DistanceFromStart <= 1) Assert.That(heavy, Is.False, $"seed {seed} room {room.Id}");
+                    else if (heavy) heavyFar++;
+                }
+            }
+            Assert.That(heavyFar, Is.GreaterThan(200), "먼 방에는 멧돼지 · 두꺼비가 섞인다");
         }
 
         [TestCase(1)]
@@ -200,6 +267,11 @@ namespace Game.Tests
                 new[] { new EnemySpeciesRule(EnemySpecies.Badger, 1, 1, 1, 0f) },
                 new[] { new EnemyStage(new[] { (EnemySpecies.Toad, 1) }, 0f) }));
             Assert.Throws<ArgumentException>(() => new EnemyMix(new[] { new EnemySpeciesRule(EnemySpecies.Badger, 1, 1, 1, 0f) }, new EnemyStage[0]));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new EnemyStage(new[] { (EnemySpecies.Badger, 1) }, 0f, null, -1, null));
+            Assert.Throws<ArgumentException>(() => new EnemyStage(new[] { (EnemySpecies.Badger, 1) }, 0f, new[] { (EnemySpecies.Badger, 0) }, 1, null));
+            Assert.Throws<ArgumentException>(() => new EnemyMix(
+                new[] { new EnemySpeciesRule(EnemySpecies.Badger, 1, 1, 1, 0f) },
+                new[] { new EnemyStage(new[] { (EnemySpecies.Badger, 1) }, 0f, null, 0, new[] { (EnemySpecies.Toad, 1) }) }), "길 위 비중의 종도 규칙이 있어야");
         }
     }
 }

@@ -31,11 +31,23 @@ namespace Game
             sameFloorButton.onClick.AddListener(() => run.Restart(sameSeed: true));
         }
 
-        public void Show(RunStats stats, IRunRestart restart)
+        /// <summary>결과 화면 제목. 지역 클리어는 그 지역 이름(예: "폐허 도시 클리어"), 이름을 모르면 "지역 클리어".</summary>
+        public static string TitleFor(RunOutcome outcome, string clearedRegion)
+        {
+            switch (outcome)
+            {
+                case RunOutcome.Died: return "쓰러졌다";
+                case RunOutcome.RegionCleared: return $"{(string.IsNullOrEmpty(clearedRegion) ? "지역" : clearedRegion)} 클리어";
+                default: return "층 클리어";
+            }
+        }
+
+        /// <param name="clearedRegion">지역을 깨서 끝났을 때 그 지역 이름(<see cref="WorldTuning.ClearedRegionName"/>)</param>
+        public void Show(RunStats stats, IRunRestart restart, string clearedRegion = null)
         {
             run = restart;
             bool died = stats.Outcome == RunOutcome.Died;
-            title.text = died ? "쓰러졌다" : stats.Outcome == RunOutcome.RegionCleared ? "숲 클리어" : "층 클리어";
+            title.text = TitleFor(stats.Outcome, clearedRegion);
             title.color = died ? new Color(0.9f, 0.35f, 0.3f) : new Color(0.55f, 0.85f, 0.5f);
 
             string cause = died ? $"사망 원인  {stats.DeathCause}\n" : "";

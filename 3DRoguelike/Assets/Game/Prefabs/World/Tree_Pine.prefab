@@ -53,10 +53,10 @@ CapsuleCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 2
-  m_Radius: 0.6147668
+  m_Radius: 0.65105337
   m_Height: 4
   m_Direction: 1
-  m_Center: {x: -0.12289853, y: 2, z: 0.079009265}
+  m_Center: {x: -0.1396755, y: 2, z: 0.06409299}
 --- !u!205 &2153942585300963669
 LODGroup:
   m_ObjectHideFlags: 0
@@ -65,8 +65,8 @@ LODGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4282530316514620806}
   serializedVersion: 2
-  m_LocalReferencePoint: {x: 0.9094362, y: 6.742656, z: 0.3410802}
-  m_Size: 13.485312
+  m_LocalReferencePoint: {x: 0.9094362, y: 6.5926576, z: 0.34108257}
+  m_Size: 13.785317
   m_FadeMode: 0
   m_AnimateCrossFading: 0
   m_LastLODIsBillboard: 0
@@ -103,7 +103,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8af7b188d4b121247a8f6378ed74af82, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.7071068
+      value: 0.7071069
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 8af7b188d4b121247a8f6378ed74af82, type: 3}
       propertyPath: m_LocalRotation.y

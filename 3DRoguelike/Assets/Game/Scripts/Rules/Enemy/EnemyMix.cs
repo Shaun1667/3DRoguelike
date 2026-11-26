@@ -64,31 +64,74 @@ namespace Game.Rules
         public float GroupSpread { get; }
     }
 
-    /// <summary>진행 단계(던전 순서) 하나의 종 비중과 E 개체 비율.</summary>
+    /// <summary>적이 나오는 곳. 단계마다 곳에 따라 다른 비중을 쓸 수 있다(비우면 던전 방 비중).</summary>
+    public enum EnemyPlace
+    {
+        Room,     // 던전 방(시작 방에서 먼 방 · 보스 방)
+        NearRoom, // 던전 앞 방(시작 방에서 NearRoomDistance 이하) — 첫 방이 너무 세지 않게
+        Road,     // 길 위 무리(E 개체 없음)
+    }
+
+    /// <summary>진행 단계(던전 순서) 하나의 종 비중과 E 개체 비율. 앞 방 · 길 위 비중을 따로 줄 수 있다.</summary>
     public sealed class EnemyStage
     {
         readonly List<(EnemySpecies species, int weight)> weights;
+        readonly List<(EnemySpecies species, int weight)> nearWeights;
+        readonly List<(EnemySpecies species, int weight)> roadWeights;
+
+        /// <param name="nearWeights">시작 방에서 nearRoomDistance 이하인 방의 비중. null이면 weights</param>
+        /// <param name="nearRoomDistance">앞 방으로 치는 시작 방에서의 거리(문 수). 0이면 앞 방 없음</param>
+        /// <param name="roadWeights">길 위 무리 비중. null이면 weights</param>
+        public EnemyStage(IEnumerable<(EnemySpecies species, int weight)> weights, float evolvedChance,
+            IEnumerable<(EnemySpecies species, int weight)> nearWeights, int nearRoomDistance,
+            IEnumerable<(EnemySpecies species, int weight)> roadWeights)
+            : this(weights, evolvedChance)
+        {
+            if (nearRoomDistance < 0) throw new ArgumentOutOfRangeException(nameof(nearRoomDistance));
+            if (nearWeights != null) this.nearWeights = ReadWeights(nearWeights, nameof(nearWeights));
+            if (roadWeights != null) this.roadWeights = ReadWeights(roadWeights, nameof(roadWeights));
+            NearRoomDistance = nearRoomDistance;
+        }
 
         public EnemyStage(IEnumerable<(EnemySpecies species, int weight)> weights, float evolvedChance)
         {
             if (weights == null) throw new ArgumentNullException(nameof(weights));
             if (evolvedChance < 0f || evolvedChance > 1f) throw new ArgumentOutOfRangeException(nameof(evolvedChance));
 
-            this.weights = new List<(EnemySpecies, int)>();
-            int total = 0;
-            foreach ((EnemySpecies species, int weight) in weights)
-            {
-                if (weight < 0) throw new ArgumentOutOfRangeException(nameof(weights), "Weights must be 0 or more.");
-                if (weight == 0) continue;
-                this.weights.Add((species, weight));
-                total += weight;
-            }
-            if (total == 0) throw new ArgumentException("A stage needs at least one species with weight.", nameof(weights));
+            this.weights = ReadWeights(weights, nameof(weights));
             EvolvedChance = evolvedChance;
         }
 
-        /// <summary>무게가 0보다 큰 종만.</summary>
+        static List<(EnemySpecies, int)> ReadWeights(IEnumerable<(EnemySpecies species, int weight)> source, string name)
+        {
+            var list = new List<(EnemySpecies, int)>();
+            int total = 0;
+            foreach ((EnemySpecies species, int weight) in source)
+            {
+                if (weight < 0) throw new ArgumentOutOfRangeException(name, "Weights must be 0 or more.");
+                if (weight == 0) continue;
+                list.Add((species, weight));
+                total += weight;
+            }
+            if (total == 0) throw new ArgumentException("A stage needs at least one species with weight.", name);
+            return list;
+        }
+
+        /// <summary>던전 방 비중. 무게가 0보다 큰 종만.</summary>
         public IReadOnlyList<(EnemySpecies species, int weight)> Weights => weights;
+        /// <summary>앞 방 비중(따로 없으면 <see cref="Weights"/>).</summary>
+        public IReadOnlyList<(EnemySpecies species, int weight)> NearWeights => nearWeights ?? weights;
+        /// <summary>길 위 무리 비중(따로 없으면 <see cref="Weights"/>).</summary>
+        public IReadOnlyList<(EnemySpecies species, int weight)> RoadWeights => roadWeights ?? weights;
+        /// <summary>시작 방에서 이 거리(문 수) 이하인 방이 앞 방. 0이면 앞 방 없음.</summary>
+        public int NearRoomDistance { get; }
+
+        public IReadOnlyList<(EnemySpecies species, int weight)> WeightsAt(EnemyPlace place) =>
+            place == EnemyPlace.Road ? RoadWeights : place == EnemyPlace.NearRoom ? NearWeights : Weights;
+
+        /// <summary>시작 방에서 distance만큼 떨어진 던전 방은 앞 방인가 · 먼 방인가.</summary>
+        public EnemyPlace RoomPlace(int distanceFromStart) =>
+            distanceFromStart <= NearRoomDistance ? EnemyPlace.NearRoom : EnemyPlace.Room;
         /// <summary>한 번 뽑을 때 E 개체로 나올 확률(떼는 다 같이).</summary>
         public float EvolvedChance { get; }
     }
@@ -115,11 +158,18 @@ namespace Game.Rules
             foreach (EnemyStage stage in this.stages)
             {
                 if (stage == null) throw new ArgumentNullException(nameof(stages));
-                foreach ((EnemySpecies kind, int _) in stage.Weights)
+                foreach ((EnemySpecies kind, int _) in AllWeights(stage))
                 {
                     if (!rules.ContainsKey(kind)) throw new ArgumentException($"Stage uses species {kind} that has no rule.", nameof(stages));
                 }
             }
+        }
+
+        static IEnumerable<(EnemySpecies, int)> AllWeights(EnemyStage stage)
+        {
+            foreach ((EnemySpecies, int) w in stage.Weights) yield return w;
+            foreach ((EnemySpecies, int) w in stage.NearWeights) yield return w;
+            foreach ((EnemySpecies, int) w in stage.RoadWeights) yield return w;
         }
 
         public int StageCount => stages.Count;
@@ -159,9 +209,21 @@ namespace Game.Rules
     /// </summary>
     public static class EnemyMixPlanner
     {
+        /// <summary>던전 방 비중으로 뽑는다.</summary>
         /// <param name="slots">쓸 자리 수. 남은 자리로 살 수 있는 종이 없으면 거기서 멈춘다.</param>
-        /// <param name="allowEvolved">false면 E 개체 없이(길 위 무리).</param>
+        /// <param name="allowEvolved">false면 E 개체 없이.</param>
         public static List<EnemyPick> Pick(EnemyMix mix, int stage, int slots, bool allowEvolved, IRandom random)
+        {
+            return Pick(mix, stage, EnemyPlace.Room, slots, allowEvolved, random);
+        }
+
+        /// <summary>곳(던전 방 · 앞 방 · 길 위)의 비중으로 뽑는다. 길 위는 E 개체 없음.</summary>
+        public static List<EnemyPick> Pick(EnemyMix mix, int stage, EnemyPlace place, int slots, IRandom random)
+        {
+            return Pick(mix, stage, place, slots, place != EnemyPlace.Road, random);
+        }
+
+        static List<EnemyPick> Pick(EnemyMix mix, int stage, EnemyPlace place, int slots, bool allowEvolved, IRandom random)
         {
             if (mix == null) throw new ArgumentNullException(nameof(mix));
             if (random == null) throw new ArgumentNullException(nameof(random));
@@ -169,13 +231,14 @@ namespace Game.Rules
 
             EnemyStage table = mix.Stage(stage);
             var picks = new List<EnemyPick>();
-            var affordable = new List<(EnemySpecies species, int weight)>(table.Weights.Count);
+            IReadOnlyList<(EnemySpecies species, int weight)> weights = table.WeightsAt(place);
+            var affordable = new List<(EnemySpecies species, int weight)>(weights.Count);
             int remaining = slots;
             while (remaining > 0)
             {
                 affordable.Clear();
                 int total = 0;
-                foreach ((EnemySpecies species, int weight) in table.Weights)
+                foreach ((EnemySpecies species, int weight) in weights)
                 {
                     if (mix.Rule(species).Slots > remaining) continue;
                     affordable.Add((species, weight));

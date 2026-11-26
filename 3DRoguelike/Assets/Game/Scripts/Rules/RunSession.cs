@@ -11,8 +11,17 @@ namespace Game.Rules
         public const int InWorld = -1;
         public const int FullHealth = -1;
 
-        public RunSession(RunSeed seed, int dungeonCount)
+        public RunSession(RunSeed seed, int dungeonCount) : this(seed, dungeonCount, lastDungeonOpensNextRegion: false)
         {
+        }
+
+        /// <param name="lastDungeonOpensNextRegion">
+        /// 마지막 던전 뒤 관문 너머에 다음 지역이 있는가(월드 지역 표가 정한다). true면 마지막 던전을 깨도 판이 끝나지 않고
+        /// 관문만 열린다 — 결정 2026-11-25(사용자): 지역 던전을 깨면 다음 지역이 열리고, 다음 지역이 없는 마지막 던전을 깨면 클리어.
+        /// </param>
+        public RunSession(RunSeed seed, int dungeonCount, bool lastDungeonOpensNextRegion)
+        {
+            LastDungeonOpensNextRegion = lastDungeonOpensNextRegion;
             Seed = seed;
             World = new WorldProgress(dungeonCount);
             Stats = new RunStats(seed, 0);
@@ -20,6 +29,8 @@ namespace Game.Rules
         }
 
         public RunSeed Seed { get; }
+        /// <summary>마지막 던전을 깨면 다음 지역 관문이 열리는가(그러면 깨도 판이 이어진다).</summary>
+        public bool LastDungeonOpensNextRegion { get; }
         public RunStats Stats { get; }
         public WorldProgress World { get; }
 
@@ -43,7 +54,10 @@ namespace Game.Rules
             return true;
         }
 
-        /// <summary>들어가 있는 던전의 마지막 방을 깼다. 월드로 돌아갈 준비를 하고, 마지막 던전이면 지역을 깬 것으로 판이 끝난다.</summary>
+        /// <summary>
+        /// 들어가 있는 던전의 마지막 방을 깼다. 월드로 돌아갈 준비를 하고(그 뒤 관문이 열림), 다음 지역이 없는 마지막 던전이면
+        /// 지역을 깬 것으로 판이 끝난다. 다음 지역이 있으면(<see cref="LastDungeonOpensNextRegion"/>) 판은 이어진다.
+        /// </summary>
         /// <returns>이번에 지역을 깨서 판이 끝났으면 true</returns>
         public bool FinishDungeon(int playerHealth, float elapsedSeconds)
         {
@@ -54,7 +68,7 @@ namespace Game.Rules
             ReturnDungeon = CurrentDungeon;
             CurrentDungeon = InWorld;
             PlayerHealth = playerHealth;
-            return World.AllCleared && Stats.ClearRegion(elapsedSeconds);
+            return World.AllCleared && !LastDungeonOpensNextRegion && Stats.ClearRegion(elapsedSeconds);
         }
     }
 }

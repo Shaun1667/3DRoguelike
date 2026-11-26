@@ -33,6 +33,8 @@ namespace Game
         [SerializeField] private GameObject[] gates;
         [Tooltip("길 위 적 무리. 자식이 적이 나올 자리")]
         [SerializeField] private Transform[] encounterSites;
+        [Tooltip("지형 타일(지역 순서, 남 → 북). 플레이 때 이웃으로 잇는다")]
+        [SerializeField] private Terrain[] terrains;
         [Tooltip("비워 두면 새 판마다 새 시드. 'XXXX-XXXX' 코드를 넣으면 그 던전들을 다시 만든다")]
         [SerializeField] private string fixedSeedCode = "";
         [Min(0f)] [SerializeField] private float resultDelayAfterDeath = 1.5f;
@@ -45,6 +47,9 @@ namespace Game
         private float nextObjectiveTime;
         private bool leaving;
         private EnemyMix mix;
+        private WorldRoute route;
+        private int lastRegion = -1;
+        private float atmosphereDistance = float.NaN;
 
         public RunSession Session { get; private set; }
         public WorldTuning Tuning => tuning;
@@ -54,8 +59,10 @@ namespace Game
         {
             Time.timeScale = 1f;
             playerTransform = player.transform;
-            Session = CurrentRun.EnsureSession(tuning.dungeons.Length, ChooseSeed);
+            Session = CurrentRun.EnsureSession(tuning.dungeons.Length, tuning.LastDungeonOpensRegion, ChooseSeed);
             mix = roster.ToMix();
+            route = tuning.ToRoute();
+            ConnectTerrains();
 
             int back = Session.ReturnDungeon;
             if (back >= 0 && back < entrances.Length)
@@ -73,6 +80,7 @@ namespace Game
                 started[i] = Session.World.IsEncounterCleared(i);
             }
             RefreshWorld();
+            UpdateAtmosphere(playerTransform.position, force: true);
             Debug.Log($"[WorldRun] 시드 {Session.Seed.ToCode()} · 깬 던전 {Session.World.ClearedCount}/{Session.World.DungeonCount}" +
                       (back >= 0 ? $" · {tuning.dungeons[back].displayName} 앞에서" : " · 길 시작에서"));
         }
@@ -99,6 +107,7 @@ namespace Game
         {
             if (leaving || Session.Stats.Outcome != RunOutcome.Playing) return;
             Vector3 position = playerTransform.position;
+            UpdateAtmosphere(position, force: false);
             SafeZone safeZone = SafeZone.Protecting(position);
 
             // 안전 지대(마을) 안에서는 길 위 무리가 나타나지 않는다 — 나오면 평소처럼 나타남 거리로 본다
@@ -151,7 +160,7 @@ namespace Game
             started[site] = true;
             Transform points = encounterSites[site];
             IRandom random = new RunRandom(Session.Seed).Create(RandomPurpose.Road, site);
-            List<EnemyPick> picks = EnemyMixPlanner.Pick(mix, tuning.DungeonAhead(site), points.childCount, allowEvolved: false, random);
+            List<EnemyPick> picks = EnemyMixPlanner.Pick(mix, tuning.DungeonAhead(site), EnemyPlace.Road, points.childCount, random);
             for (int i = 0; i < picks.Count && i < points.childCount; i++)
             {
                 Vector3 position = points.GetChild(i).position;
@@ -187,9 +196,31 @@ namespace Game
 
         private string ObjectiveText(Vector3 position, int next)
         {
-            if (next < 0) return "숲을 모두 지났다";
+            if (next < 0) return OpenRoadText(position);
+            string count = $"({Session.World.ClearedCount}/{Session.World.DungeonCount})";
+            // 다음 던전이 아직 들어서지 않은 지역에 있으면 먼저 그 지역으로(숲 던전 1 → 폐허 도시 → 도시 던전)
+            int region = tuning.RegionOfDungeon(next);
+            route.DistanceFrom(position.x, position.z, out float along);
+            if (region > 0 && along < tuning.regions[region].startDistance)
+                return $"다음: {tuning.regions[region].displayName}  ·  {Mathf.RoundToInt(tuning.regions[region].startDistance - along)} m  {count}";
             float distance = Flat(entrances[next].position - position).magnitude;
-            return $"다음: {tuning.dungeons[next].displayName}  ·  {Mathf.RoundToInt(distance)} m  ({Session.World.ClearedCount}/{Session.World.DungeonCount})";
+            return $"다음: {tuning.dungeons[next].displayName}  ·  {Mathf.RoundToInt(distance)} m  {count}";
+        }
+
+        /// <summary>
+        /// 던전을 모두 깼는데 판이 이어질 때(마지막 던전이 다음 지역을 열었을 때): 열린 관문 너머 지역이 아직 앞이면 그리로,
+        /// 그 지역에 들어섰으면 지역 이름 · 앞길은 아직 막힘(그 지역 던전 · 다음 지역은 준비 중).
+        /// </summary>
+        private string OpenRoadText(Vector3 position)
+        {
+            route.DistanceFrom(position.x, position.z, out float along);
+            for (int r = 1; r < tuning.regions.Length; r++)
+            {
+                int gate = tuning.GateBefore(r);
+                if (gate < 0 || !Session.World.IsGateOpen(gate) || along >= tuning.regions[r].startDistance) continue;
+                return $"다음: {tuning.regions[r].displayName}  ·  {Mathf.RoundToInt(tuning.regions[r].startDistance - along)} m";
+            }
+            return $"{tuning.regions[tuning.RegionAt(along)].displayName}  ·  앞길은 아직 막혀 있다(준비 중)";
         }
 
         private void OnPlayerDied()
@@ -201,7 +232,42 @@ namespace Game
         {
             Debug.Log($"[WorldRun] 판 끝: {Session.Stats.Outcome} · 원인 {Session.Stats.DeathCause}");
             yield return new WaitForSecondsRealtime(delay);
-            resultScreen.Show(Session.Stats, this);
+            resultScreen.Show(Session.Stats, this, tuning.ClearedRegionName(Session.ReturnDungeon));
+        }
+
+        /// <summary>지형 타일을 남 → 북 이웃으로 잇는다(이음매 LOD 틈이 없게). 이웃은 저장되지 않아 판마다 잇는다.</summary>
+        private void ConnectTerrains()
+        {
+            if (terrains == null) return;
+            for (int i = 0; i < terrains.Length; i++)
+            {
+                if (terrains[i] == null) continue;
+                Terrain south = i > 0 ? terrains[i - 1] : null;
+                Terrain north = i + 1 < terrains.Length ? terrains[i + 1] : null;
+                terrains[i].SetNeighbors(null, north, null, south);
+            }
+        }
+
+        /// <summary>
+        /// 플레이어가 있는 길 거리로 지역 분위기(앰비언트 · 안개 색 · 거리)를 섞는다(<see cref="WorldTuning.AtmosphereAt"/>).
+        /// 길 거리가 0.5 m 넘게 바뀔 때만 고친다.
+        /// </summary>
+        private void UpdateAtmosphere(Vector3 position, bool force)
+        {
+            route.DistanceFrom(position.x, position.z, out float along);
+            if (!force && Mathf.Abs(along - atmosphereDistance) < 0.5f) return;
+            atmosphereDistance = along;
+            WorldTuning.Atmosphere air = tuning.AtmosphereAt(along);
+            RenderSettings.ambientLight = air.ambientColor;
+            RenderSettings.fogColor = air.fogColor;
+            RenderSettings.fogStartDistance = air.fogStart;
+            RenderSettings.fogEndDistance = air.fogEnd;
+            int region = tuning.RegionAt(along);
+            if (region != lastRegion)
+            {
+                if (lastRegion >= 0) Debug.Log($"[WorldRun] 지역: {tuning.regions[region].displayName} (길 {along:0} m)");
+                lastRegion = region;
+            }
         }
 
         private void Place(Vector3 position, Quaternion rotation)
@@ -232,6 +298,35 @@ namespace Game
             if (next < 0) return;
             Transform entrance = entrances[next];
             Place(entrance.position + entrance.forward * (returnDistance + 3f), Quaternion.LookRotation(-entrance.forward));
+        }
+
+        /// <summary>지역 수 · 이름(디버그 창).</summary>
+        public int RegionCount => tuning.regions.Length;
+        public string RegionName(int region) => tuning.regions[region].displayName;
+
+        /// <summary>
+        /// 길 거리 distance의 길 위로 옮긴다(앞을 보고). openGates면 그 앞 관문을 모두 열어 둔다 — 보기만 하는 것이라 판 상태(깬 던전)는 그대로다.
+        /// </summary>
+        public void DebugGoToRouteDistance(float distance, bool openGates)
+        {
+            if (openGates)
+            {
+                for (int i = 0; i < gates.Length; i++) if (tuning.GateDistance(i) <= distance) gates[i].SetActive(false);
+            }
+            (float x, float z) = route.PointAt(distance);
+            (float dx, float dz) = route.DirectionAt(distance);
+            var ground = new Vector3(x, 500f, z);
+            if (Physics.Raycast(ground, Vector3.down, out RaycastHit hit, 1000f, ~0, QueryTriggerInteraction.Ignore)) ground = hit.point;
+            else ground.y = 0f;
+            Place(ground, Quaternion.LookRotation(new Vector3(dx, 0f, dz)));
+            UpdateAtmosphere(ground, force: true);
+        }
+
+        /// <summary>지역 i 시작(섞임이 끝난 자리)으로 옮기고 그 앞 관문을 연다.</summary>
+        public void DebugGoToRegion(int region)
+        {
+            WorldTuning.Region data = tuning.regions[region];
+            DebugGoToRouteDistance(data.startDistance + data.blendDistance + 5f, openGates: true);
         }
 
         private static Vector3 Flat(Vector3 vector)

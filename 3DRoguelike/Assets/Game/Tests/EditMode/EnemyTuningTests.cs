@@ -147,7 +147,7 @@ namespace Game.Tests
 
             (float evolved, (EnemySpecies, int)[] weights)[] stages =
             {
-                (0f, new[] { (EnemySpecies.Badger, 3), (EnemySpecies.Hare, 1) }),
+                (0f, new[] { (EnemySpecies.Badger, 3), (EnemySpecies.Hare, 1), (EnemySpecies.Boar, 1), (EnemySpecies.Toad, 1) }),
                 (0.25f, new[] { (EnemySpecies.Badger, 3), (EnemySpecies.Hare, 1), (EnemySpecies.Boar, 1), (EnemySpecies.Toad, 1) }),
                 (0.5f, new[] { (EnemySpecies.Badger, 2), (EnemySpecies.Hare, 1), (EnemySpecies.Boar, 2), (EnemySpecies.Toad, 2) }),
             };
@@ -156,6 +156,17 @@ namespace Game.Tests
             {
                 Assert.That(roster.stages[i].evolvedChance, Is.EqualTo(stages[i].evolved));
                 Assert.That(roster.stages[i].weights.Select(w => (w.species, w.weight)), Is.EqualTo(stages[i].weights));
+            }
+            // 던전 1 앞 방(시작 방에서 1) · 길 위 무리는 오소리 3 · 멧토끼 1(결정 2026-11-25, 길 위는 그대로), 단계 2 · 3은 따로 없음
+            var light = new[] { (EnemySpecies.Badger, 3), (EnemySpecies.Hare, 1) };
+            Assert.That(roster.stages[0].nearRoomDistance, Is.EqualTo(1));
+            Assert.That(roster.stages[0].nearWeights.Select(w => (w.species, w.weight)), Is.EqualTo(light));
+            Assert.That(roster.stages[0].roadWeights.Select(w => (w.species, w.weight)), Is.EqualTo(light));
+            for (int i = 1; i < stages.Length; i++)
+            {
+                Assert.That(roster.stages[i].nearRoomDistance, Is.EqualTo(0), $"단계 {i + 1}");
+                Assert.That(roster.stages[i].nearWeights == null || roster.stages[i].nearWeights.Length == 0, $"단계 {i + 1}");
+                Assert.That(roster.stages[i].roadWeights == null || roster.stages[i].roadWeights.Length == 0, $"단계 {i + 1}");
             }
             Assert.DoesNotThrow(() => roster.ToMix());
         }

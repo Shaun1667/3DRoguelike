@@ -162,7 +162,7 @@ namespace Game
                 return;
             }
 
-            GUILayout.BeginArea(new Rect(10, 10, 340, 440), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(10, 10, 340, 480), GUI.skin.box);
             GUILayout.Label("디버그 (F1 닫기)");
             if (floor != null && floor.Layout != null)
             {
@@ -190,6 +190,14 @@ namespace Game
             {
                 if (GUILayout.Button("다음 던전 입구로 이동")) { world.DebugGoToNext(); lastAction = "다음 던전 입구 앞으로"; }
                 if (GUILayout.Button("다음 던전 깬 것으로 (관문 열기)")) { world.DebugClearNext(); lastAction = "던전을 깬 것으로 침"; }
+            }
+            if (world != null && world.Session != null)
+            {
+                // 지역마다 한 줄: 그 지역 시작으로 순간이동(앞 관문은 보기만 열림, 깬 던전은 그대로)
+                for (int i = 1; i < world.RegionCount; i++)
+                {
+                    if (GUILayout.Button($"{world.RegionName(i)} 시작으로 이동 (관문 열기)")) { world.DebugGoToRegion(i); lastAction = $"{world.RegionName(i)} 시작으로"; }
+                }
             }
             if (lastAction.Length > 0) GUILayout.Label(lastAction);
             GUILayout.EndArea();

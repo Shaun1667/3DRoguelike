@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cdbad0c8914071642b73b89bafe6f060, type: 3}
   m_Name: VillageTuning
   m_EditorClassIdentifier: Game.Runtime::Game.VillageTuning
+  placeInWorld: 0
   displayName: "\uC232\uC18D \uB9C8\uC744"
   routeDistance: 488
   sideOffset: -22

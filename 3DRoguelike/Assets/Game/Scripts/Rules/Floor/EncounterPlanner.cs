@@ -128,7 +128,9 @@ namespace Game.Rules
         static List<SpawnPoint> PlanRoom(FloorLayout layout, EncounterSettings settings, EnemyMix mix, int stage, IRandom random, FloorRoom room)
         {
             int slots = SlotsFor(settings, random, room);
-            List<EnemyPick> picks = EnemyMixPlanner.Pick(mix, stage, slots, allowEvolved: true, random);
+            // 시작 방 가까운 앞 방은 그 단계의 앞 방 비중(없으면 같은 비중)
+            EnemyPlace place = mix.Stage(stage).RoomPlace(room.DistanceFromStart);
+            List<EnemyPick> picks = EnemyMixPlanner.Pick(mix, stage, place, slots, random);
 
             var doors = new List<(float x, float z)>();
             foreach (FloorDoor door in layout.Doors)
