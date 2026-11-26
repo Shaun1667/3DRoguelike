@@ -681,7 +681,7 @@ private static ChildMotion Diagonal(AnimatorController controller, string name, 
             EditorSceneManager.SaveScene(scene, ScenePath);
         }
 
-        internal static void BuildLighting()
+        internal static Light BuildLighting()
         {
             var light = new GameObject("Sun").AddComponent<Light>();
             light.type = LightType.Directional;
@@ -689,6 +689,7 @@ private static ChildMotion Diagonal(AnimatorController controller, string name, 
             light.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = new Color(0.45f, 0.45f, 0.5f);
+            return light;
         }
 
         private static void BuildRoom()

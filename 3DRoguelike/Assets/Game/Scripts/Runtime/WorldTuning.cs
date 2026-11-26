@@ -26,6 +26,8 @@ namespace Game
             public Vector3 doorwayCenter;
             [Tooltip("어두운 문 면 폭 · 높이(m)")]
             public Vector2 doorwaySize;
+            [Tooltip("던전 안 모양 테마(바닥 · 벽 재질 · 장식 · 조명). 비면 회색 층(숲)")]
+            public FloorTheme interiorTheme;
 
             public bool HasEntrancePrefab => !string.IsNullOrEmpty(entrancePrefab);
         }

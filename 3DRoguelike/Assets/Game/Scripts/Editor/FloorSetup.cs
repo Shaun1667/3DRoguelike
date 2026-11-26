@@ -25,11 +25,12 @@ namespace Game.EditorTools
             }
 
             if (!AssetDatabase.IsValidFolder(MaterialFolder)) AssetDatabase.CreateFolder("Assets/Game/Art", "Floor");
+            FloorThemeSetup.Run(); // 던전 안 모양 테마(도시 대피소) 재질 · 에셋 — 새 씬을 열기 전에
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             // 새 씬을 연 뒤에 불러온다. 앞에서 새로 만든 에셋은 씬을 바꿀 때 참조가 끊겨 씬에 빈칸으로 저장됐다.
             FloorTuning tuning = LoadOrCreateTuning();
-            TestRoomSetup.BuildLighting();
+            Light sun = TestRoomSetup.BuildLighting();
 
             var player = (GameObject)PrefabUtility.InstantiatePrefab(AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath));
             player.transform.position = new Vector3(0f, 0.1f, 0f); // 시작 방 가운데가 원점
@@ -64,6 +65,7 @@ namespace Game.EditorTools
             fields.FindProperty("bossFloorMaterial").objectReferenceValue = Lit("BossFloor", new Color(0.6f, 0.4f, 0.4f));
             fields.FindProperty("wallMaterial").objectReferenceValue = Lit("Wall", new Color(0.7f, 0.7f, 0.72f));
             fields.FindProperty("lockedDoorMaterial").objectReferenceValue = Lit("LockedDoor", new Color(0.75f, 0.2f, 0.15f));
+            fields.FindProperty("sun").objectReferenceValue = sun; // 테마가 조명 색 · 세기를 바꾼다(숲은 그대로)
             fields.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.SaveScene(scene, ScenePath);

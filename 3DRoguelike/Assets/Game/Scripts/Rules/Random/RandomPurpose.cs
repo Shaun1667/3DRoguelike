@@ -19,6 +19,8 @@ namespace Game.Rules
         public static readonly RandomPurpose Effects = new RandomPurpose("effects");
         /// <summary>월드 길 위 적 무리의 종류(층 번호 자리 = 무리 번호). 던전 안 적(enemy)과 수열이 겹치지 않게 따로.</summary>
         public static readonly RandomPurpose Road = new RandomPurpose("road");
+        /// <summary>던전 테마 방 꾸미기(잔해 · 차 같은 장식 자리). 맵 · 적 · 보상과 수열이 겹치지 않게 따로 — 테마 없는 던전은 쓰지 않는다.</summary>
+        public static readonly RandomPurpose Dressing = new RandomPurpose("dressing");
 
         RandomPurpose(string key)
         {

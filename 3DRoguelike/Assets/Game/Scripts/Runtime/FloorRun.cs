@@ -55,6 +55,12 @@ namespace Game
         [SerializeField] private Material rewardMaterial;
         [SerializeField] private Material rareRewardMaterial;
 
+        [Header("테마 (던전 안 모양)")]
+        [Tooltip("테마가 조명 색 · 세기를 바꿀 해")]
+        [SerializeField] private Light sun;
+        [Tooltip("층 씬만 Play할 때 쓸 테마(비면 회색). 월드 판은 WorldTuning.dungeons의 interiorTheme")]
+        [SerializeField] private FloorTheme previewTheme;
+
         private readonly List<Health> roomEnemies = new List<Health>();
         private GameObject[] doorBarriers;
         private Transform playerTransform;
@@ -73,6 +79,10 @@ namespace Game
         /// <summary>지금 놓여 있는 보상물 수.</summary>
         public int PickupCount => pickups.Count;
         public RunStats Stats { get; private set; }
+        /// <summary>이 던전의 안 모양 테마. 없으면(숲) null — 회색 층.</summary>
+        public FloorTheme Theme { get; private set; }
+        /// <summary>테마 장식 자리. 테마가 없으면 null.</summary>
+        public FloorDressing Dressing { get; private set; }
         /// <summary>잠긴 방에 아직 살아 있는 적 수.</summary>
         public int AliveEnemies => roomEnemies.Count;
         public EnemyRoster Roster => roster;
@@ -122,6 +132,7 @@ namespace Game
             Progress.RoomLocked += OnRoomLocked;
             Progress.RoomCleared += OnRoomCleared;
 
+            Theme = session != null ? (world != null && dungeon < world.dungeons.Length ? world.dungeons[dungeon].interiorTheme : null) : previewTheme;
             var materials = new FloorGeometry.Materials
             {
                 floor = floorMaterial,
@@ -131,7 +142,15 @@ namespace Game
                 lockedDoor = lockedDoorMaterial,
                 treasureFloor = treasureFloorMaterial,
             };
+            if (Theme != null) UseTheme(ref materials);
             doorBarriers = FloorGeometry.Build(Layout, tuning, materials, transform);
+            if (Theme != null)
+            {
+                // 장식은 dressing 난수 따로(맵 · 적 · 보상 그대로), NavMesh를 굽기 전에 세운다
+                Dressing = RoomDressingPlanner.Plan(Layout, Encounters, Theme.ToDressingSettings(tuning), random.Create(RandomPurpose.Dressing, dungeon));
+                FloorGeometry.BuildDressing(Dressing, Theme, transform);
+                Theme.ApplyAtmosphere(sun);
+            }
             navMesh.BuildNavMesh();
             if (TreasureRoom >= 0) SpawnPickup(TreasureRoom);
             Debug.Log($"[FloorRun] {DungeonName} · 시드 {Seed.ToCode()} · 방 {Layout.Rooms.Count}개 · 보스 방 {Layout.BossRoom.Id} · 보물방 {TreasureRoom}\n{Layout.ToAscii()}");
@@ -202,6 +221,19 @@ namespace Game
             }
             return new RunSeed(unchecked((uint)Guid.NewGuid().GetHashCode()));
         }
+
+        /// <summary>테마가 정한 재질로 바꾼다(빈 칸은 회색 기본). 잠긴 문은 어느 테마든 빨간 벽 그대로.</summary>
+        private void UseTheme(ref FloorGeometry.Materials materials)
+        {
+            if (Theme.floor != null) materials.floor = Theme.floor;
+            if (Theme.startFloor != null) materials.startFloor = Theme.startFloor;
+            if (Theme.bossFloor != null) materials.bossFloor = Theme.bossFloor;
+            if (Theme.treasureFloor != null) materials.treasureFloor = Theme.treasureFloor;
+            if (Theme.wall != null) materials.wall = Theme.wall;
+            materials.floorTile = Theme.floorTile;
+            materials.wallTile = Theme.wallTile;
+        }
+
 
         private void OnRoomLocked(int roomId)
         {

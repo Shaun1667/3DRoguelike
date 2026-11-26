@@ -8,6 +8,7 @@
 | 9 | `Assets/Game/Data/Enemies/{Badger,Boar,Hare,Toad}Tuning.asset` | `BadgerTuning` · `BoarTuning` · `HareTuning` · `ToadTuning` (공통 `EnemyTuning`) |
 | 13 | `Assets/Game/Data/WorldTuning.asset` | `WorldTuning` |
 | 14 | `Assets/Game/Data/EnemyRoster.asset` | `EnemyRoster` → `EnemyMix`(Game.Rules) |
+| 8-1 | `Assets/Game/Data/FloorThemes/CityShelter.asset` | `FloorTheme` → `DressingSettings`(Game.Rules) |
 
 ## 1. 플레이어 조작
 재미 검증 전 출발값이다. 값을 바꾸면 `PlayerTuningTests`도 함께 고친다. 걷기 배속은 바꾼 뒤 `Tools/Game/Setup Test Room`을 다시 실행해야 컨트롤러에 들어간다.
@@ -92,6 +93,19 @@
 | 벽 높이 `wallHeight` · 두께 `wallThickness` | 4 m · 1 m | 시험 방과 같음 |
 | 문 폭 `doorWidth` | 4 m | 플레이어(폭 0.7 m)가 구르거나 카메라를 돌리며 지나가도 넉넉하게, 첫 시도 |
 | 방에 들어선 거리 `enterMargin` | 1.5 m | 문틀에 선 채로 잠겨 갇히지 않게, 첫 시도 |
+
+### 8-1. 던전 안 모양 테마 (`FloorTheme`, 던전마다 `WorldTuning.dungeons[].interiorTheme`)
+비면 회색 층(숲 던전 1). 장식 자리는 판 시드 + 던전 순서(`dressing` 난수)로 정해져 같은 시드면 같다. 값을 바꾸면 `FloorThemeTests.CityTheme_MatchesBalance`도 고친다. 아래는 도시 던전 "무너진 대피소" 값, 정한 것 (Claude, 확인 필요, 2026-11-26).
+
+| 항목 | 값 | 근거 |
+|---|---|---|
+| 바닥 · 벽 재질 | 바닥 아스팔트(8 m 타일) · 벽 잔해 콘크리트(6 m) · 시작 잡초 틈 · 보스 아스팔트 빨간 색조 · 보물 잔해 콘크리트 노란 색조, 매끄러움 0.05 | 지하 주차장 대피소. 시작 초록 · 보스 빨강 · 보물 노랑은 회색 층과 같은 뜻. `Art/City/Ground` 텍스처만 씀 |
+| 분위기 | 앰비언트 (0.40, 0.40, 0.42) · 안개 (0.27, 0.26, 0.25) 14 ~ 70 m · 해 (1, 0.92, 0.82) 세기 0.8 | 어둡고 먼지 낀 폐건물 |
+| 벽 장식 (무게 · 배율) | 방벽 30 · 1 / 바리케이드 25 · 0.9 / 잔해 25 · 0.6 / 차 12 · 1(긴 변이 벽 따라) | 벽 띠 3.2 m 안에 들어가는 크기 |
+| 방 안 엄폐물 (무게 · 배율) | 방벽 40 · 1 / 잔해 30 · 0.75 / 차 15 · 1 / 바리케이드 15 · 0.9, 아무 방향 | 전투 · 보스 방만 |
+| 장식 수 `wallPropsPerCell` · `openPropsPerCell` | 칸마다 4 ~ 6 · 1 ~ 3 | 비울 거리에 걸린 자리는 버려 실제 층당 약 80 ~ 100개(시드 3개: 101 · 92 · 78) |
+| 벽 띠 `wallBandDepth` | 3.2 m | 적 자리 벽 여백 `spawnWallMargin` 4 m보다 얕게 |
+| 비우는 거리 | 문 4 m · 적 자리 2 m · 방 가운데 4 m · 문 → 가운데 길 반폭 2.5 m · 장식끼리 0.4 m · 엄폐물은 방 경계에서 5 m 안쪽 | 문 · 보스 방 동선 · 보상물 · 적 나타날 자리를 막지 않게 |
 
 ## 9. 숲 적 4종
 종마다 `Data/Enemies/{종}Tuning.asset` 하나에 Mutant(네 발, 본능)와 E 개체(두 발) 값을 같이 둔다. 결정 2026-11-12(사용자): 오소리 · 멧돼지 · 멧토끼 · 두꺼비, E 개체 = 체력 ×1.8 + 공격 하나 더 — 결정에 없는 값은 첫 시도. 값을 바꾸면 `EnemyTuningTests`도 함께 고치고, 할퀴기 범위 · 돌진 거리 · 부딪힘 반지름 · 내려찍기 반지름 · 부채꼴 발 수를 바꾸면 `Tools/Game/Setup Test Room`을 다시 실행한다(바닥 예고 크기). 예전 `MutantTuning`(2-4)의 값은 오소리로 옮겼다.

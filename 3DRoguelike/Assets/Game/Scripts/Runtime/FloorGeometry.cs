@@ -18,6 +18,9 @@ namespace Game
             public Material wall;
             public Material lockedDoor;
             public Material treasureFloor;
+            /// <summary>바닥 · 벽 텍스처 한 장이 덮는 크기(m). 0이면 도형 UV 그대로(회색 기본 재질).</summary>
+            public float floorTile;
+            public float wallTile;
         }
 
         /// <summary>문 순서(layout.Doors)대로 잠금 벽. 처음에는 꺼져 있다.</summary>
@@ -91,7 +94,7 @@ namespace Game
                 : materials.floor;
             Vector3 center = RoomCenter(layout, tuning, room);
             Vector3 size = new Vector3(room.Width * tuning.cellSize, 1f, room.Height * tuning.cellSize);
-            Block(parent, $"Floor_{room.Id}_{room.Kind}", center + Vector3.down * 0.5f, size, material);
+            Block(parent, $"Floor_{room.Id}_{room.Kind}", center + Vector3.down * 0.5f, size, material, materials.floorTile);
         }
 
         private static void BuildEdge(FloorLayout layout, FloorTuning tuning, Materials materials, Transform parent,
@@ -109,15 +112,15 @@ namespace Game
 
             if (!doorByEdge.TryGetValue(EdgeKey(ax, ay, bx, by), out int doorIndex))
             {
-                Block(parent, name, edgeCenter, WallSize(vertical, tuning.cellSize + tuning.wallThickness, tuning), materials.wall);
+                Block(parent, name, edgeCenter, WallSize(vertical, tuning.cellSize + tuning.wallThickness, tuning), materials.wall, materials.wallTile);
                 return;
             }
 
             // 문 양옆 벽. 모서리 쪽 끝만 벽 두께의 절반만큼 늘려 이웃 벽과 틈 없이 만난다.
             float sideLength = (tuning.cellSize - tuning.doorWidth) * 0.5f + tuning.wallThickness * 0.5f;
             float offset = tuning.doorWidth * 0.5f + sideLength * 0.5f;
-            Block(parent, name + "_L", edgeCenter - along * offset, WallSize(vertical, sideLength, tuning), materials.wall);
-            Block(parent, name + "_R", edgeCenter + along * offset, WallSize(vertical, sideLength, tuning), materials.wall);
+            Block(parent, name + "_L", edgeCenter - along * offset, WallSize(vertical, sideLength, tuning), materials.wall, materials.wallTile);
+            Block(parent, name + "_R", edgeCenter + along * offset, WallSize(vertical, sideLength, tuning), materials.wall, materials.wallTile);
 
             GameObject barrier = Block(parent, $"Door_{doorIndex}", edgeCenter, WallSize(vertical, tuning.doorWidth, tuning), materials.lockedDoor);
             barrier.SetActive(false);
@@ -137,15 +140,64 @@ namespace Game
             return ax < bx || ax == bx && ay < by ? (ax, ay, bx, by) : (bx, by, ax, ay);
         }
 
-        private static GameObject Block(Transform parent, string name, Vector3 position, Vector3 size, Material material)
+        private static GameObject Block(Transform parent, string name, Vector3 position, Vector3 size, Material material, float tile = 0f)
         {
             var block = GameObject.CreatePrimitive(PrimitiveType.Cube);
             block.name = name;
             block.transform.SetParent(parent, false);
             block.transform.localPosition = position;
             block.transform.localScale = size;
-            block.GetComponent<Renderer>().sharedMaterial = material;
+            var renderer = block.GetComponent<Renderer>();
+            renderer.sharedMaterial = material;
+            if (tile > 0f) SetTiling(renderer, size, tile);
             return block;
         }
-    }
+    
+
+        private static readonly int BaseMapSt = Shader.PropertyToID("_BaseMap_ST");
+
+        /// <summary>
+        /// 테마 재질의 텍스처를 도형 크기에 맞게 되풀이(재질 하나를 같이 쓰므로 렌더러마다 속성 블록). 바닥은 위 면(x · z), 벽은 긴 면(길이 · 높이).
+        /// 정규맵 · 금속 맵도 URP Lit에서는 같은 _BaseMap_ST를 쓴다.
+        /// </summary>
+        private static void SetTiling(Renderer renderer, Vector3 size, float tile)
+        {
+            bool flat = size.y <= Mathf.Min(size.x, size.z);
+            Vector2 repeat = flat
+                ? new Vector2(size.x / tile, size.z / tile)
+                : new Vector2(Mathf.Max(size.x, size.z) / tile, size.y / tile);
+            var block = new MaterialPropertyBlock();
+            renderer.GetPropertyBlock(block);
+            block.SetVector(BaseMapSt, new Vector4(repeat.x, repeat.y, 0f, 0f));
+            renderer.SetPropertyBlock(block);
+        }
+
+        /// <summary>
+        /// 테마 장식을 정해 둔 자리에 세운다(충돌 상자 그대로 — NavMesh를 굽기 전에 불러야 적이 돌아간다).
+        /// 이름 Dressing_{방}_{순번}_{프리팹}. 세운 수를 돌려준다.
+        /// </summary>
+        public static int BuildDressing(FloorDressing dressing, FloorTheme theme, Transform parent)
+        {
+            var root = new GameObject("Dressing").transform;
+            root.SetParent(parent, false);
+            int count = 0;
+            for (int roomId = 0; roomId < dressing.RoomCount; roomId++)
+            {
+                var placements = dressing.For(roomId);
+                for (int i = 0; i < placements.Count; i++)
+                {
+                    DressingPlacement placement = placements[i];
+                    FloorTheme.Prop prop = theme.props[placement.Kind];
+                    if (prop.prefab == null) continue;
+                    GameObject instance = Object.Instantiate(prop.prefab, root);
+                    instance.name = $"Dressing_{roomId}_{i}_{prop.prefab.name}";
+                    instance.transform.localPosition = new Vector3(placement.X, 0f, placement.Z);
+                    instance.transform.localRotation = Quaternion.Euler(0f, placement.Yaw, 0f);
+                    instance.transform.localScale = Vector3.one * (prop.scale > 0f ? prop.scale : 1f);
+                    count++;
+                }
+            }
+            return count;
+        }
+}
 }

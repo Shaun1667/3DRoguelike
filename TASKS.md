@@ -1,6 +1,7 @@
 # TASKS.md
 
 ## 진행 요약 (2026-11-10 기준 — 새 세션은 여기부터 읽는다)
+**최신 (2026-11-26): 3-8 ⑤-2 도시 던전 안 모양 — 테마 데이터(`interiorTheme` · `FloorTheme`)로 무너진 대피소를 아스팔트 · 콘크리트 · 도시 소품 장식(시드로 배치)으로, 숲 던전 1은 해시까지 그대로 · 코드 호출 플레이 · EditMode 122개 통과, 커밋 안 함, 플레이 확인 대기. (3-8 ③ ~ ⑤는 2026-11-26 커밋 94fbc92)**
 **최신 (2026-11-25, 넷째): 3-8 ⑤ 도시 던전(무너진 대피소, 길 630 m) · 도시 길 위 무리 4곳 — 숲 던전 1 → 폐허 도시 → 도시 던전 → "폐허 도시 클리어" 결과 화면으로 판이 끝남. Setup World 2번 같은 결과 · 숲 나무 377그루 그대로 · 코드 호출 플레이 · EditMode 116개 통과, 커밋 안 함, 플레이 확인 대기.**
 **최신 (2026-11-25, 셋째): 3-8 ④-3 숲 던전 1을 깨면 결과 화면 없이 관문 1이 열려 폐허 도시로(지역 표로 일반화) · 던전 1 방에 멧돼지 · 두꺼비 섞음(앞 방 · 길 위는 그대로) — 코드 호출 플레이 · EditMode 114개 통과, 커밋 안 함, 플레이 확인 대기. 지금은 도시 던전이 없어 죽는 것 말고 판이 끝나지 않음.**
 **최신 (2026-11-25, 둘째): 월드를 줄임 — 숲은 1구간(시작 ~ 던전 1 ~ 관문 1)만, 관문 1 고개 뒤 바로 폐허 도시 약 330 m(길 합 약 716 m), 마을은 월드에서 뺌(`VillageTuning.placeInWorld` 끔). 숲 1구간 나무 377그루 · 던전 1 · 무리 5곳 · 시작점 그대로, Setup World 2번 같은 결과, EditMode 108개 통과, 커밋 안 함. 던전 1을 깨면 "숲 클리어"로 판 끝 — 도시로 넘어가는 흐름은 결정 대기.**
@@ -304,6 +305,14 @@
     - 테스트: 기대값 고침 `WorldTuning_MatchesBalance` · `WorldTuning_RegionsTable`, 새 `World_ForestThenCityDungeon_ClearsCity` · `ResultTitle_ByOutcomeAndRegion`. EditMode 116개 통과
     - 캡처: `Assets/Screenshots/city_dungeon_1_entrance.png` · `city_dungeon_1b_entrance_close.png` · `city_dungeon_2_gate2_end.png` · `city_dungeon_3_forest_cleared.png` · `city_dungeon_4_road_group.png` · `city_dungeon_5_near_entrance.png` · `city_dungeon_6_inside.png` · `city_dungeon_7_clear_result.png`
     - 남은 것: 던전 안 그림을 도시답게(지금은 숲과 같은 회색 층). 도시 적 종(지금 숲 4종). 대피소 뒤 빈 터 · 관문 2 뒤 700 ~ 716 m 빈 곳. 입구 글자 가까이서 넘침. 단계 3(E 50%)은 쓰는 던전 없음. 실제 키 입력 플레이 · 난이도
+  - ⑤-2 도시 던전 안 모양 (2026-11-26 사용자 "도시 던전 안을 도시답게 바꿔줘", "도시 진행해줘") — Setup Floor 2번 · 코드 호출 플레이 · 캡처 · EditMode 122개 통과, **플레이 확인 대기 · 커밋 안 함**
+    - 한 일: 던전마다 안 모양 테마를 데이터로 — `WorldTuning.dungeons[].interiorTheme`(FloorTheme 에셋, 비면 회색 층). 테마 `Data/FloorThemes/CityShelter.asset`(재질 · 텍스처 타일 · 앰비언트 · 안개 · 해 · 장식 표 · 비울 거리)을 도시 던전 줄에만 붙임. 장식 자리는 규칙 `RoomDressingPlanner`(새 난수 용도 `dressing`, 맵 · 적 · 보상 난수 그대로) — 벽 장식은 방 경계 3.2 m 띠, 엄폐물은 전투 · 보스 방만, 문 둘레 · 문 → 방 가운데 길 · 방 가운데 · 적 자리는 비움. `FloorRun`이 테마가 있을 때만 재질 · 장식(NavMesh 굽기 전) · 분위기를 바꾸고, `FloorGeometry`가 테마 재질 블록마다 텍스처를 크기에 맞춰 되풀이. 재질 · 테마는 `FloorThemeSetup`(메뉴 `Tools/Game/Setup Floor Themes`, Setup Floor가 부름). 새 에셋 없이 `Art/City/Ground` 텍스처 · `Prefabs/World/City` 소품만 씀
+    - 정한 것 (Claude, 확인 필요): 지하 주차장 대피소 — 바닥 아스팔트 8 m · 벽 잔해 콘크리트 6 m · 시작 잡초 틈 · 보스 빨간 아스팔트 · 보물 노란 잔해 콘크리트. 장식은 방벽 · 바리케이드 · 잔해 · 차(건물 3종은 방에 너무 커서 뺌), 칸마다 벽 4 ~ 6 · 엄폐물 1 ~ 3. 분위기 앰비언트 0.40 · 안개 14 ~ 70 m · 해 0.8. 수치는 BALANCE 8-1
+    - 확인: 컴파일 오류 0. Setup Floor 2번 같은 결과(Floor.unity fileID 빼고 · 재질 · 테마 해시). 숲 던전 1(시드 WKUT-MRCL · 9TNJ-W2Z5) 오브젝트 · 자리 · 재질 · 적 자리 · NavMesh · 조명이 바꾸기 전과 해시까지 같음. 도시 던전 배치 · 적 자리도 바꾸기 전과 같음(바뀐 것은 그림뿐). 같은 시드 두 번 같은 장식. 시드 3개(장식 101 · 92 · 78개): 모든 방 가운데 · 적 자리 90곳 NavMesh 위 · 시작 방에서 경로 완성, 문 둘레에 장식 없음. 코드 호출 플레이(WKUT-MRCL): 월드 → 대피소 입장 → 방 8개 → 보스 방 → "폐허 도시 클리어"
+    - 테스트: 새 `FloorThemeTests` 6개(같은 시드 같은 장식 · 문/적 자리/가운데/길 비움 · 난수 용도 따로 · 설정 검사 · 도시 테마 값 · 숲 층 다이제스트 그대로). EditMode 122개 통과
+    - 캡처: `Assets/Screenshots/city_interior_0_forest_compare_start.png`(같은 시드 숲 던전 1) · `city_interior_4_room_fight.png` · `city_interior_5_boss_room.png` · `city_interior_6_clear_result.png` · `city_interior_7_big_room_eye.png`
+    - 확인 방법: `Tools/Game/Setup Floor` → `World` Play → F1 "폐허 도시 시작으로 이동" → 도시 던전 입구로 들어가기 → 아스팔트 바닥 · 콘크리트 벽 · 벽 앞 방벽 · 바리케이드 · 잔해 · 차 · 방 안 엄폐물, 문 앞과 문 → 방 가운데 길은 비어 있고, 보스 방은 빨간 아스팔트면 정상. 숲 던전 1은 예전 회색 층 그대로
+    - 남은 것: 실제 키 입력 플레이 · 엄폐물 손맛, 실시간 프레임(장식 하나 약 1만 삼각형 · 층당 약 80 ~ 100개), 천장 없음(하늘이 보임), 빌드에서 장식 정적 배칭 안 될 수 있음. 도시 적 종(지금 숲 4종)은 그대로
 
 ## Phase G. 그래픽 (한 판이 돈 뒤)
 - [ ] 숲 방 · 적 VARCO 교체

@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a41b0e76ea592f74c98f97845d815765, type: 3}
+  m_Name: CityShelter
+  m_EditorClassIdentifier: Game.Runtime::Game.FloorTheme
+  displayName: "\uBB34\uB108\uC9C4 \uB300\uD53C\uC18C"
+  floor: {fileID: 2100000, guid: 550bf69156c3dde4a92d7cfbfdb44612, type: 2}
+  startFloor: {fileID: 2100000, guid: 84e3f853a3285b84281159ee8f548379, type: 2}
+  bossFloor: {fileID: 2100000, guid: 3ad8a90888a53564fa5c5856561289db, type: 2}
+  treasureFloor: {fileID: 2100000, guid: 77ae00a1765727f46b6df9b9d382806d, type: 2}
+  wall: {fileID: 2100000, guid: 9ec1abac9c7210141806483c2df51aba, type: 2}
+  floorTile: 8
+  wallTile: 6
+  ambientColor: {r: 0.4, g: 0.4, b: 0.42, a: 1}
+  fog: 1
+  fogColor: {r: 0.27, g: 0.26, b: 0.25, a: 1}
+  fogStart: 14
+  fogEnd: 70
+  sunColor: {r: 1, g: 0.92, b: 0.82, a: 1}
+  sunIntensity: 0.8
+  props:
+  - prefab: {fileID: 3174113033791323945, guid: 3aa34ab990944a144b90cc52f4b10472, type: 3}
+    weight: 30
+    place: 0
+    scale: 1
+    yawOffset: 0
+    yawJitter: 6
+  - prefab: {fileID: 5798530349338286046, guid: 0d68a3683e7f0eb42bf7335cf3892ce7, type: 3}
+    weight: 25
+    place: 0
+    scale: 0.9
+    yawOffset: 0
+    yawJitter: 8
+  - prefab: {fileID: 7039285895336959143, guid: 5c91f7cadbcda1c4788b09173c3e3566, type: 3}
+    weight: 25
+    place: 0
+    scale: 0.6
+    yawOffset: 0
+    yawJitter: 8
+  - prefab: {fileID: 7096760173687334168, guid: 9cedd210fcfe96a41aba082a5cf7fbda, type: 3}
+    weight: 12
+    place: 0
+    scale: 1
+    yawOffset: 90
+    yawJitter: 4
+  - prefab: {fileID: 3174113033791323945, guid: 3aa34ab990944a144b90cc52f4b10472, type: 3}
+    weight: 40
+    place: 1
+    scale: 1
+    yawOffset: 0
+    yawJitter: 180
+  - prefab: {fileID: 7039285895336959143, guid: 5c91f7cadbcda1c4788b09173c3e3566, type: 3}
+    weight: 30
+    place: 1
+    scale: 0.75
+    yawOffset: 0
+    yawJitter: 180
+  - prefab: {fileID: 7096760173687334168, guid: 9cedd210fcfe96a41aba082a5cf7fbda, type: 3}
+    weight: 15
+    place: 1
+    scale: 1
+    yawOffset: 0
+    yawJitter: 180
+  - prefab: {fileID: 5798530349338286046, guid: 0d68a3683e7f0eb42bf7335cf3892ce7, type: 3}
+    weight: 15
+    place: 1
+    scale: 0.9
+    yawOffset: 0
+    yawJitter: 180
+  wallPropsPerCell: {x: 4, y: 6}
+  openPropsPerCell: {x: 1, y: 3}
+  wallBandDepth: 3.2
+  doorClearance: 4
+  spawnClearance: 2
+  centerClearance: 4
+  laneHalfWidth: 2.5
+  propGap: 0.4
+  openWallMargin: 5
