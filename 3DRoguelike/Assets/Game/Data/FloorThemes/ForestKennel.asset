@@ -1,0 +1,117 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a41b0e76ea592f74c98f97845d815765, type: 3}
+  m_Name: ForestKennel
+  m_EditorClassIdentifier: Game.Runtime::Game.FloorTheme
+  displayName: "\uBB34\uB108\uC9C4 \uC0AC\uC721\uC7A5"
+  floor: {fileID: 2100000, guid: bbbbf098fed65ad45a3987b1cbc6d6ab, type: 2}
+  startFloor: {fileID: 2100000, guid: f28ffb4dcd8da1841a5ecdb62665baea, type: 2}
+  bossFloor: {fileID: 2100000, guid: f97bddea1e2a2b647b2a336aaaa85481, type: 2}
+  treasureFloor: {fileID: 2100000, guid: 00ab83658d15b714abae16ddb4486534, type: 2}
+  wall: {fileID: 2100000, guid: 9c7116a39c5754b43967110007c727f8, type: 2}
+  floorTile: 6
+  wallTile: 6
+  ambientColor: {r: 0.5, g: 0.54, b: 0.48, a: 1}
+  fog: 1
+  fogColor: {r: 0.42, g: 0.48, b: 0.42, a: 1}
+  fogStart: 20
+  fogEnd: 90
+  sunColor: {r: 1, g: 0.95, b: 0.84, a: 1}
+  sunIntensity: 1.05
+  props:
+  - prefab: {fileID: 5660632673647864900, guid: b86c5dfb7e6134247a4c95cecc664357, type: 3}
+    weight: 14
+    place: 0
+    scale: 1
+    yawOffset: 0
+    yawJitter: 180
+  - prefab: {fileID: 7541349155107565142, guid: 4e50e8043c956b1498fc9e05dbcabf7a, type: 3}
+    weight: 10
+    place: 0
+    scale: 1
+    yawOffset: 0
+    yawJitter: 180
+  - prefab: {fileID: 7695116014731766365, guid: bf1bb007f048f0143b909a06d4be0fa5, type: 3}
+    weight: 8
+    place: 0
+    scale: 1
+    yawOffset: 0
+    yawJitter: 180
+  - prefab: {fileID: 5995047264595671531, guid: f17e26d2be6d8eb4f82888772aed9742, type: 3}
+    weight: 14
+    place: 0
+    scale: 1
+    yawOffset: 0
+    yawJitter: 6
+  - prefab: {fileID: 3562931994102877953, guid: 6c7a8e62269988b488935cdb0f65f7a2, type: 3}
+    weight: 16
+    place: 0
+    scale: 1
+    yawOffset: 0
+    yawJitter: 4
+  - prefab: {fileID: 128968764179352357, guid: 9f63d36a0a0248d4fa1e8b1d235a7ccc, type: 3}
+    weight: 10
+    place: 0
+    scale: 1
+    yawOffset: 0
+    yawJitter: 8
+  - prefab: {fileID: 7120192362692563582, guid: 35f791be78ddbe8418fd85f34891f454, type: 3}
+    weight: 10
+    place: 0
+    scale: 1
+    yawOffset: 0
+    yawJitter: 20
+  - prefab: {fileID: 5798530349338286046, guid: 0d68a3683e7f0eb42bf7335cf3892ce7, type: 3}
+    weight: 8
+    place: 0
+    scale: 0.9
+    yawOffset: 0
+    yawJitter: 8
+  - prefab: {fileID: 7039285895336959143, guid: 5c91f7cadbcda1c4788b09173c3e3566, type: 3}
+    weight: 6
+    place: 0
+    scale: 0.6
+    yawOffset: 0
+    yawJitter: 8
+  - prefab: {fileID: 7120192362692563582, guid: 35f791be78ddbe8418fd85f34891f454, type: 3}
+    weight: 30
+    place: 1
+    scale: 1
+    yawOffset: 0
+    yawJitter: 180
+  - prefab: {fileID: 128968764179352357, guid: 9f63d36a0a0248d4fa1e8b1d235a7ccc, type: 3}
+    weight: 25
+    place: 1
+    scale: 1
+    yawOffset: 0
+    yawJitter: 180
+  - prefab: {fileID: 1801033568567444014, guid: 57eb0d2739312eb4e8309ca0a7233e40, type: 3}
+    weight: 15
+    place: 1
+    scale: 1
+    yawOffset: 0
+    yawJitter: 180
+  - prefab: {fileID: 5995047264595671531, guid: f17e26d2be6d8eb4f82888772aed9742, type: 3}
+    weight: 15
+    place: 1
+    scale: 1
+    yawOffset: 0
+    yawJitter: 180
+  wallPropsPerCell: {x: 4, y: 6}
+  openPropsPerCell: {x: 1, y: 3}
+  wallBandDepth: 3.2
+  doorClearance: 4
+  spawnClearance: 2
+  centerClearance: 4
+  laneHalfWidth: 2.5
+  propGap: 0.4
+  openWallMargin: 5

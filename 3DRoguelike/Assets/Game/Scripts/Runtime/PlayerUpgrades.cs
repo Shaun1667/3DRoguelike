@@ -21,12 +21,21 @@ namespace Game
         public float Bonus(UpgradeStat stat) => sheet.Bonus(stat);
         public int ScaleInt(UpgradeStat stat, int baseValue) => sheet.ScaleInt(stat, baseValue);
 
+        /// <summary>그 도구(권총 등)를 가졌는가. 판이 없는 시험 방에서는 모두 가진 것으로 본다(조작 시험용).</summary>
+        public bool Has(RewardUnlock unlock) => !inRun || sheet.Has(unlock);
+
+        /// <summary>판의 강화 합계를 쓰는 중인가(층 · 월드). false면 시험 방.</summary>
+        public bool InRun => inRun;
+
+        private bool inRun;
+
         /// <summary>이 판의 강화 합계를 쓴다.</summary>
         public void Use(UpgradeSheet runSheet)
         {
             if (runSheet == null) throw new ArgumentNullException(nameof(runSheet));
             sheet.Changed -= OnSheetChanged;
             sheet = runSheet;
+            inRun = true;
             sheet.Changed += OnSheetChanged;
             Changed?.Invoke();
         }

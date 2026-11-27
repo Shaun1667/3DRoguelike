@@ -2,71 +2,66 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Game.Rules;
+using Unity.Cinemachine;
 using UnityEngine;
 
 namespace Game
 {
     /// <summary>
-    /// 던전 보스(지금은 숲 던전 1의 까치). 패턴은 예전 까치 보스전(main)을 따랐다:
-    /// "대기 → 패턴 하나" 되풀이, 패턴은 돌진 · 깃털 날리기 · 급강하 내려찍기, 같은 패턴은 연달아 안 나옴(<see cref="BossPatternPlanner"/>, 난수 용도 boss).
-    /// 체력이 비율 이하가 되면 강화 — 대기 짧아짐 · 돌진 빨라짐 · 깃털 많아짐(두 번 연사) · 착지 빈틈 짧아짐.
+    /// 던전 보스 공통(보스 종마다 이것을 이어받은 클래스 하나 — <see cref="MagpieBoss"/> 까치 · <see cref="BearBoss"/> 반달가슴곰).
+    /// "등장 → 대기 → 패턴 하나" 되풀이. 패턴 순서는 <see cref="BossPatternPlanner"/>(난수 용도 boss)가 수치 에셋의 패턴 목록(<see cref="BossTuning.Patterns"/>)에서 고르고,
+    /// 패턴 하나를 어떻게 하는지는 종 클래스의 <see cref="RunPattern"/>가 정한다. 체력이 비율 이하가 되면 강화(세기는 종 클래스가 <see cref="IsEnraged"/>로).
     /// 모든 공격은 예고(바닥 표시 · 준비 동작)가 먼저 나오고, 예고가 나온 뒤에는 목표가 바뀌지 않는다 — 옆으로 비키거나 구르기 무적으로 넘긴다.
-    /// 날아다니는 보스라 NavMesh를 쓰지 않고 방 안(<see cref="Begin"/>의 사각 경기장)에서 스스로 움직인다. 수치는 <see cref="BossTuning"/>.
-    /// 모양은 <c>Body</c> 아래(모델이 없으면 임시 도형). 애니메이터가 있으면 예전 컨트롤러의 신호(ChargeReady · Charge · Dive · Land · Die)를 보낸다.
+    /// NavMesh를 쓰지 않고 방 안(<see cref="Begin"/>의 사각 경기장)에서 스스로 움직인다. 모양은 <c>Body</c> 아래(모델이 없으면 임시 도형).
     /// </summary>
-    public sealed class Boss : MonoBehaviour
+    public abstract class Boss : MonoBehaviour
     {
-        private static readonly int ChargeReadyId = Animator.StringToHash("ChargeReady");
-        private static readonly int ChargeId = Animator.StringToHash("Charge");
-        private static readonly int DiveId = Animator.StringToHash("Dive");
-        private static readonly int LandId = Animator.StringToHash("Land");
-        private static readonly int DieId = Animator.StringToHash("Die");
+        /// <summary>보스가 화면을 흔드는 채널(비트). 게임 카메라(PlayerCamera)만 듣는다 — 등장 연출 카메라(채널 1)와 따로.</summary>
+        public const int ShakeChannel = 2;
+
         private static readonly int IdleStateId = Animator.StringToHash("Idle");
 
-
-        [SerializeField] private BossTuning tuning;
         [SerializeField] private Health health;
         [SerializeField] private HitFlash flash;
         [Tooltip("모양(모델 자리). 준비 동작의 떨림 · 부풀기는 이것만 움직인다")]
         [SerializeField] private GameObject body;
-        [Tooltip("돌진 길 예고(1 × 1 상자, 길이 · 폭은 실행 때 맞춤)")]
-        [SerializeField] private GameObject laneWarning;
-        [Tooltip("내려찍기 범위 예고(원)")]
-        [SerializeField] private GameObject slamWarning;
-        [Tooltip("몸통 애니메이터(없으면 동작 신호를 건너뜀)")]
+        [Tooltip("몸 애니메이터(없으면 동작을 건너뜀)")]
         [SerializeField] private Animator animator;
-        [Tooltip("날개 애니메이터(몸통과 같은 신호, 없으면 건너뜀)")]
-        [SerializeField] private Animator wingAnimator;
+        [Tooltip("화면 흔들기(게임 카메라가 듣는 채널). 없으면 흔들지 않는다")]
+        [SerializeField] private CinemachineImpulseSource impulse;
 
         private readonly List<BossPattern> history = new List<BossPattern>();
-        private readonly List<FeatherProjectile> feathers = new List<FeatherProjectile>();
         private Collider bodyCollider;
-        private Health player;
-        private Vector3 arenaCenter;
-        private Vector2 arenaHalf;
         private BossPatternPlanner planner;
         private Coroutine fight;
-        private float groundY;
-        private Vector3 bodyRestPosition;
-        private Vector3 bodyRestScale;
+        private bool enrageShown;
         private bool dead;
 
-        public BossTuning Tuning => tuning;
+        /// <summary>플레이어(싸움을 시작한 뒤).</summary>
+        protected Health Player { get; private set; }
+        protected Vector3 ArenaCenter { get; private set; }
+        protected Vector2 ArenaHalf { get; private set; }
+        protected float GroundY { get; set; }
+        protected Vector3 BodyRestPosition { get; private set; }
+        protected Vector3 BodyRestScale { get; private set; }
+        protected GameObject Body => body;
+        protected Animator Animator => animator;
+
+        /// <summary>이 보스의 수치(종 클래스가 자기 수치 에셋을 돌려준다).</summary>
+        public abstract BossTuning Tuning { get; }
         public Health Health => health;
         public bool IsDead => dead;
         public bool IsEnraged => planner != null && planner.Enraged;
         /// <summary>지금 하는 패턴. 대기 중이면 null.</summary>
         public BossPattern? CurrentPattern { get; private set; }
-        /// <summary>지금 하는 일(디버그 · 확인용): 대기 · 돌진 예고 · 돌진 · 깃털 준비 · 깃털 · 떠오름 · 추적 · 고정 · 낙하 · 착지.</summary>
-        public string Step { get; private set; } = "등장";
+        /// <summary>지금 하는 일(디버그 · 확인용): 등장 · 대기 · 패턴의 단계 이름 · 빈틈 · 쓰러짐.</summary>
+        public string Step { get; protected set; } = "등장";
         /// <summary>지금까지 시작한 패턴(순서대로).</summary>
         public IReadOnlyList<BossPattern> History => history;
-        public GameObject LaneWarning => laneWarning;
-        public GameObject SlamWarning => slamWarning;
-        public string DisplayName => tuning.displayName;
+        public string DisplayName => Tuning.displayName;
         public HitFlash Flash => flash;
-        /// <summary>머리 뼈(등장 연출 카메라가 본다). 사람 뼈대가 아니면 몸.</summary>
-        public Transform Head
+        /// <summary>머리 뼈(등장 연출 카메라가 본다). 못 찾으면 몸.</summary>
+        public virtual Transform Head
         {
             get
             {
@@ -78,6 +73,8 @@ namespace Game
         public bool HasBegun => planner != null;
         /// <summary>패턴이 돌고 있는지. 등장 연출 동안 · 멈춰 둔 동안(<see cref="Hold"/>)은 false.</summary>
         public bool IsFighting => fight != null;
+        /// <summary>화면을 흔든 횟수(확인용).</summary>
+        public int ShakeCount { get; private set; }
 
 
         /// <summary>강화된 순간(한 번).</summary>
@@ -85,18 +82,14 @@ namespace Game
         /// <summary>내려찍기가 땅에 닿은 순간. 값은 플레이어가 맞았는지.</summary>
         public event Action<bool> Slammed;
 
-        private void Awake()
+        protected virtual void Awake()
         {
             bodyCollider = GetComponent<Collider>();
-            health.Configure(tuning.maxHealth, 0f);
-            flash.Configure(tuning.hitFlashTime);
-            bodyRestPosition = body.transform.localPosition;
-            bodyRestScale = body.transform.localScale;
-            groundY = transform.position.y;
-            // 예고 표시는 보스를 따라 움직이지 않게 방(부모) 밑으로 옮긴다
-            laneWarning.transform.SetParent(transform.parent, true);
-            slamWarning.transform.SetParent(transform.parent, true);
-            HideWarnings();
+            health.Configure(Tuning.maxHealth, 0f);
+            flash.Configure(Tuning.hitFlashTime);
+            BodyRestPosition = body.transform.localPosition;
+            BodyRestScale = body.transform.localScale;
+            GroundY = transform.position.y;
         }
 
         private void OnEnable()
@@ -111,24 +104,18 @@ namespace Game
             health.Died -= OnDied;
         }
 
-        private void OnDestroy()
-        {
-            if (laneWarning != null) Destroy(laneWarning);
-            if (slamWarning != null) Destroy(slamWarning);
-        }
-
         /// <summary>
-        /// 싸움을 시작한다. arenaHalf = 보스 몸 가운데가 다닐 수 있는 사각형 반폭(방 가운데 기준, 벽 · 몸통 반지름을 뺀 값).
+        /// 싸움을 시작한다. half = 보스 몸 가운데가 다닐 수 있는 사각형 반폭(방 가운데 기준, 벽 · 몸통 반지름을 뺀 값).
         /// random은 보스 패턴 난수(`RunRandom.Create(RandomPurpose.Boss, 던전)`).
         /// </summary>
-public void Begin(Health target, Vector3 center, Vector2 half, IRandom random)
+        public void Begin(Health target, Vector3 center, Vector2 half, IRandom random)
         {
             if (planner != null || dead) return;
-            player = target;
-            arenaCenter = new Vector3(center.x, transform.position.y, center.z);
-            arenaHalf = new Vector2(Mathf.Max(0f, half.x), Mathf.Max(0f, half.y));
-            groundY = transform.position.y;
-            planner = new BossPatternPlanner(tuning.ToPatternSettings(), random);
+            Player = target;
+            ArenaCenter = new Vector3(center.x, transform.position.y, center.z);
+            ArenaHalf = new Vector2(Mathf.Max(0f, half.x), Mathf.Max(0f, half.y));
+            GroundY = transform.position.y;
+            planner = new BossPatternPlanner(Tuning.ToPatternSettings(), Tuning.Patterns, random);
             // 몸은 플레이어를 밀지 않는다(돌진 · 착지에 끌려가지 않게) — 몸통 피해는 거리로 본다. 근접 · 총 판정은 그대로 맞는다
             var playerBody = target != null ? target.GetComponent<CharacterController>() : null;
             if (playerBody != null && bodyCollider != null) Physics.IgnoreCollision(bodyCollider, playerBody, true);
@@ -136,8 +123,8 @@ public void Begin(Health target, Vector3 center, Vector2 half, IRandom random)
         }
 
         /// <summary>
-        /// 하던 패턴을 그만두고 멈춰 선다(등장 연출 다시 보기 — 디버그). 예고 표시 · 날아가던 깃털을 거두고 바닥으로 내려온다.
-        /// 패턴 순서(난수)는 그대로 이어진다. <see cref="Release"/>로 다시 움직인다.
+        /// 하던 패턴을 그만두고 멈춰 선다(등장 다시 보기 — 디버그). 예고 표시 · 투사체를 거두고 바닥으로 내려온다.
+        /// 패턴 순서(난수)는 그대로 이어진다. <see cref="Release"/>로 다시 움직인다(등장 동작부터).
         /// </summary>
         public void Hold()
         {
@@ -146,35 +133,32 @@ public void Begin(Health target, Vector3 center, Vector2 half, IRandom random)
             fight = null;
             CurrentPattern = null;
             Step = "등장";
-            HideWarnings();
-            foreach (FeatherProjectile feather in feathers) if (feather != null) Destroy(feather.gameObject);
-            feathers.Clear();
-            body.transform.localScale = bodyRestScale;
-            body.transform.localPosition = bodyRestPosition;
-            transform.position = new Vector3(transform.position.x, groundY, transform.position.z);
+            OnStopped();
+            body.transform.localScale = BodyRestScale;
+            body.transform.localPosition = BodyRestPosition;
+            transform.position = new Vector3(transform.position.x, GroundY, transform.position.z);
         }
 
-        /// <summary><see cref="Hold"/>로 멈춘 싸움을 잇는다(첫 대기부터). 아직 시작하지 않았으면 아무 일도 없다.</summary>
+        /// <summary><see cref="Hold"/>로 멈춘 싸움을 잇는다(등장 동작 · 첫 대기부터). 아직 시작하지 않았으면 아무 일도 없다.</summary>
         public void Release()
         {
             if (dead || planner == null || fight != null) return;
             fight = StartCoroutine(Fight());
         }
 
-        /// <summary>동작 신호를 보낸다(등장 연출이 쓴다: ChargeReady · Charge · Stomp · Land). 그 신호가 없는 애니메이터는 건너뛴다.</summary>
+        /// <summary>동작 신호(트리거)를 보낸다(등장 연출이 쓴다). 그 신호가 없는 애니메이터는 건너뛴다.</summary>
         public void PlaySignal(string trigger)
         {
             Signal(Animator.StringToHash(trigger));
         }
 
         /// <summary>걸려 있던 신호를 지우고 대기 동작으로 돌린다(등장 연출 앞뒤).</summary>
-        public void ResetAnimation()
+        public virtual void ResetAnimation()
         {
             ResetAnimator(animator);
-            ResetAnimator(wingAnimator);
         }
 
-        private static void ResetAnimator(Animator target)
+        protected static void ResetAnimator(Animator target)
         {
             if (target == null || !target.isActiveAndEnabled || target.runtimeAnimatorController == null) return;
             foreach (AnimatorControllerParameter parameter in target.parameters)
@@ -184,206 +168,81 @@ public void Begin(Health target, Vector3 center, Vector2 half, IRandom random)
             if (target.HasState(0, IdleStateId)) target.Play(IdleStateId, 0, 0f);
         }
 
+        // ---------- 종마다 ----------
+
+        /// <summary>패턴 하나(<see cref="BossTuning.Patterns"/> 중 하나). 끝날 때 보스는 땅 위에 서 있어야 한다.</summary>
+        protected abstract IEnumerator RunPattern(BossPattern pattern);
+
+        /// <summary>싸움을 시작할 때의 짧은 등장 동작(예: 곰의 포효). 없으면 null.</summary>
+        protected virtual IEnumerator Entrance() => null;
+
+        /// <summary>강화된 뒤 처음 대기 전에 한 번(예: 곰의 포효). 없으면 null.</summary>
+        protected virtual IEnumerator EnragePause() => null;
+
+        /// <summary>대기 한 프레임: 기본은 플레이어 쪽으로 돌고 몸통 피해.</summary>
+        protected virtual void IdleTick()
+        {
+            FacePlayer(Tuning.turnSpeed);
+            Contact(Tuning.contactDamage, Tuning.bodyRadius, Tuning.contactName);
+        }
+
+        /// <summary>패턴을 멈춘 때(<see cref="Hold"/> · 죽음): 예고 표시 · 투사체를 거둔다.</summary>
+        protected abstract void OnStopped();
+
+        /// <summary>맞았을 때(살아 있을 때만).</summary>
+        protected virtual void OnHurt() { }
+
+        /// <summary>쓰러지기 동작. 끝나면 몸을 치운다(<see cref="BossTuning.corpseTime"/>).</summary>
+        protected abstract IEnumerator FallDown();
+
+        /// <summary>몸통 피해를 주는 높이(플레이어 발이 보스 발밑보다 이만큼 넘게 위면 안 맞음).</summary>
+        protected abstract float ContactHeight { get; }
+
         // ---------- 흐름 ----------
 
         private IEnumerator Fight()
         {
             Step = "등장";
-            yield return Idle(tuning.fightDelay);
+            IEnumerator entrance = Entrance();
+            if (entrance != null) yield return entrance;
+            yield return Idle(Tuning.fightDelay);
             while (true)
             {
+                if (IsEnraged && !enrageShown)
+                {
+                    enrageShown = true;
+                    IEnumerator pause = EnragePause();
+                    if (pause != null) yield return pause;
+                }
                 BossStep next = planner.Next();
                 Step = "대기";
                 yield return Idle(next.IdleSeconds);
                 CurrentPattern = next.Pattern;
                 history.Add(next.Pattern);
-                switch (next.Pattern)
-                {
-                    case BossPattern.Charge: yield return Charge(); break;
-                    case BossPattern.FeatherVolley: yield return FeatherVolley(); break;
-                    default: yield return Slam(); break;
-                }
+                yield return RunPattern(next.Pattern);
                 CurrentPattern = null;
             }
         }
 
-        private IEnumerator Idle(float duration)
+        protected IEnumerator Idle(float duration)
         {
             for (float t = 0f; t < duration; t += Time.deltaTime)
             {
-                FacePlayer(tuning.turnSpeed);
-                Contact(tuning.contactDamage, tuning.bodyRadius, tuning.contactName);
+                IdleTick();
                 yield return null;
             }
-        }
-
-        // ---------- 패턴 1: 돌진 ----------
-
-        private IEnumerator Charge()
-        {
-            Vector3 start = Flat(transform.position);
-            Vector3 direction = DirectionToPlayer();
-            float length = ChargeLength(start, direction);
-            if (length < tuning.bodyRadius * 2f)
-            {
-                // 플레이어가 보스와 벽 사이에 끼어 갈 길이 없으면 방 가운데 쪽으로
-                Vector3 toCenter = Flat(arenaCenter - start);
-                if (toCenter.sqrMagnitude > 0.01f)
-                {
-                    direction = toCenter.normalized;
-                    length = ChargeLength(start, direction);
-                }
-            }
-            Vector3 end = start + direction * length;
-
-            // 예고: 돌진 길을 바닥에 길게 표시 — 이 뒤로 방향은 바뀌지 않는다
-            Step = "돌진 예고";
-            transform.rotation = Quaternion.LookRotation(direction);
-            laneWarning.transform.SetPositionAndRotation(
-                new Vector3((start.x + end.x) * 0.5f, groundY + 0.02f, (start.z + end.z) * 0.5f), Quaternion.LookRotation(direction));
-            laneWarning.transform.localScale = new Vector3(tuning.chargeLaneWidth, laneWarning.transform.localScale.y, Mathf.Max(0.1f, length + tuning.bodyRadius));
-            laneWarning.SetActive(true);
-            Signal(ChargeReadyId);
-            yield return Hold(tuning.chargeWindup, 0.06f);
-            laneWarning.SetActive(false);
-
-            Step = "돌진";
-            Signal(ChargeId);
-            float speed = tuning.chargeSpeed * (IsEnraged ? tuning.enragedChargeSpeedMultiplier : 1f);
-            bool hit = false;
-            while (Flat(end - transform.position).magnitude > 0.01f)
-            {
-                Vector3 next = Vector3.MoveTowards(Flat(transform.position), end, speed * Time.deltaTime);
-                transform.position = new Vector3(next.x, groundY, next.z);
-                if (!hit) hit = Contact(tuning.chargeDamage, tuning.bodyRadius * 1.1f, tuning.chargeName);
-                yield return null;
-            }
-            Signal(LandId);
-            Step = "빈틈";
-            yield return Idle(tuning.chargeRecover);
-        }
-
-        private float ChargeLength(Vector3 start, Vector3 direction)
-        {
-            return BossShapes.DistanceToEdge(start.x - arenaCenter.x, start.z - arenaCenter.z, direction.x, direction.z,
-                arenaHalf.x, arenaHalf.y, tuning.chargeDistance);
-        }
-
-        // ---------- 패턴 2: 깃털 날리기 ----------
-
-        private IEnumerator FeatherVolley()
-        {
-            Step = "깃털 준비";
-            for (float t = 0f; t < tuning.featherWindup; t += Time.deltaTime)
-            {
-                FacePlayer(tuning.turnSpeed * 2f);
-                body.transform.localScale = bodyRestScale * (1f + 0.06f * Mathf.Sin(t / Mathf.Max(0.01f, tuning.featherWindup) * Mathf.PI));
-                yield return null;
-            }
-            body.transform.localScale = bodyRestScale;
-
-            Step = "깃털";
-            int volleys = IsEnraged ? tuning.enragedVolleys : tuning.volleys;
-            int count = IsEnraged ? tuning.enragedFeatherCount : tuning.featherCount;
-            for (int v = 0; v < volleys; v++)
-            {
-                FireFan(count, v % 2 == 1);
-                yield return Idle(tuning.volleyInterval);
-            }
-            Step = "빈틈";
-            yield return Idle(tuning.featherRecover);
-        }
-
-        private void FireFan(int count, bool offsetHalf)
-        {
-            if (tuning.featherPrefab == null || player == null) return;
-            feathers.RemoveAll(feather => feather == null); // 맞거나 수명이 다한 깃털
-            Vector3 spawn = transform.position + Vector3.up * tuning.featherSpawnHeight + DirectionToPlayer() * tuning.bodyRadius;
-            Vector3 aim = player.transform.position + Vector3.up * tuning.playerCenterHeight - spawn;
-            if (aim.sqrMagnitude < 0.0001f) aim = transform.forward;
-            aim.Normalize();
-            foreach (float angle in BossShapes.FanAngles(count, tuning.featherSpread, offsetHalf))
-            {
-                Vector3 direction = Quaternion.AngleAxis(angle, Vector3.up) * aim;
-                FeatherProjectile feather = Instantiate(tuning.featherPrefab, spawn, Quaternion.LookRotation(direction), transform.parent);
-                feather.Launch(player, tuning);
-                feathers.Add(feather);
-            }
-        }
-
-        // ---------- 패턴 3: 급강하 내려찍기 ----------
-
-        private IEnumerator Slam()
-        {
-            float airY = groundY + tuning.slamHeight;
-            Vector3 from = transform.position;
-
-            Step = "떠오름";
-            for (float t = 0f; t < tuning.slamRiseTime; t += Time.deltaTime)
-            {
-                float k = t / tuning.slamRiseTime;
-                transform.position = new Vector3(from.x, Mathf.Lerp(groundY, airY, k * (2f - k)), from.z);
-                yield return null;
-            }
-
-            // 공중에서 플레이어 위를 따라다니고, 바닥 예고 원이 밑을 따라온다
-            Step = "추적";
-            slamWarning.transform.localScale = new Vector3(tuning.slamRadius * 2f, slamWarning.transform.localScale.y, tuning.slamRadius * 2f);
-            MoveSlamWarning();
-            slamWarning.SetActive(true);
-            for (float t = 0f; t < tuning.slamTrackTime; t += Time.deltaTime)
-            {
-                Vector3 target = player != null ? ClampToArena(Flat(player.transform.position)) : Flat(transform.position);
-                Vector3 next = Vector3.MoveTowards(Flat(transform.position), target, tuning.slamTrackSpeed * Time.deltaTime);
-                transform.position = new Vector3(next.x, airY, next.z);
-                MoveSlamWarning();
-                yield return null;
-            }
-
-            // 낙하 지점 고정 — 예고 원이 멈춘 이 시간이 피할 시간
-            Step = "고정";
-            Signal(DiveId);
-            yield return Hold(tuning.slamLockTime, 0.1f);
-
-            Step = "낙하";
-            Vector3 top = transform.position;
-            for (float t = 0f; t < tuning.slamFallTime; t += Time.deltaTime)
-            {
-                float k = t / tuning.slamFallTime;
-                transform.position = new Vector3(top.x, Mathf.Lerp(airY, groundY, k * k), top.z);
-                yield return null;
-            }
-            transform.position = new Vector3(top.x, groundY, top.z);
-            slamWarning.SetActive(false);
-
-            // 원 안 + 땅에 붙어 있으면 맞는다(점프로 높이 떠 있거나 구르기 무적이면 피함)
-            bool hit = false;
-            if (player != null && !player.IsDead)
-            {
-                Vector3 p = player.transform.position;
-                bool inside = Flat(p - transform.position).magnitude <= tuning.slamRadius;
-                bool grounded = p.y <= groundY + tuning.slamJumpClearance;
-                if (inside && grounded) hit = Damage(tuning.slamDamage, tuning.slamName);
-            }
-            Slammed?.Invoke(hit);
-            Signal(LandId);
-            Step = "착지";
-            yield return Idle(IsEnraged ? tuning.enragedSlamRecover : tuning.slamRecover);
-        }
-
-        private void MoveSlamWarning()
-        {
-            slamWarning.transform.position = new Vector3(transform.position.x, groundY + 0.02f, transform.position.z);
         }
 
         // ---------- 죽음 · 피해 ----------
 
         private void OnDamaged(int amount)
         {
-            if (dead || planner == null) return;
+            if (dead) return;
+            OnHurt();
+            if (planner == null) return;
             if (planner.UpdateHealth(health.Current, health.Max))
             {
-                Debug.Log($"[Boss] {tuning.displayName} 강화({tuning.enragedLabel}) — 체력 {health.Current}/{health.Max}");
+                Debug.Log($"[Boss] {Tuning.displayName} 강화({Tuning.enragedLabel}) — 체력 {health.Current}/{health.Max}");
                 Enraged?.Invoke();
             }
         }
@@ -395,103 +254,93 @@ public void Begin(Health target, Vector3 center, Vector2 half, IRandom random)
             fight = null;
             CurrentPattern = null;
             Step = "쓰러짐";
-            HideWarnings();
-            // 날아가는 깃털도 거둔다(방을 깬 뒤 맞지 않게)
-            foreach (FeatherProjectile feather in feathers) if (feather != null) Destroy(feather.gameObject);
-            feathers.Clear();
-            body.transform.localScale = bodyRestScale;
-            body.transform.localPosition = bodyRestPosition;
+            OnStopped();
+            body.transform.localScale = BodyRestScale;
+            body.transform.localPosition = BodyRestPosition;
             if (bodyCollider != null) bodyCollider.enabled = false;
             StartCoroutine(FallDown());
         }
 
-        /// <summary>쓰러지기: 쓰러지는 동작이 있으면 그것, 없으면 옆으로 기운다. 공중에서 죽으면 바닥으로 내려앉는다.</summary>
-        private IEnumerator FallDown()
-        {
-            bool hasDeath = HasParameter(animator, DieId);
-            if (hasDeath) animator.SetTrigger(DieId);
-            else if (animator != null) animator.speed = 0f;
-            if (wingAnimator != null) wingAnimator.speed = 0f;
+        /// <summary>내려찍기가 땅에 닿았다고 알린다.</summary>
+        protected void NotifySlammed(bool hit) => Slammed?.Invoke(hit);
 
-            Quaternion startRotation = transform.rotation;
-            Quaternion endRotation = hasDeath ? startRotation : startRotation * Quaternion.Euler(0f, 0f, 80f);
-            Vector3 startPosition = transform.position;
-            Vector3 endPosition = new Vector3(startPosition.x, groundY, startPosition.z);
-            float duration = hasDeath ? 0.5f : 1.2f;
-            for (float t = 0f; t < duration; t += Time.deltaTime)
-            {
-                float k = t / duration;
-                transform.SetPositionAndRotation(Vector3.Lerp(startPosition, endPosition, k), Quaternion.Slerp(startRotation, endRotation, k * k));
-                yield return null;
-            }
-            transform.SetPositionAndRotation(endPosition, endRotation);
-            Destroy(gameObject, Mathf.Max(0f, tuning.corpseTime - duration));
-        }
-
-        /// <summary>플레이어가 몸통 반지름 안(높이 뺌)이면 피해. 실제로 체력이 줄었으면 true.</summary>
-        private bool Contact(int damage, float radius, string attackName)
+        /// <summary>플레이어가 몸통 반지름 안(높이 뺀)이면 피해. 실제로 체력이 줄었으면 true.</summary>
+        protected bool Contact(int damage, float radius, string attackName)
         {
-            if (player == null || player.IsDead || damage <= 0) return false;
-            Vector3 p = player.transform.position;
-            if (p.y > transform.position.y + tuning.slamHeight) return false;
+            if (Player == null || Player.IsDead || damage <= 0) return false;
+            Vector3 p = Player.transform.position;
+            if (p.y > transform.position.y + ContactHeight) return false;
             if (Flat(p - transform.position).magnitude > radius) return false;
             return Damage(damage, attackName);
         }
 
-        private bool Damage(int damage, string attackName)
+        /// <summary>플레이어에게 피해(사망 원인 '{이름}의 {공격}'). 구르기 무적 · 맞은 뒤 무적이면 false.</summary>
+        protected bool Damage(int damage, string attackName)
         {
-            int before = player.Current;
-            player.TakeDamage(damage, $"{tuning.displayName}의 {attackName}");
-            return player.Current < before;
+            int before = Player.Current;
+            Player.TakeDamage(damage, $"{Tuning.displayName}의 {attackName}");
+            return Player.Current < before;
+        }
+
+        /// <summary>화면을 흔든다(게임 카메라의 듣는 채널 — 등장 연출 카메라와 따로).</summary>
+        protected void Shake(float force, float duration, CinemachineImpulseDefinition.ImpulseShapes shape)
+        {
+            if (impulse == null || force <= 0f) return;
+            impulse.ImpulseDefinition.ImpulseShape = shape;
+            impulse.ImpulseDefinition.ImpulseDuration = Mathf.Max(0.05f, duration);
+            impulse.GenerateImpulseWithForce(force);
+            ShakeCount++;
         }
 
         // ---------- 도움 ----------
 
         /// <summary>준비 동작: 제자리에서 몸을 떤다(난수 없이 — 연출이 결과를 바꾸지 않게).</summary>
-        private IEnumerator Hold(float duration, float amount)
+        protected IEnumerator Shiver(float duration, float amount)
         {
             for (float t = 0f; t < duration; t += Time.deltaTime)
             {
-                body.transform.localPosition = bodyRestPosition + new Vector3(Mathf.Sin(t * 71f), 0f, Mathf.Cos(t * 53f)) * amount;
+                body.transform.localPosition = BodyRestPosition + new Vector3(Mathf.Sin(t * 71f), 0f, Mathf.Cos(t * 53f)) * amount;
                 yield return null;
             }
-            body.transform.localPosition = bodyRestPosition;
+            body.transform.localPosition = BodyRestPosition;
         }
 
-        private void FacePlayer(float degreesPerSecond)
+        protected void FacePlayer(float degreesPerSecond)
         {
             Vector3 direction = DirectionToPlayer();
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(direction), degreesPerSecond * Time.deltaTime);
         }
 
-        private Vector3 DirectionToPlayer()
+        protected Vector3 DirectionToPlayer()
         {
-            if (player == null) return Flat(transform.forward).normalized;
-            Vector3 offset = Flat(player.transform.position - transform.position);
+            if (Player == null) return Flat(transform.forward).normalized;
+            Vector3 offset = Flat(Player.transform.position - transform.position);
             return offset.sqrMagnitude > 0.0001f ? offset.normalized : Flat(transform.forward).normalized;
         }
 
-        private Vector3 ClampToArena(Vector3 position)
+        protected float DistanceToPlayer => Player != null ? Flat(Player.transform.position - transform.position).magnitude : float.PositiveInfinity;
+
+        protected Vector3 ClampToArena(Vector3 position)
         {
             return new Vector3(
-                Mathf.Clamp(position.x, arenaCenter.x - arenaHalf.x, arenaCenter.x + arenaHalf.x),
+                Mathf.Clamp(position.x, ArenaCenter.x - ArenaHalf.x, ArenaCenter.x + ArenaHalf.x),
                 position.y,
-                Mathf.Clamp(position.z, arenaCenter.z - arenaHalf.y, arenaCenter.z + arenaHalf.y));
+                Mathf.Clamp(position.z, ArenaCenter.z - ArenaHalf.y, ArenaCenter.z + ArenaHalf.y));
         }
 
-        private void HideWarnings()
+        /// <summary>방 안의 점에서 그 방향으로 벽(경기장 끝)까지 거리, 최대 maxDistance.</summary>
+        protected float DistanceToArenaEdge(Vector3 start, Vector3 direction, float maxDistance)
         {
-            if (laneWarning != null) laneWarning.SetActive(false);
-            if (slamWarning != null) slamWarning.SetActive(false);
+            return BossShapes.DistanceToEdge(start.x - ArenaCenter.x, start.z - ArenaCenter.z, direction.x, direction.z,
+                ArenaHalf.x, ArenaHalf.y, maxDistance);
         }
 
-        private void Signal(int trigger)
+        protected virtual void Signal(int trigger)
         {
             if (HasParameter(animator, trigger)) animator.SetTrigger(trigger);
-            if (HasParameter(wingAnimator, trigger)) wingAnimator.SetTrigger(trigger);
         }
 
-        private static bool HasParameter(Animator target, int id)
+        protected static bool HasParameter(Animator target, int id)
         {
             if (target == null || !target.isActiveAndEnabled || target.runtimeAnimatorController == null) return false;
             foreach (AnimatorControllerParameter parameter in target.parameters)
@@ -501,7 +350,7 @@ public void Begin(Health target, Vector3 center, Vector2 half, IRandom random)
             return false;
         }
 
-        private static Vector3 Flat(Vector3 vector)
+        protected static Vector3 Flat(Vector3 vector)
         {
             vector.y = 0f;
             return vector;

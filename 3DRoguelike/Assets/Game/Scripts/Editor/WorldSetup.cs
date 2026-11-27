@@ -120,14 +120,30 @@ namespace Game.EditorTools
         public static WorldTuning LoadOrCreateTuning()
         {
             var tuning = AssetDatabase.LoadAssetAtPath<WorldTuning>(TuningPath);
-            if (tuning != null)
+            if (tuning == null)
             {
-                EditorUtility.SetDirty(tuning); // 새로 생긴 필드를 파일에 남긴다
-                return tuning;
+                AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<WorldTuning>(), TuningPath);
+                AssetDatabase.SaveAssets();
+                tuning = AssetDatabase.LoadAssetAtPath<WorldTuning>(TuningPath);
             }
-            AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<WorldTuning>(), TuningPath);
+            // 이어 하기(3-6)가 고른 보상을 찾는 표 — 던전(FloorRun)과 같은 에셋
+            if (tuning.rewardTable == null) tuning.rewardTable = AssetDatabase.LoadAssetAtPath<RewardTable>(RewardTablePath);
+            // 판 밖 성장 트리 · 영구 재화 표(3-7) — 없으면 기본 표로 만든다(있으면 에셋 값이 기준)
+            if (tuning.metaTree == null) tuning.metaTree = LoadOrCreateMetaTree();
+            EditorUtility.SetDirty(tuning); // 새로 생긴 필드를 파일에 남긴다
+            return tuning;
+        }
+
+        private const string RewardTablePath = "Assets/Game/Data/RewardTable.asset";
+        public const string MetaTreePath = "Assets/Game/Data/MetaTree.asset";
+
+        public static MetaTreeTable LoadOrCreateMetaTree()
+        {
+            var table = AssetDatabase.LoadAssetAtPath<MetaTreeTable>(MetaTreePath);
+            if (table != null) return table;
+            AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<MetaTreeTable>(), MetaTreePath);
             AssetDatabase.SaveAssets();
-            return AssetDatabase.LoadAssetAtPath<WorldTuning>(TuningPath);
+            return AssetDatabase.LoadAssetAtPath<MetaTreeTable>(MetaTreePath);
         }
 
         /// <summary>씬 기본 분위기 = 첫 지역(길 시작). 플레이 중에는 WorldRun이 길 거리로 지역 값을 섞는다.</summary>

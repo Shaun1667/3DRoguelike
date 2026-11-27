@@ -13,7 +13,7 @@ namespace Game
     /// 지형 · 나무 · 입구 · 관문은 `WorldSetup`(메뉴 Tools/Game/Setup World)이 씬에 세워 둔다.
     /// </summary>
     [DefaultExecutionOrder(-100)] // 플레이어 자리 · 체력을 HUD · 카메라보다 먼저 맞춘다
-    public sealed class WorldRun : MonoBehaviour, IRunRestart
+    public sealed class WorldRun : MonoBehaviour, IRunRestart, IRunSavePoint
     {
         [SerializeField] private WorldTuning tuning;
         [SerializeField] private PlayerVitals player;
@@ -40,6 +40,8 @@ namespace Game
         [Min(0f)] [SerializeField] private float resultDelayAfterDeath = 1.5f;
         [Tooltip("돌아올 때 입구 앞으로 떨어져 서는 거리(m)")]
         [Min(0.5f)] [SerializeField] private float returnDistance = 5f;
+        [Tooltip("길 시작에서 이 거리(m) 안이면 G로 성장 트리를 연다(3-7 재생 자리)")]
+        [Min(1f)] [SerializeField] private float metaTreeRadius = 8f;
 
         private List<Health>[] alive;
         private bool[] started;
@@ -55,17 +57,26 @@ namespace Game
         public WorldTuning Tuning => tuning;
         public EnemyRoster Roster => roster;
 
+        /// <summary>이 씬에서 새 판을 만들었는가(그러면 Start에서 이어 하기를 묻거나 바로 저장).</summary>
+        private bool createdRun;
+
         private void Awake()
         {
             Time.timeScale = 1f;
             playerTransform = player.transform;
-            Session = CurrentRun.EnsureSession(tuning.dungeons.Length, tuning.LastDungeonOpensRegion, ChooseSeed);
+            MetaRun.Use(tuning.metaTree); // 판 밖 성장(3-7): 새 판을 만들 때 산 노드를 건다
+            Session = CurrentRun.EnsureSession(tuning.dungeons.Length, tuning.LastDungeonOpensRegion, ChooseSeed, out createdRun);
             mix = roster.ToMix();
             route = tuning.ToRoute();
             ConnectTerrains();
 
             int back = Session.ReturnDungeon;
-            if (back >= 0 && back < entrances.Length)
+            if (Session.HasWorldSpot)
+            {
+                // 이어 하기: 월드에서 저장한 자리(길 위 무리를 깬 곳 · 끈 곳)
+                Place(new Vector3(Session.WorldX, Session.WorldY, Session.WorldZ), Quaternion.Euler(0f, Session.WorldYaw, 0f));
+            }
+            else if (back >= 0 && back < entrances.Length)
             {
                 Transform entrance = entrances[back];
                 Place(entrance.position + entrance.forward * returnDistance, Quaternion.LookRotation(-entrance.forward));
@@ -90,17 +101,45 @@ namespace Game
             // PlayerVitals.Awake가 체력을 가득으로 만든 뒤, HUD.Start보다 먼저(실행 순서 -100)
             if (Session.PlayerHealth != RunSession.FullHealth) player.Health.SetCurrent(Session.PlayerHealth);
             player.GetComponent<PlayerUpgrades>().Use(Session.Stats.Upgrades);
+            if (Session.PlayerAmmo != RunSession.FullAmmo && player.Gun != null) player.Gun.SetAmmo(Session.PlayerAmmo); // 이어 할 때만(씬을 옮기면 가득)
             player.GetComponent<PlayerForm>().UpdateForm(Session.Stats.Beast, Session.Stats.Human);
+            if (createdRun) OfferContinueOrSave();
         }
+
+        /// <summary>
+        /// 새 판을 시작한 참(3-6): 게임을 켜고 처음이고 이어 할 저장이 있으면 [이어 하기] / [새 판]을 묻는다.
+        /// 없으면(또는 새 판을 고르면) 새 판을 바로 저장한다.
+        /// </summary>
+        private void OfferContinueOrSave()
+        {
+            var table = tuning.rewardTable != null ? tuning.rewardTable.ToDefinitions() : null;
+            if (!CurrentRun.TryTakeSavedRun(tuning.dungeons.Length, tuning.LastDungeonOpensRegion, table, out RunSession saved, out float elapsed, out string summary))
+            {
+                CurrentRun.Save("판 시작");
+                return;
+            }
+            Prompt = ContinuePrompt.Show(objective != null ? objective.font : null, summary,
+                () => CurrentRun.Resume(saved, elapsed),
+                () =>
+                {
+                    CurrentRun.DeleteSave("새 판 고름");
+                    CurrentRun.Save("판 시작");
+                });
+        }
+
+        /// <summary>떠 있는 이어 하기 화면. 없으면 null.</summary>
+        public ContinuePrompt Prompt { get; private set; }
 
         private void OnEnable()
         {
             player.Health.Died += OnPlayerDied;
+            CurrentRun.UseSavePoint(this);
         }
 
         private void OnDisable()
         {
             player.Health.Died -= OnPlayerDied;
+            CurrentRun.ReleaseSavePoint(this);
         }
 
         private void Update()
@@ -116,6 +155,10 @@ namespace Game
                 if (!started[i] && Flat(encounterSites[i].position - position).magnitude <= tuning.encounterTriggerRange) SpawnEncounter(i);
             }
 
+            bool atStart = MetaRun.Ready && Flat(startPoint.position - position).magnitude <= metaTreeRadius;
+            if (atStart && Prompt == null && MetaTreeScreen.CanOpenThisFrame && UnityEngine.InputSystem.Keyboard.current != null
+                && UnityEngine.InputSystem.Keyboard.current.gKey.wasPressedThisFrame) OpenMetaTree();
+
             int next = Session.World.NextDungeon;
             if (next >= 0 && next < entrances.Length && Flat(entrances[next].position - position).magnitude <= tuning.entranceRadius)
             {
@@ -128,10 +171,26 @@ namespace Game
                 nextObjectiveTime = Time.unscaledTime + 0.25f;
                 objective.text = ObjectiveText(position, next);
                 if (safeZone != null) objective.text = $"{safeZone.DisplayName} · 안전 지대\n{objective.text}";
+                if (atStart) objective.text = $"{RebirthText()}  ·  G: 성장 트리 (영구 재화 {MetaRun.Progress.Currency})\n{objective.text}";
             }
         }
 
         public void Restart(bool sameSeed) => CurrentRun.RestartFromWorld(sameSeed);
+
+        /// <summary>길 시작(재생 자리) 안내: 몇 번째 깨어났나(끝난 판 수 + 1).</summary>
+        private static string RebirthText()
+        {
+            int runs = MetaRun.Progress.Runs;
+            return runs > 0 ? $"초재생 · {runs + 1}번째 깨어남" : "숲에서 깨어났다";
+        }
+
+        /// <summary>성장 트리 화면(3-7)을 연다. 아직 아무것도 안 한 판이면 산 노드가 이 판에도 바로 걸린다.</summary>
+        public MetaTreeScreen OpenMetaTree()
+        {
+            if (Session == null || Session.Stats.Outcome != RunOutcome.Playing) return null;
+            return MetaTreeScreen.Open(objective != null ? objective.font : null, () => Session,
+                () => player.GetComponent<PlayerForm>().UpdateForm(Session.Stats.Beast, Session.Stats.Human));
+        }
 
         private RunSeed ChooseSeed()
         {
@@ -148,6 +207,7 @@ namespace Game
             if (!Session.EnterDungeon(dungeon, player.Health.Current)) return;
             leaving = true;
             Debug.Log($"[WorldRun] {tuning.dungeons[dungeon].displayName} 입장");
+            CurrentRun.Save("던전 입장", syncFromScene: false); // 입장한 판 상태 그대로(체력은 EnterDungeon이 적음)
             SceneManager.LoadScene(CurrentRun.FloorScene);
         }
 
@@ -181,7 +241,7 @@ namespace Game
         {
             Session.Stats.RecordKill();
             alive[site].Remove(enemy);
-            if (alive[site].Count == 0) Session.World.ClearEncounter(site);
+            if (alive[site].Count == 0 && Session.World.ClearEncounter(site)) CurrentRun.Save("길 위 무리 깸");
         }
 
         /// <summary>깬 던전 입구는 회색, 깬 던전 뒤 관문은 열림.</summary>
@@ -225,7 +285,25 @@ namespace Game
 
         private void OnPlayerDied()
         {
-            if (Session.Stats.Die(player.Health.LastDamageSource, CurrentRun.Elapsed)) StartCoroutine(ShowResultAfter(resultDelayAfterDeath));
+            if (!Session.Stats.Die(player.Health.LastDamageSource, CurrentRun.Elapsed)) return;
+            CurrentRun.RunEnded(); // 로그라이크: 죽으면 저장을 지운다
+            StartCoroutine(ShowResultAfter(resultDelayAfterDeath));
+        }
+
+        /// <summary>
+        /// 저장 지점(3-6): 체력 · 탄 · 지금 자리를 판 상태에 적는다. 길 위 무리와 싸우는 중(나온 무리에 살아 있는 적)이면 false.
+        /// 던전으로 떠나는 중이면 판 상태가 이미 던전 입장이라 그대로 둔다.
+        /// </summary>
+        public bool SyncForSave(RunSession session)
+        {
+            if (session != Session || session.Stats.Outcome != RunOutcome.Playing || player.Health.IsDead) return false;
+            if (leaving || session.InDungeon) return true;
+            for (int i = 0; i < alive.Length; i++) if (alive[i].Count > 0) return false;
+            PlayerGun gun = player.Gun;
+            session.UpdatePlayer(player.Health.Current, gun == null || gun.Ammo >= gun.Magazine ? RunSession.FullAmmo : gun.Ammo);
+            Vector3 position = playerTransform.position;
+            session.SetWorldSpot(position.x, position.y, position.z, playerTransform.eulerAngles.y);
+            return true;
         }
 
         private IEnumerator ShowResultAfter(float delay)
@@ -288,7 +366,12 @@ namespace Game
             if (next < 0 || !Session.EnterDungeon(next, player.Health.Current)) return;
             bool regionCleared = Session.FinishDungeon(player.Health.Current, CurrentRun.Elapsed);
             RefreshWorld();
-            if (regionCleared) StartCoroutine(ShowResultAfter(0f));
+            if (regionCleared)
+            {
+                CurrentRun.RunEnded();
+                StartCoroutine(ShowResultAfter(0f));
+            }
+            else CurrentRun.Save("던전 깬 것으로(디버그)");
         }
 
         /// <summary>다음 던전 입구 조금 앞으로 옮긴다.</summary>

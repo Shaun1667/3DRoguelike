@@ -39,20 +39,29 @@ namespace Game
         {
             offers = rewardOffers;
             onChosen = chosen;
-            header.text = (rare ? "희귀 보상" : "보상") + $" — 하나를 고르세요\n지금 성향  Beast {stats.Beast} · Human {stats.Human}";
+            string ask = offers.Count == 1 ? (offers[0].Unlock != RewardUnlock.None ? "새 무기 — 받으세요" : "보상 — 받으세요") : (rare ? "희귀 보상" : "보상") + " — 하나를 고르세요";
+            header.text = ask + $"\n지금 성향  Beast {stats.Beast} · Human {stats.Human}";
             for (int i = 0; i < cards.Length; i++)
             {
                 bool used = i < offers.Count;
                 cards[i].gameObject.SetActive(used);
                 if (!used) continue;
                 RewardDefinition reward = offers[i];
-                cardTexts[i].text = $"<size=130%><b>{reward.Name}</b></size>\n\n{reward.Description}\n\n{EffectLines(reward, stats.Upgrades)}{reward.Tendency} +{reward.Amount}\n<size=70%>[{i + 1}]</size>";
+                cardTexts[i].text = $"<size=130%><b>{reward.Name}</b></size>\n\n{reward.Description}\n\n{UnlockLine(reward)}{EffectLines(reward, stats.Upgrades)}{TendencyLine(reward)}<size=70%>[{i + 1}]</size>";
             }
             panel.SetActive(true);
             Time.timeScale = 0f;
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
+
+        /// <summary>도구를 주는 보상(권총)이면 "새 무기" 줄.</summary>
+        private static string UnlockLine(RewardDefinition reward) =>
+            reward.Unlock == RewardUnlock.None ? "" : "<color=#ffd27f>새 무기 · 이번 판 내내</color>\n\n";
+
+        /// <summary>성향이 오르는 보상만 "Human +1" 줄(권총처럼 0이면 없음).</summary>
+        private static string TendencyLine(RewardDefinition reward) =>
+            reward.Amount > 0 ? $"{reward.Tendency} +{reward.Amount}\n" : "";
 
         /// <summary>"근접 피해 +20%  (지금 +20%)" 줄들. 이미 가진 강화가 있으면 지금 합계도 보여 준다.</summary>
         private static string EffectLines(RewardDefinition reward, UpgradeSheet upgrades)

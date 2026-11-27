@@ -87,6 +87,18 @@ namespace Game.Rules
             if (Outcome == RunOutcome.Playing) RoomsCleared++;
         }
 
+        /// <summary>저장 파일에서 되살릴 때만(<see cref="RunSaveRules"/>). 성향 · 강화는 고른 보상을 다시 반영해 얻는다.</summary>
+        internal void RestoreCounts(int battleRooms, int dungeonsCleared, int roomsCleared, int kills)
+        {
+            if (battleRooms < 0 || dungeonsCleared < 0 || dungeonsCleared > Dungeons || roomsCleared < 0 || kills < 0)
+                throw new ArgumentOutOfRangeException(nameof(battleRooms), "Saved run counts are out of range.");
+            BattleRooms = battleRooms;
+            DungeonsCleared = dungeonsCleared;
+            RoomsCleared = roomsCleared;
+            Kills = kills;
+        }
+
+
         /// <returns>이번에 판이 끝났으면 true. 이미 끝났으면 false.</returns>
         public bool Die(string cause, float elapsedSeconds)
         {

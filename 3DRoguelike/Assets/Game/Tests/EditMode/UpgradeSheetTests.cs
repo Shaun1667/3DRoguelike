@@ -97,7 +97,12 @@ namespace Game.Tests
                 Assert.That(byId[later].ComingLater, Is.True, later);
                 Assert.That(byId[later].Effects, Is.Empty, later);
             }
-            Assert.That(byId.Count, Is.EqualTo(10));
+            // 성장 트리(3-7)가 여는 잠긴 희귀 2줄(MetaTreeTests.MetaTreeAsset_MatchesBalance)
+            Expect("beast_frenzy", (UpgradeStat.MeleeDamage, 40f));
+            Expect("human_hollowpoint", (UpgradeStat.PistolDamage, 40f));
+            Assert.That(byId["beast_frenzy"].MetaLocked && byId["human_hollowpoint"].MetaLocked, Is.True);
+            Assert.That(byId.Values.Count(r => r.MetaLocked), Is.EqualTo(2));
+            Assert.That(byId.Count, Is.EqualTo(13)); // + 권총(보장 보상, PistolGuaranteeTests.RewardTable_PistolRow_MatchesBalance)
         }
     }
 }

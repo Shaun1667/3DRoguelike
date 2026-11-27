@@ -19,6 +19,8 @@ namespace Game.Tests
                     new EnemySpeciesRule(EnemySpecies.Boar, 2, 1, 1, 0f),
                     new EnemySpeciesRule(EnemySpecies.Hare, 2, 3, 5, 1.5f),
                     new EnemySpeciesRule(EnemySpecies.Toad, 1, 1, 1, 0f),
+                    new EnemySpeciesRule(EnemySpecies.RaccoonDog, 2, 3, 5, 1.5f),
+                    new EnemySpeciesRule(EnemySpecies.Fox, 1, 1, 1, 0f),
                 },
                 new[]
                 {
@@ -26,7 +28,10 @@ namespace Game.Tests
                     new EnemyStage(new[] { (EnemySpecies.Badger, 3), (EnemySpecies.Hare, 1), (EnemySpecies.Boar, 1), (EnemySpecies.Toad, 1) }, 0f,
                         new[] { (EnemySpecies.Badger, 3), (EnemySpecies.Hare, 1) }, 1,
                         new[] { (EnemySpecies.Badger, 3), (EnemySpecies.Hare, 1) }),
-                    new EnemyStage(new[] { (EnemySpecies.Badger, 3), (EnemySpecies.Hare, 1), (EnemySpecies.Boar, 1), (EnemySpecies.Toad, 1) }, 0.25f),
+                    // 도시 던전(2026-11-27): 방은 너구리 · 여우 위주 + 멧돼지 · 두꺼비, 길 위는 너구리 · 여우만
+                    new EnemyStage(new[] { (EnemySpecies.RaccoonDog, 2), (EnemySpecies.Fox, 3), (EnemySpecies.Boar, 1), (EnemySpecies.Toad, 1) }, 0.25f,
+                        null, 0,
+                        new[] { (EnemySpecies.RaccoonDog, 1), (EnemySpecies.Fox, 1) }),
                     new EnemyStage(new[] { (EnemySpecies.Badger, 2), (EnemySpecies.Hare, 1), (EnemySpecies.Boar, 2), (EnemySpecies.Toad, 2) }, 0.5f),
                 });
         }
@@ -80,7 +85,7 @@ namespace Game.Tests
         public void StageWithoutNearOrRoad_UsesRoomWeights()
         {
             EnemyMix mix = BalanceMix();
-            EnemyStage stage = mix.Stage(1);
+            EnemyStage stage = mix.Stage(2);
 
             Assert.That(stage.NearWeights, Is.SameAs(stage.Weights));
             Assert.That(stage.RoadWeights, Is.SameAs(stage.Weights));
@@ -89,8 +94,8 @@ namespace Game.Tests
             Assert.That(mix.Stage(0).RoomPlace(2), Is.EqualTo(EnemyPlace.Room));
             for (uint seed = 0; seed < 50; seed++)
             {
-                string room = string.Join(" ", EnemyMixPlanner.Pick(mix, 1, 5, false, Random(seed, 1)));
-                string road = string.Join(" ", EnemyMixPlanner.Pick(mix, 1, EnemyPlace.Road, 5, Random(seed, 1)));
+                string room = string.Join(" ", EnemyMixPlanner.Pick(mix, 2, 5, false, Random(seed, 2)));
+                string road = string.Join(" ", EnemyMixPlanner.Pick(mix, 2, EnemyPlace.Road, 5, Random(seed, 2)));
                 Assert.That(road, Is.EqualTo(room), $"seed {seed}");
             }
         }
@@ -115,7 +120,49 @@ namespace Game.Tests
             Assert.That(heavyFar, Is.GreaterThan(200), "먼 방에는 멧돼지 · 두꺼비가 섞인다");
         }
 
-        [TestCase(1)]
+        /// <summary>도시 던전(단계 2) 방: 너구리 · 여우 위주, 멧돼지 · 두꺼비는 조금, 오소리 · 멧토끼는 없음(2026-11-27).</summary>
+        [Test]
+        public void CityStage_Rooms_CitySpeciesMost_SomeBoarAndToad()
+        {
+            List<EnemyPick> picks = ManyPicks(1, EnemyPlace.Room);
+
+            Assert.That(picks.Select(p => p.Kind.Species).Distinct(),
+                Is.EquivalentTo(new[] { EnemySpecies.RaccoonDog, EnemySpecies.Fox, EnemySpecies.Boar, EnemySpecies.Toad }));
+            int city = picks.Count(p => p.Kind.Species == EnemySpecies.RaccoonDog || p.Kind.Species == EnemySpecies.Fox);
+            Assert.That(city, Is.GreaterThan((picks.Count - city) * 2), "도시 종 위주(뽑힌 횟수, 무게 5 : 2)");
+            Assert.That(picks.Any(p => p.Kind.Grade == EnemyGrade.Evolved), Is.True, "도시 던전은 E 개체도 나온다");
+        }
+
+        /// <summary>도시 길 위 무리: 너구리 · 여우 Mutant만.</summary>
+        [Test]
+        public void CityStage_Road_OnlyRaccoonDogAndFox_Mutant()
+        {
+            List<EnemyPick> picks = ManyPicks(1, EnemyPlace.Road);
+
+            Assert.That(picks.Select(p => p.Kind.Species).Distinct(), Is.EquivalentTo(new[] { EnemySpecies.RaccoonDog, EnemySpecies.Fox }));
+            Assert.That(picks.All(p => p.Kind.Grade == EnemyGrade.Mutant), Is.True);
+        }
+
+        /// <summary>너구리는 3~5마리 떼, 여우는 한 마리.</summary>
+        [Test]
+        public void RaccoonDogComesInPacksOfThreeToFive_FoxAlone()
+        {
+            List<EnemyPick> picks = ManyPicks(1, allowEvolved: true);
+            var packs = picks.Where(p => p.Kind.Species == EnemySpecies.RaccoonDog).Select(p => p.GroupSize).ToList();
+
+            Assert.That(packs.Distinct(), Is.EquivalentTo(new[] { 3, 4, 5 }));
+            Assert.That(picks.Where(p => p.Kind.Species == EnemySpecies.Fox).Select(p => p.GroupSize), Is.All.EqualTo(1));
+        }
+
+        /// <summary>숲(단계 1)에는 도시 종이 어디에도 나오지 않는다.</summary>
+        [TestCase(EnemyPlace.Room)]
+        [TestCase(EnemyPlace.NearRoom)]
+        [TestCase(EnemyPlace.Road)]
+        public void ForestStage_HasNoCitySpecies(EnemyPlace place)
+        {
+            Assert.That(ManyPicks(0, place).Any(p => p.Kind.Species == EnemySpecies.RaccoonDog || p.Kind.Species == EnemySpecies.Fox), Is.False);
+        }
+
         [TestCase(2)]
         public void LaterStages_AllFourSpeciesAppear(int stage)
         {

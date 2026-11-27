@@ -396,6 +396,14 @@ namespace Game
         [Tooltip("마지막 관문 너머 안내(다음 지역은 준비 중)")]
         public string nextRegionLabel = "다음 지역 — 준비 중";
 
+        [Header("저장 · 이어 하기 (3-6)")]
+        [Tooltip("이어 할 때 고른 보상을 id로 찾는 표(던전과 같은 Data/RewardTable). Setup World가 잇는다")]
+        public RewardTable rewardTable;
+
+        [Header("판 밖 성장 (3-7)")]
+        [Tooltip("성장 트리 · 영구 재화 표(Data/MetaTree). 비어 있으면 판 밖 진행 없이 지금 숫자 그대로. Setup World가 잇는다")]
+        public MetaTreeTable metaTree;
+
         [Header("길 위 적 무리 (지역마다 관문 고개 밖 · 던전 입구 앞뒤 20 m 밖)")]
         public EncounterSite[] encounters =
         {

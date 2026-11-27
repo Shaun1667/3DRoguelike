@@ -50,5 +50,14 @@ namespace Game.Rules
 
         /// <returns>이번에 처음 잡았으면 true.</returns>
         public bool ClearEncounter(int encounter) => clearedEncounters.Add(encounter);
+
+        /// <summary>잡은 길 위 무리(작은 수부터). 저장에 쓴다.</summary>
+        public List<int> ClearedEncounters()
+        {
+            var list = new List<int>(clearedEncounters);
+            list.Sort();
+            return list;
+        }
+
     }
 }

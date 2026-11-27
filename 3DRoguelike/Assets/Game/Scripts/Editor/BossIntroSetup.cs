@@ -60,6 +60,11 @@ namespace Game.EditorTools
             CinemachineBrain brain = Object.FindAnyObjectByType<CinemachineBrain>();
             Camera mainCamera = brain.GetComponent<Camera>();
             CinemachineCamera playerCamera = GameObject.Find("PlayerCamera").GetComponent<CinemachineCamera>();
+            // 게임 카메라는 보스의 흔들기 채널만 듣는다(곰의 포효 · 내려찍기 · 벽 박기) — 등장 연출의 흔들기(채널 1)는 듣지 않아 까치 연출 그대로
+            CinemachineImpulseListener shakeListener = playerCamera.GetComponent<CinemachineImpulseListener>();
+            if (shakeListener == null) shakeListener = playerCamera.gameObject.AddComponent<CinemachineImpulseListener>();
+            shakeListener.ChannelMask = Boss.ShakeChannel;
+
             var defaults = ScriptableObject.CreateInstance<BossIntroTuning>(); // 화각 · 흔들림 기본값(재생할 때 수치 에셋 값으로 다시 맞춘다)
 
             var root = new GameObject(RootName);

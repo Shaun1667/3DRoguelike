@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: caf1adc0b471a8041b2e9aad0aae4422, type: 3}
+  m_Name: RaccoonDogTuning
+  m_EditorClassIdentifier: Game.Runtime::Game.RaccoonDogTuning
+  displayName: "\uB108\uAD6C\uB9AC Mutant"
+  evolvedDisplayName: "\uB108\uAD6C\uB9AC E \uAC1C\uCCB4"
+  maxHealth: 14
+  evolvedHealthMultiplier: 1.8
+  moveSpeed: 3
+  turnSpeed: 540
+  repathInterval: 0.2
+  spawnTime: 1
+  extraAttackEvery: 2
+  windupLeanAngle: 20
+  strikeLeanAngle: 20
+  hitFlashTime: 0.08
+  corpseTime: 1
+  evolvedCorpseTime: 2.2
+  attackName: "\uD560\uD034\uC5B4 \uBB3C\uAE30"
+  attackStartRange: 1.3
+  windupTime: 0.7
+  hitRange: 1.6
+  hitAngle: 90
+  damage: 5
+  recoverTime: 0.8
+  comboName: "\uC5F0\uC18D \uD560\uD034\uAE30"
+  comboHits: 2
+  comboInterval: 0.55
+  comboDamage: 5
+  comboStep: 0.4
+  comboRecoverTime: 1.2

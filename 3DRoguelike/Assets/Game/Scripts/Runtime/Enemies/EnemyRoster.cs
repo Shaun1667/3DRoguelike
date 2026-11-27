@@ -58,6 +58,9 @@ namespace Game
             new SpeciesEntry { species = EnemySpecies.Boar, slots = 2, groupMin = 1, groupMax = 1 },
             new SpeciesEntry { species = EnemySpecies.Hare, slots = 2, groupMin = 3, groupMax = 5, groupSpread = 1.5f },
             new SpeciesEntry { species = EnemySpecies.Toad, slots = 1, groupMin = 1, groupMax = 1 },
+            // 도시(2026-11-27): 너구리 떼 3~5(멧토끼와 같은 방식) · 여우 한 마리
+            new SpeciesEntry { species = EnemySpecies.RaccoonDog, slots = 2, groupMin = 3, groupMax = 5, groupSpread = 1.5f },
+            new SpeciesEntry { species = EnemySpecies.Fox, slots = 1, groupMin = 1, groupMax = 1 },
         };
 
         [Tooltip("던전 순서대로(0 = 숲 던전 1). 표보다 뒤 던전은 마지막 단계")]
@@ -74,8 +77,10 @@ namespace Game
             },
             new Stage
             {
-                name = "도시 던전 (+ 그 앞 길) — 전 숲 던전 2 단계", evolvedChance = 0.25f,
-                weights = new[] { W(EnemySpecies.Badger, 3), W(EnemySpecies.Hare, 1), W(EnemySpecies.Boar, 1), W(EnemySpecies.Toad, 1) },
+                name = "도시 던전 (+ 그 앞 길)", evolvedChance = 0.25f,
+                // 2026-11-27 도시 종: 방은 너구리 · 여우 위주 + 멧돼지 · 두꺼비 조금(탱커 · 원거리 역할), 길 위는 도시 종만 — 정한 것(Claude, 확인 필요)
+                weights = new[] { W(EnemySpecies.RaccoonDog, 2), W(EnemySpecies.Fox, 3), W(EnemySpecies.Boar, 1), W(EnemySpecies.Toad, 1) },
+                roadWeights = new[] { W(EnemySpecies.RaccoonDog, 1), W(EnemySpecies.Fox, 1) },
             },
             new Stage
             {

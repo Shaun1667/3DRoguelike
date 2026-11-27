@@ -13,6 +13,7 @@ namespace Game.Tests
     public class FloorThemeTests
     {
         const string CityThemePath = "Assets/Game/Data/FloorThemes/CityShelter.asset";
+        const string ForestThemePath = "Assets/Game/Data/FloorThemes/ForestKennel.asset";
 
         /// <summary>도시 테마와 같은 모양의 수치(바닥 자리는 도시 소품 크기).</summary>
         static DressingSettings CitySettings()
@@ -131,7 +132,7 @@ namespace Game.Tests
             var world = AssetDatabase.LoadAssetAtPath<WorldTuning>("Assets/Game/Data/WorldTuning.asset");
             var theme = AssetDatabase.LoadAssetAtPath<FloorTheme>(CityThemePath);
             Assert.That(theme, Is.Not.Null);
-            Assert.That(world.dungeons[0].interiorTheme, Is.Null, "숲 던전 1은 테마 없음(회색 층 그대로)");
+            Assert.That(world.dungeons[0].interiorTheme, Is.SameAs(AssetDatabase.LoadAssetAtPath<FloorTheme>(ForestThemePath)), "숲 던전 1 = 무너진 사육장 테마(⑥)");
             Assert.That(world.dungeons[1].interiorTheme, Is.SameAs(theme), "도시 던전 = 무너진 대피소 테마");
 
             Assert.That(theme.floor.mainTexture.name, Is.EqualTo("City_Asphalt"));
@@ -171,9 +172,105 @@ namespace Game.Tests
             }
         }
 
+        /// <summary>숲 던전 1 "무너진 사육장" 테마 값(BALANCE 8-1). 이미 있는 숲 · 도시 에셋과 단순 도형 소품만, 벽 장식은 띠 안에 들어감.</summary>
+        [Test]
+        public void ForestTheme_MatchesBalance()
+        {
+            var theme = AssetDatabase.LoadAssetAtPath<FloorTheme>(ForestThemePath);
+            Assert.That(theme, Is.Not.Null);
+            Assert.That(theme.displayName, Is.EqualTo("무너진 사육장"));
+            Assert.That(theme.floor.mainTexture.name, Is.EqualTo("Ground_ForestFloor"));
+            Assert.That(theme.startFloor.mainTexture.name, Is.EqualTo("Ground_DirtTrail"));
+            Assert.That(theme.bossFloor.mainTexture.name, Is.EqualTo("Ground_DirtTrail"));
+            Assert.That(theme.treasureFloor.mainTexture.name, Is.EqualTo("Ground_ForestFloor"));
+            Assert.That(theme.wall.mainTexture.name, Is.EqualTo("City_RubbleConcrete"));
+            // 시작 초록 · 보스 빨강 · 보물 노랑(회색 층과 같은 뜻)
+            Color start = theme.startFloor.GetColor("_BaseColor"), boss = theme.bossFloor.GetColor("_BaseColor"), treasure = theme.treasureFloor.GetColor("_BaseColor");
+            Assert.That(start.g, Is.GreaterThan(start.r));
+            Assert.That(boss.r, Is.GreaterThan(boss.g));
+            Assert.That(treasure.r, Is.GreaterThan(treasure.b));
+            Assert.That(theme.floorTile, Is.EqualTo(6f));
+            Assert.That(theme.wallTile, Is.EqualTo(6f));
+            Assert.That(theme.fog, Is.True);
+            Assert.That(theme.fogStart, Is.EqualTo(20f));
+            Assert.That(theme.fogEnd, Is.EqualTo(90f));
+            Assert.That(theme.sunIntensity, Is.EqualTo(1.05f));
+
+            Assert.That(theme.props.Length, Is.EqualTo(13));
+            foreach (FloorTheme.Prop prop in theme.props)
+            {
+                Assert.That(prop.prefab, Is.Not.Null);
+                string path = AssetDatabase.GetAssetPath(prop.prefab);
+                Assert.That(path.StartsWith("Assets/Game/Prefabs/World/Forest/") || path.StartsWith("Assets/Game/Prefabs/World/City/"), Is.True, path);
+                Assert.That(prop.prefab.GetComponent<BoxCollider>(), Is.Not.Null, prop.prefab.name);
+            }
+            var floor = AssetDatabase.LoadAssetAtPath<FloorTuning>("Assets/Game/Data/FloorTuning.asset");
+            Assert.That(theme.wallBandDepth, Is.LessThan(floor.spawnWallMargin), "벽 장식은 적 자리보다 벽 쪽");
+            Assert.That(theme.doorClearance, Is.GreaterThan(floor.doorWidth * 0.5f));
+
+            DressingSettings settings = theme.ToDressingSettings(floor);
+            for (int i = 0; i < settings.Kinds.Count; i++)
+            {
+                DressingKind kind = settings.Kinds[i];
+                Assert.That(kind.Weight, Is.GreaterThan(0f), theme.props[i].prefab.name);
+                if (kind.Place == DressingPlace.Open)
+                {
+                    // 방 안 엄폐물은 낮게(곰 · 적이 가려지지 않게)
+                    Assert.That(theme.props[i].prefab.GetComponent<BoxCollider>().size.y * theme.props[i].scale, Is.LessThanOrEqualTo(1.6f), theme.props[i].prefab.name);
+                    continue;
+                }
+                (float ex, float ez) = RoomDressingPlanner.Extents(kind, kind.YawOffset);
+                Assert.That(floor.wallThickness * 0.5f + settings.Gap + 2f * ez, Is.LessThanOrEqualTo(settings.WallBandDepth), theme.props[i].prefab.name);
+            }
+        }
+
+        /// <summary>숲 테마로도 장식이 문 · 적 자리 · 가운데 · 문 → 가운데 길을 비운다(실제 테마 에셋 값, 던전 0).</summary>
+        [Test]
+        public void ForestTheme_Dressing_KeepsDoorsSpawnsCenterAndLanesClear()
+        {
+            var floor = AssetDatabase.LoadAssetAtPath<FloorTuning>("Assets/Game/Data/FloorTuning.asset");
+            var roster = AssetDatabase.LoadAssetAtPath<EnemyRoster>("Assets/Game/Data/EnemyRoster.asset");
+            var theme = AssetDatabase.LoadAssetAtPath<FloorTheme>(ForestThemePath);
+            DressingSettings settings = theme.ToDressingSettings(floor);
+            float cell = floor.cellSize;
+            int total = 0;
+            for (uint seed = 0; seed < 60; seed++)
+            {
+                var random = new RunRandom(new RunSeed(seed * 7919u + 3u));
+                FloorLayout layout = FloorGenerator.Generate(floor.ToSettings(), random.Create(RandomPurpose.Map, 0));
+                SpecialRoomPlanner.AssignTreasure(layout, random.Create(RandomPurpose.Decor, 0));
+                FloorEncounters encounters = EncounterPlanner.Plan(layout, floor.ToEncounterSettings(), roster.ToMix(), 0, random.Create(RandomPurpose.Enemy, 0));
+                FloorDressing dressing = RoomDressingPlanner.Plan(layout, encounters, settings, random.Create(RandomPurpose.Dressing, 0));
+                foreach (FloorRoom room in layout.Rooms)
+                {
+                    (float cx, float cz) = FloorSpace.RoomCenter(layout, cell, room);
+                    var doors = new List<(float x, float z)>();
+                    foreach (FloorDoor door in layout.Doors)
+                        if (door.RoomA == room.Id || door.RoomB == room.Id) doors.Add(FloorSpace.DoorCenter(layout, cell, door));
+                    foreach (DressingPlacement p in dressing.For(room.Id))
+                    {
+                        total++;
+                        DressingKind kind = settings.Kinds[p.Kind];
+                        (float ex, float ez) = RoomDressingPlanner.Extents(kind, p.Yaw);
+                        string where = $"seed {seed} room {room.Id} {p}";
+                        foreach ((float x, float z) in doors) Assert.That(Distance(p.X, p.Z, ex, ez, x, z), Is.GreaterThanOrEqualTo(settings.DoorClearance - 1e-3f), "문 " + where);
+                        foreach (SpawnPoint s in encounters.SpawnsFor(room.Id)) Assert.That(Distance(p.X, p.Z, ex, ez, s.X, s.Z), Is.GreaterThanOrEqualTo(settings.SpawnClearance - 1e-3f), "적 자리 " + where);
+                        if (kind.Place != DressingPlace.Open) continue;
+                        Assert.That(Distance(p.X, p.Z, ex, ez, cx, cz), Is.GreaterThanOrEqualTo(settings.CenterClearance - 1e-3f), "가운데 " + where);
+                        foreach ((float x, float z) in doors)
+                            for (float t = 0f; t <= 1f; t += 0.02f)
+                                Assert.That(Distance(p.X, p.Z, ex, ez, x + (cx - x) * t, z + (cz - z) * t), Is.GreaterThanOrEqualTo(settings.LaneHalfWidth - 0.06f), "문 → 가운데 길 " + where);
+                    }
+                }
+            }
+            Assert.That(total, Is.GreaterThan(60 * 40), "층마다 장식이 충분히 놓임");
+        }
+
+
         /// <summary>
-        /// 숲 던전 1(테마 없음)의 층 도형 · 재질 · 적 자리가 테마를 넣기 전과 같다. 기대값은 3-8 ⑤-2 전 코드로 플레이에서 잰 층과 같은 결과를 낸 값.
-        /// 회색 기본 재질(`Art/Floor`)로 세우고 속성 블록이 없어야 한다.
+        /// 숲 던전 1의 층 도형(방 · 벽 · 문 자리) · 적 자리가 테마를 넣기 전과 같다. 기대값은 3-8 ⑤-2 전 코드로 플레이에서 잰 층과 같은 결과를 낸 값.
+        /// 회색 기본 재질(`Art/Floor`)로 세우면 속성 블록이 없어야 한다(테마 없는 회색 층 그대로).
+        /// ⑥에서 숲 던전 1에 무너진 사육장 테마를 붙였지만 테마는 재질 · 장식 · 분위기만 바꾸므로(맵 · 적 난수 그대로) 이 다이제스트도 그대로다.
         /// </summary>
         [Test]
         public void ForestDungeon_GeometryAndEnemiesUnchanged()

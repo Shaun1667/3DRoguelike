@@ -16,7 +16,7 @@ namespace Game
         private string source;
         private float dieTime;
 
-        public void Launch(Health player, BossTuning tuning)
+        public void Launch(Health player, MagpieBossTuning tuning)
         {
             target = player;
             speed = tuning.featherSpeed;

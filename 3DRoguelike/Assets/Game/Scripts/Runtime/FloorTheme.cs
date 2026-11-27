@@ -7,7 +7,7 @@ namespace Game
 {
     /// <summary>
     /// 던전 안 모양 테마(바닥 · 벽 재질, 방 꾸미기 장식, 조명 · 안개). 던전마다 `WorldTuning.dungeons`의 interiorTheme으로 고른다.
-    /// 비어 있으면(숲 던전) 회색 층 그대로. 새 테마 = 이 에셋 하나(`FloorThemeSetup`이 재질 · 에셋을 만든다), 새 장식 = props에 한 줄.
+    /// 비어 있으면 회색 층(숲 던전 1 = 무너진 사육장, 도시 던전 = 무너진 대피소). 새 테마 = 이 에셋 하나(`FloorThemeSetup`이 재질 · 에셋을 만든다), 새 장식 = props에 한 줄.
     /// 장식 자리는 규칙 <see cref="RoomDressingPlanner"/>가 판 시드로 정한다(BALANCE 8-1).
     /// </summary>
     [CreateAssetMenu(menuName = "Game/Floor Theme")]

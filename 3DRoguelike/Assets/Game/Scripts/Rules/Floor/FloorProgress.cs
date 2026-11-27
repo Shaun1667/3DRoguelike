@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Game.Rules
 {
@@ -115,5 +116,23 @@ namespace Game.Rules
         {
             if (roomId < 0 || roomId >= cleared.Length) throw new ArgumentOutOfRangeException(nameof(roomId));
         }
-    }
+    
+
+        /// <summary>
+        /// 이어 하기(3-6): 저장해 둔 깬 방 · 가 본 방 · 선 방으로 되돌린다. 시작 방 · 보물방은 늘 깬 방, 시작 방은 늘 가 본 방이다.
+        /// 선 방은 깬 방이어야 한다(저장은 문이 잠기지 않았을 때만). 이벤트는 내지 않는다.
+        /// </summary>
+        public void Restore(IEnumerable<int> clearedRooms, IEnumerable<int> visitedRooms, int currentRoom)
+        {
+            if (clearedRooms == null) throw new ArgumentNullException(nameof(clearedRooms));
+            if (visitedRooms == null) throw new ArgumentNullException(nameof(visitedRooms));
+            CheckRoom(currentRoom);
+            foreach (int id in clearedRooms) { CheckRoom(id); cleared[id] = true; }
+            foreach (int id in visitedRooms) { CheckRoom(id); visited[id] = true; }
+            if (!cleared[currentRoom]) throw new ArgumentException("The saved room must be cleared (saves happen only while no door is locked).", nameof(currentRoom));
+            visited[currentRoom] = true;
+            CurrentRoom = currentRoom;
+            LockedRoom = -1;
+        }
+}
 }

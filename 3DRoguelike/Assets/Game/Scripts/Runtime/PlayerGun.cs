@@ -46,6 +46,8 @@ namespace Game
         public int Damage => upgrades.ScaleInt(Rules.UpgradeStat.PistolDamage, tuning.pistolDamage);
         /// <summary>달린 강화. 조준 화면(카메라 · 팔)도 여기서 읽는다.</summary>
         public PlayerUpgrades Upgrades => upgrades;
+        /// <summary>권총을 가졌는가. 판은 맨몸으로 시작하고 첫 던전의 보장 보상으로 얻는다(3-4). 시험 방은 늘 가짐.</summary>
+        public bool Owned => upgrades.Has(Rules.RewardUnlock.Pistol);
         public bool IsAiming { get; private set; }
         public bool IsReloading => reloading;
         public Vector3 AimPoint { get; private set; }
@@ -90,7 +92,7 @@ namespace Game
 
         private void Update()
         {
-            SetAiming((aimAction.IsPressed() || DebugForceAim) && !melee.IsAttacking && !roll.IsRolling);
+            SetAiming(Owned && (aimAction.IsPressed() || DebugForceAim) && !melee.IsAttacking && !roll.IsRolling);
             UpdateAimPoint();
 
             if (reloadAction.WasPressedThisFrame()) StartReload();
@@ -114,7 +116,7 @@ namespace Game
 
         public bool TryFire()
         {
-            if (reloading) return false;
+            if (!Owned || reloading) return false;
             if (Ammo == 0)
             {
                 StartReload();
@@ -138,10 +140,19 @@ namespace Game
 
         public void StartReload()
         {
-            if (reloading || Ammo >= Magazine) return;
+            if (!Owned || reloading || Ammo >= Magazine) return;
             reloading = true;
             reloadEndTime = Time.time + tuning.pistolReloadTime;
         }
+
+        /// <summary>이어 하기(3-6): 저장한 남은 탄으로 맞춘다(탄창 크기를 넘지 않음). 갈아 끼우던 중이면 멈춘다.</summary>
+        public void SetAmmo(int ammo)
+        {
+            reloading = false;
+            Ammo = Mathf.Clamp(ammo, 0, Magazine);
+            AmmoChanged?.Invoke(Ammo);
+        }
+
 
         private void FinishReload()
         {

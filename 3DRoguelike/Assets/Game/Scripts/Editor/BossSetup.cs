@@ -8,9 +8,10 @@ namespace Game.EditorTools
     /// <summary>
     /// 보스 프리팹 · 수치 에셋 · 깃털 프리팹을 만든다(Setup Floor가 부른다). 여러 번 실행해도 결과가 같다.
     /// 수치 에셋은 없을 때만 만들고 값을 덮어쓰지 않는다(프리팹 연결만 고친다). 던전에 보스를 붙이는 것은 `WorldTuning.dungeons[].boss`(데이터).
-    /// 까치 모델(예전 까치 보스전, main에서 가져옴)이 `Art/Bosses/Magpie`에 있으면 그것을, 없으면 임시 도형을 Body 아래에 둔다.
-    /// 새 보스 = 수치 에셋 하나 + 여기 프리팹 한 벌.
-    /// </summary>
+    /// 까치(도시 던전): 모델(예전 까치 보스전, main에서 가져옴)이 `Art/Bosses/Magpie`에 있으면 그것을, 없으면 임시 도형을 Body 아래에 둔다.
+    /// 반달가슴곰(숲 던전 1): <see cref="BearBossSetup"/>.
+    /// 새 보스 = 수치 클래스 + 에셋 하나 + 패턴 클래스(Boss 이어받기) + 여기서 부르는 프리팹 한 벌.
+    /// </summary>ummary>
     public static class BossSetup
     {
         internal const string TuningPath = "Assets/Game/Data/Bosses/MagpieBossTuning.asset";
@@ -34,13 +35,13 @@ namespace Game.EditorTools
         private const float ShapeWingspan = 4.4f;
         private const float FeatherLength = 0.8f; // 예전 2.2 m ÷ 2.75
 
-        public static BossTuning Run()
+        public static MagpieBossTuning Run()
         {
             EnsureFolder("Assets/Game/Data", "Bosses");
             EnsureFolder("Assets/Game/Prefabs", "Bosses");
             EnsureFolder("Assets/Game/Art", "Bosses");
 
-            BossTuning tuning = LoadOrCreateTuning();
+            MagpieBossTuning tuning = LoadOrCreateTuning();
             Material warning = TestRoomSetup.LoadOrCreateUnlit(WarningMaterialPath, new Color(0.8f, 0.15f, 0.1f));
             Material black = TestRoomSetup.LoadOrCreateLit($"{ArtFolder}/Magpie_Black.mat", new Color(0.06f, 0.06f, 0.08f));
             Material white = TestRoomSetup.LoadOrCreateLit($"{ArtFolder}/Magpie_White.mat", new Color(0.92f, 0.92f, 0.9f));
@@ -56,22 +57,24 @@ namespace Game.EditorTools
             EditorUtility.SetDirty(tuning);
             AssetDatabase.SaveAssets();
             Debug.Log($"[BossSetup] 보스 프리팹 {PrefabPath} · 수치 {TuningPath} · 모델 {(HasModel ? "까치 VARCO" : "임시 도형(모델 없음: " + ModelFolder + ")")}");
+
+            BearBossSetup.Run(warning); // 반달가슴곰(숲 던전 1) — 짧은 등장(이름 + 포효 + 흔들림), 연출 타임라인 없음
             return tuning;
         }
 
         private static bool HasModel =>
             AssetDatabase.LoadAssetAtPath<GameObject>(BodyModelPath) != null && AssetDatabase.LoadAssetAtPath<GameObject>(WingsModelPath) != null;
 
-        private static BossTuning LoadOrCreateTuning()
+        private static MagpieBossTuning LoadOrCreateTuning()
         {
-            var tuning = AssetDatabase.LoadAssetAtPath<BossTuning>(TuningPath);
+            var tuning = AssetDatabase.LoadAssetAtPath<MagpieBossTuning>(TuningPath);
             if (tuning != null) return tuning;
-            AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<BossTuning>(), TuningPath);
+            AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<MagpieBossTuning>(), TuningPath);
             AssetDatabase.SaveAssets();
-            return AssetDatabase.LoadAssetAtPath<BossTuning>(TuningPath);
+            return AssetDatabase.LoadAssetAtPath<MagpieBossTuning>(TuningPath);
         }
 
-        private static Boss BuildBoss(BossTuning tuning, Material warning, Material black, Material white, Material blue)
+        private static Boss BuildBoss(MagpieBossTuning tuning, Material warning, Material black, Material white, Material blue)
         {
             var root = new GameObject("Boss_Magpie");
             var body = new GameObject("Body");
@@ -104,7 +107,7 @@ namespace Game.EditorTools
             GameObject lane = TestRoomSetup.FlatMarker(root.transform, "LaneWarning", PrimitiveType.Cube, Vector3.zero, new Vector3(1f, 0.005f, 1f), warning);
             GameObject slam = TestRoomSetup.FlatMarker(root.transform, "SlamWarning", PrimitiveType.Cylinder, Vector3.zero, new Vector3(1f, 0.005f, 1f), warning);
 
-            var boss = root.AddComponent<Boss>();
+            var boss = root.AddComponent<MagpieBoss>();
             var fields = new SerializedObject(boss);
             fields.FindProperty("tuning").objectReferenceValue = tuning;
             fields.FindProperty("health").objectReferenceValue = health;

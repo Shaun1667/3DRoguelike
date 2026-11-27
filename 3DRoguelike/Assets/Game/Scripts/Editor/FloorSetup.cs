@@ -25,8 +25,8 @@ namespace Game.EditorTools
             }
 
             if (!AssetDatabase.IsValidFolder(MaterialFolder)) AssetDatabase.CreateFolder("Assets/Game/Art", "Floor");
-            FloorThemeSetup.Run(); // 던전 안 모양 테마(도시 대피소) 재질 · 에셋 — 새 씬을 열기 전에
-            BossSetup.Run(); // 보스(까치) 프리팹 · 수치 에셋 — 새 씬을 열기 전에
+            FloorThemeSetup.Run(); // 던전 안 모양 테마(숲 사육장 · 도시 대피소) 재질 · 장식 · 에셋 — 새 씬을 열기 전에
+            BossSetup.Run(); // 보스(까치 · 반달가슴곰) 프리팹 · 수치 에셋 — 새 씬을 열기 전에
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             // 새 씬을 연 뒤에 불러온다. 앞에서 새로 만든 에셋은 씬을 바꿀 때 참조가 끊겨 씬에 빈칸으로 저장됐다.
@@ -72,9 +72,11 @@ namespace Game.EditorTools
             fields.FindProperty("bossBar").objectReferenceValue = bossBar;
             fields.FindProperty("bossIntro").objectReferenceValue = bossIntro;
 
-            // 층 씬만 Play = 숲 던전 1과 같은 보스(월드 판은 WorldTuning.dungeons[].boss)
-            fields.FindProperty("previewBoss").objectReferenceValue = AssetDatabase.LoadAssetAtPath<BossTuning>(BossSetup.TuningPath);
-            fields.FindProperty("sun").objectReferenceValue = sun; // 테마가 조명 색 · 세기를 바꾼다(숲은 그대로)
+            // 층 씬만 Play = 숲 던전 1과 같은 보스(반달가슴곰, 월드 판은 WorldTuning.dungeons[].boss)
+            fields.FindProperty("previewBoss").objectReferenceValue = AssetDatabase.LoadAssetAtPath<BossTuning>(BearBossSetup.TuningPath);
+            fields.FindProperty("sun").objectReferenceValue = sun; // 테마가 조명 색 · 세기를 바꾼다
+            // 층 씬만 Play = 숲 던전 1과 같은 안 모양(무너진 사육장, 월드 판은 WorldTuning.dungeons[].interiorTheme)
+            fields.FindProperty("previewTheme").objectReferenceValue = FloorThemeSetup.LoadForestTheme();
             fields.ApplyModifiedPropertiesWithoutUndo();
 
             EditorSceneManager.SaveScene(scene, ScenePath);

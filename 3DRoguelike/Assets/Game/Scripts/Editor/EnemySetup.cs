@@ -30,6 +30,8 @@ namespace Game.EditorTools
             (EnemySpecies.Boar, new Color(0.42f, 0.28f, 0.18f), new Vector3(1.0f, 0.8f, 1.9f), new Vector2(1.1f, 2.1f)),
             (EnemySpecies.Hare, new Color(0.72f, 0.62f, 0.48f), new Vector3(0.35f, 0.35f, 0.7f), new Vector2(0.45f, 1.1f)),
             (EnemySpecies.Toad, new Color(0.32f, 0.48f, 0.22f), new Vector3(1.0f, 0.45f, 0.9f), new Vector2(0.9f, 1.4f)),
+            (EnemySpecies.RaccoonDog, new Color(0.40f, 0.34f, 0.28f), new Vector3(0.55f, 0.45f, 1.0f), new Vector2(0.6f, 1.3f)),
+            (EnemySpecies.Fox, new Color(0.78f, 0.42f, 0.18f), new Vector3(0.45f, 0.5f, 1.3f), new Vector2(0.7f, 1.7f)),
         };
 
         /// <summary>E 개체 색을 이 색 쪽으로 조금 당겨 Mutant와 구별한다.</summary>
@@ -43,20 +45,27 @@ namespace Game.EditorTools
         private const float ModelSmoothnessScale = 0.5f;
 
         /// <summary>
-        /// VARCO 정적 모델 표: 종 · 모습 → 파일(Art/Enemies/Models/{file}.fbx, 텍스처는 {file}_tex), 목표 크기, 정면 보정(Y 회전, 도), 위치 보정.
+        /// VARCO 모델 표: 종 · 모습 → 파일 이름(텍스처 Art/Enemies/Models/{file}_tex/{file}_0|1|2_Image_*.png · 재질 Materials/{file}.mat · 정적 모델 {file}.fbx), 목표 크기, 정면 보정(Y 회전, 도), 위치 보정,
+        /// 리깅 모델 자리(rigged, null이면 Models/Rigged/{file}.fbx(E) · {file}_Rigged.fbx(Mutant)) — 리깅 모델을 바꿀 때(예: 로우폴리) 이 칸 하나만 바꾼다,
+        /// 네 발 발 빠르기(feet: 걷기 x · 달리기 y, m/s, 모델 길이 1 기준, 0이면 클립에서 잰다).
         /// 목표 크기: Mutant = 앞뒤(z) 길이(충돌 캡슐 길이와 같게), E 개체 = 키(충돌 캡슐 높이와 같게, 토끼는 귀만큼 더).
         /// 가져온 모델은 모두 +z가 앞이라 회전 보정은 0. 위치는 바닥 가운데를 발밑 피벗에 자동으로 맞춘 뒤 offset을 더한다.
         /// </summary>
-        private static readonly (EnemySpecies species, EnemyGrade grade, string file, float size, float yaw, Vector3 offset)[] Models =
+        private static readonly (EnemySpecies species, EnemyGrade grade, string file, float size, float yaw, Vector3 offset, string rigged, Vector2 feet)[] Models =
         {
-            (EnemySpecies.Badger, EnemyGrade.Mutant, "Badger_Mutant", 1.38f, 0f, Vector3.zero),
-            (EnemySpecies.Boar, EnemyGrade.Mutant, "Boar_Mutant", 2.22f, 0f, Vector3.zero),
-            (EnemySpecies.Hare, EnemyGrade.Mutant, "Hare_Mutant", 0.84f, 0f, Vector3.zero),
-            (EnemySpecies.Toad, EnemyGrade.Mutant, "Toad_Mutant", 1.08f, 0f, Vector3.zero),
-            (EnemySpecies.Badger, EnemyGrade.Evolved, "Badger_E", 1.7f, 0f, Vector3.zero),
-            (EnemySpecies.Boar, EnemyGrade.Evolved, "Boar_E", 2.1f, 0f, Vector3.zero),
-            (EnemySpecies.Hare, EnemyGrade.Evolved, "Hare_E", 1.25f, 0f, Vector3.zero),
-            (EnemySpecies.Toad, EnemyGrade.Evolved, "Toad_E", 1.4f, 0f, Vector3.zero),
+            (EnemySpecies.Badger, EnemyGrade.Mutant, "Badger_Mutant", 1.38f, 0f, Vector3.zero, null, Vector2.zero),
+            (EnemySpecies.Boar, EnemyGrade.Mutant, "Boar_Mutant", 2.22f, 0f, Vector3.zero, null, Vector2.zero),
+            (EnemySpecies.Hare, EnemyGrade.Mutant, "Hare_Mutant", 0.84f, 0f, Vector3.zero, null, Vector2.zero),
+            (EnemySpecies.Toad, EnemyGrade.Mutant, "Toad_Mutant", 1.08f, 0f, Vector3.zero, null, Vector2.zero),
+            (EnemySpecies.Badger, EnemyGrade.Evolved, "Badger_E", 1.7f, 0f, Vector3.zero, null, Vector2.zero),
+            (EnemySpecies.Boar, EnemyGrade.Evolved, "Boar_E", 2.1f, 0f, Vector3.zero, null, Vector2.zero),
+            (EnemySpecies.Hare, EnemyGrade.Evolved, "Hare_E", 1.25f, 0f, Vector3.zero, null, Vector2.zero),
+            (EnemySpecies.Toad, EnemyGrade.Evolved, "Toad_E", 1.4f, 0f, Vector3.zero, null, Vector2.zero),
+            // 도시(2026-11-27): 네 발 = Blender 리그(Jaw · 여우 꼬리 TailB 더함, 발 빠르기는 감독이 Blender에서 잰 값), E = VARCO 사람형 자동 리깅 원본(하이폴리, Humanoid)
+            (EnemySpecies.RaccoonDog, EnemyGrade.Mutant, "RaccoonDog_Mutant", 1.0f, 0f, Vector3.zero, ModelFolder + "/RaccoonDog_Mutant.fbx", new Vector2(0.38f, 1.5f)),
+            (EnemySpecies.Fox, EnemyGrade.Mutant, "Fox_Mutant", 1.3f, 0f, Vector3.zero, ModelFolder + "/Fox_Mutant.fbx", new Vector2(0.40f, 2.5f)),
+            (EnemySpecies.RaccoonDog, EnemyGrade.Evolved, "RaccoonDog_E", 1.3f, 0f, Vector3.zero, ModelFolder + "/VarcoRigE/RaccoonDog_E_VarcoRig.fbx", Vector2.zero),
+            (EnemySpecies.Fox, EnemyGrade.Evolved, "Fox_E", 1.7f, 0f, Vector3.zero, ModelFolder + "/VarcoRigE/Fox_E_VarcoRig.fbx", Vector2.zero),
         };
 
         private struct Built
@@ -85,22 +94,28 @@ namespace Game.EditorTools
             var boar = LoadOrCreate<BoarTuning>("BoarTuning");
             var hare = LoadOrCreate<HareTuning>("HareTuning");
             var toad = LoadOrCreate<ToadTuning>("ToadTuning");
+            var raccoon = LoadOrCreate<RaccoonDogTuning>("RaccoonDogTuning");
+            var fox = LoadOrCreate<FoxTuning>("FoxTuning");
             // E 개체 동작: 표의 구간대로 클립 자르기(수치 에셋의 시간에 맞춘 컨트롤러는 모델을 넣을 때 만든다)
-            EnemyAnimationSetup.ImportClips((EnemySpecies.Badger, badger), (EnemySpecies.Boar, boar), (EnemySpecies.Hare, hare), (EnemySpecies.Toad, toad));
+            EnemyAnimationSetup.ImportClips((EnemySpecies.Badger, badger), (EnemySpecies.Boar, boar), (EnemySpecies.Hare, hare), (EnemySpecies.Toad, toad),
+                (EnemySpecies.RaccoonDog, raccoon), (EnemySpecies.Fox, fox));
             PoisonPuddle puddle = BuildPuddle(poison);
             ToadSpit spit = BuildSpit(spitMaterial);
 
             EnemyRoster roster = LoadOrCreateRoster();
+            AddMissingSpecies(roster);
             foreach (EnemyGrade grade in new[] { EnemyGrade.Mutant, EnemyGrade.Evolved })
             {
                 SetPrefab(roster, EnemySpecies.Badger, grade, BuildBadger(badger, grade, warning));
                 SetPrefab(roster, EnemySpecies.Boar, grade, BuildBoar(boar, grade, warning, stun));
                 SetPrefab(roster, EnemySpecies.Hare, grade, BuildHare(hare, grade, warning));
                 SetPrefab(roster, EnemySpecies.Toad, grade, BuildToad(toad, grade, warning, spit, puddle));
+                SetPrefab(roster, EnemySpecies.RaccoonDog, grade, BuildRaccoonDog(raccoon, grade, warning));
+                SetPrefab(roster, EnemySpecies.Fox, grade, BuildFox(fox, grade, warning));
             }
             EditorUtility.SetDirty(roster);
             AssetDatabase.SaveAssets();
-            Debug.Log("[EnemySetup] 숲 적 4종 프리팹 8개 · 구성 표: " + RosterPath);
+            Debug.Log("[EnemySetup] 적 6종(숲 4 · 도시 2) 프리팹 12개 · 구성 표: " + RosterPath);
             return roster;
         }
 
@@ -199,6 +214,32 @@ namespace Game.EditorTools
             for (int i = 0; i < count; i++) array.GetArrayElementAtIndex(i).objectReferenceValue = targets[i];
             fields.ApplyModifiedPropertiesWithoutUndo();
             return Save(built, EnemySpecies.Toad, grade);
+        }
+
+        private static GameObject BuildRaccoonDog(RaccoonDogTuning tuning, EnemyGrade grade, Material warning)
+        {
+            Built built = BuildShape(EnemySpecies.RaccoonDog, grade, tuning);
+            float halfAngle = Mathf.Min(tuning.hitAngle, 180f) * 0.5f * Mathf.Deg2Rad;
+            float width = 2f * tuning.hitRange * Mathf.Sin(halfAngle);
+            GameObject attack = TestRoomSetup.FlatMarker(built.root.transform, "AttackWarning", PrimitiveType.Cube,
+                new Vector3(0f, 0f, tuning.hitRange * 0.5f), new Vector3(width, 0.005f, tuning.hitRange), warning);
+
+            SerializedObject fields = Wire<RaccoonDog>(built, grade, tuning, warning);
+            fields.FindProperty("attackWarning").objectReferenceValue = attack;
+            fields.ApplyModifiedPropertiesWithoutUndo();
+            return Save(built, EnemySpecies.RaccoonDog, grade);
+        }
+
+        private static GameObject BuildFox(FoxTuning tuning, EnemyGrade grade, Material warning)
+        {
+            Built built = BuildShape(EnemySpecies.Fox, grade, tuning);
+            GameObject lane = TestRoomSetup.FlatMarker(built.root.transform, "LungeWarning", PrimitiveType.Cube,
+                new Vector3(0f, 0f, tuning.lungeDistance * 0.5f), new Vector3(tuning.hitRadius * 2f, 0.005f, tuning.lungeDistance), warning);
+
+            SerializedObject fields = Wire<Fox>(built, grade, tuning, warning);
+            fields.FindProperty("lungeWarning").objectReferenceValue = lane;
+            fields.ApplyModifiedPropertiesWithoutUndo();
+            return Save(built, EnemySpecies.Fox, grade);
         }
 
         private static PoisonPuddle BuildPuddle(Material material)
@@ -324,17 +365,18 @@ namespace Game.EditorTools
             {
                 // 두 발: 리깅 모델 + 동작(같은 텍스처 · 재질). 리깅 파일이 없으면 아래 정적 모델로
                 Material skin = LoadModelMaterial(entry.file);
-                if (skin != null && EnemyAnimationSetup.TryBuild(species, entry.file, entry.size, entry.yaw, entry.offset, skin, tuning, body, out rig)) return true;
+                if (skin != null && EnemyAnimationSetup.TryBuild(species, entry.file, entry.rigged, entry.size, entry.yaw, entry.offset, skin, tuning, body, out rig)) return true;
                 rig = default;
             }
             else
             {
                 // 네 발: 리깅 모델(Generic) + 동작. 리깅 파일이 없으면 아래 정적 모델로
                 Material skin = LoadModelMaterial(entry.file);
-                if (skin != null && EnemyAnimationSetup.TryBuildMutant(species, entry.file, entry.size, entry.yaw, entry.offset, skin, tuning, body, out rig)) return true;
+                if (skin != null && EnemyAnimationSetup.TryBuildMutant(species, entry.file, entry.rigged, entry.feet, entry.size, entry.yaw, entry.offset, skin, tuning, body, out rig)) return true;
                 rig = default;
             }
             string path = $"{ModelFolder}/{entry.file}.fbx";
+            if (path == entry.rigged) return false; // 리깅 모델 파일을 정적 모델 설정으로 바꾸지 않는다(도형으로)
             if (!VillageHouseArt.ConfigureStaticModel(path)) return false;
             var asset = AssetDatabase.LoadAssetAtPath<GameObject>(path);
             Material material = LoadModelMaterial(entry.file);
@@ -474,6 +516,23 @@ namespace Game.EditorTools
             AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<T>(), path);
             AssetDatabase.SaveAssets();
             return AssetDatabase.LoadAssetAtPath<T>(path);
+        }
+
+        /// <summary>
+        /// 구성 표에 없는 종 줄을 기본값(EnemyRoster의 초기값)으로 끝에 더한다(새 종). 이미 있는 줄 · 단계 비중은 건드리지 않는다.
+        /// </summary>
+        private static void AddMissingSpecies(EnemyRoster roster)
+        {
+            var defaults = ScriptableObject.CreateInstance<EnemyRoster>();
+            var list = new System.Collections.Generic.List<EnemyRoster.SpeciesEntry>(roster.species);
+            foreach (EnemyRoster.SpeciesEntry entry in defaults.species)
+            {
+                if (roster.TryGetEntry(entry.species, out _)) continue;
+                list.Add(entry);
+                Debug.Log($"[EnemySetup] 구성 표에 {entry.species} 줄을 더했습니다(자리 {entry.slots} · 떼 {entry.groupMin}~{entry.groupMax}).");
+            }
+            Object.DestroyImmediate(defaults);
+            if (list.Count != roster.species.Length) roster.species = list.ToArray();
         }
 
         private static EnemyRoster LoadOrCreateRoster()

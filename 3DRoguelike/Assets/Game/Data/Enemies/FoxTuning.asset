@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 669c0bd3e039a11469bcf7d63a874381, type: 3}
+  m_Name: FoxTuning
+  m_EditorClassIdentifier: Game.Runtime::Game.FoxTuning
+  displayName: "\uC5EC\uC6B0 Mutant"
+  evolvedDisplayName: "\uC5EC\uC6B0 E \uAC1C\uCCB4"
+  maxHealth: 22
+  evolvedHealthMultiplier: 1.8
+  moveSpeed: 4.4
+  turnSpeed: 540
+  repathInterval: 0.2
+  spawnTime: 1
+  extraAttackEvery: 2
+  windupLeanAngle: 15
+  strikeLeanAngle: 20
+  hitFlashTime: 0.08
+  corpseTime: 1
+  evolvedCorpseTime: 2.2
+  attackName: "\uB2EC\uB824\uB4E4\uC5B4 \uBB3C\uAE30"
+  lungeStartRange: 4
+  windupTime: 0.6
+  lungeTime: 0.3
+  lungeDistance: 4.5
+  lungeOvershoot: 0.5
+  hitRadius: 0.9
+  damage: 9
+  retreatDistance: 3.5
+  retreatTime: 1
+  stalkTime: 0.8
+  stalkSpeed: 0.55
+  chainName: "\uC5F0\uC18D \uB2EC\uB824\uB4E4\uAE30"
+  chainWindupTime: 0.35
+  chainDamage: 7

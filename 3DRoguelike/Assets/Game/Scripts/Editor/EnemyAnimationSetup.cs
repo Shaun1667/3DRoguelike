@@ -165,6 +165,27 @@ namespace Game.EditorTools
                     death = Fall(P(DeathFront, 8, 85, fall));
                     break;
                 }
+                case EnemySpecies.RaccoonDog:
+                {
+                    // 오소리와 같은 할퀴기 동작(더 짧게). 연속은 두 번째부터 매번 Combo2(오른손 짧게)
+                    var t = (RaccoonDogTuning)tuning;
+                    float gap = t.comboInterval;
+                    list.Add(S(EnemyAnim.AttackState, P(Swipe1, 6, 39, t.windupTime)));
+                    list.Add(S(EnemyAnim.AttackRecoverState, P(Swipe1, 39, 78, t.recoverTime)));
+                    list.Add(S(EnemyAnim.Combo2State, P(Swipe1, 39, 48, gap * 0.45f), P(Swipe2, 0, 9, gap * 0.55f)));
+                    list.Add(S(EnemyAnim.ComboRecoverState, P(Swipe2, 9, 33, t.comboRecoverTime)));
+                    death = Fall(P(DeathFront, 8, 85, fall));
+                    break;
+                }
+                case EnemySpecies.Fox:
+                {
+                    // 웅크림(예고) + 앞으로 뛰기(달려들기) → 끝이 무는 순간. 물러나기는 착지 구간. 연속 달려들기 = 짧은 웅크림 + 달려들기
+                    var t = (FoxTuning)tuning;
+                    list.Add(S(EnemyAnim.AttackState, P(Hop, 3, 21, t.windupTime), P(Hop, 21, 36, t.lungeTime)));
+                    list.Add(S(EnemyAnim.AttackRecoverState, P(Hop, 36, 60, t.retreatTime)));
+                    list.Add(S(EnemyAnim.Combo2State, P(Hop, 3, 21, t.chainWindupTime), P(Hop, 21, 36, t.lungeTime)));
+                    break;
+                }
             }
             list.Add(new Sequence { state = EnemyAnim.DeathState, parts = new[] { death }, returns = false });
             return list;
@@ -262,10 +283,11 @@ namespace Game.EditorTools
         /// Body 아래에 리깅 모델을 <c>Model</c>(크기 · 회전 · 위치 보정) → 모델 인스턴스(Animator)로 넣는다. 키(T-포즈 발바닥~머리 끝)를 height에 맞춘다.
         /// 리깅 파일 · 아바타 · 대기 클립이 없으면 아무것도 넣지 않고 false(EnemySetup이 정적 모델로 대신한다).
         /// </summary>
-        internal static bool TryBuild(EnemySpecies species, string file, float height, float yaw, Vector3 offset, Material material, EnemyTuning tuning, Transform body, out Rig rig)
+        /// <param name="modelPath">리깅 모델 자리. null이면 Models/Rigged/{file}.fbx(숲 E 개체 Mixamo). 다른 리깅 모델로 바꿀 때는 EnemySetup 표의 이 칸만 바꾼다</param>
+        internal static bool TryBuild(EnemySpecies species, string file, string modelPath, float height, float yaw, Vector3 offset, Material material, EnemyTuning tuning, Transform body, out Rig rig)
         {
             rig = default;
-            string path = $"{RiggedFolder}/{file}.fbx";
+            string path = string.IsNullOrEmpty(modelPath) ? $"{RiggedFolder}/{file}.fbx" : modelPath;
             if (!(AssetImporter.GetAtPath(path) is ModelImporter importer) || material == null || tuning == null) return false;
             ConfigureModel(importer);
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -543,44 +565,62 @@ namespace Game.EditorTools
         private const float MaxMutantRunRate = 2f;
         private const float MaxChargeRate = 2.5f;
 
-        /// <summary>종마다 Mutant 상태 표: 상태(= 클립 이름) · 길이(수치 에셋의 시간, 0이면 원래 빠르기). 예고 클립은 끝 프레임이 닿는 · 뱉는 순간.</summary>
-        private static List<(string state, float seconds)> MutantStatesFor(EnemySpecies species, EnemyTuning tuning)
+        /// <summary>
+        /// 종마다 Mutant 상태 표: 상태(= 클립 이름) · 길이(수치 에셋의 시간, 0이면 원래 빠르기) · 맞히는 프레임(0이면 끝 프레임).
+        /// 예고 클립은 그 프레임이 닿는 · 뱉는 순간 — 길이는 처음부터 그 프레임까지를 맞추고, 남은 프레임은 같은 빠르기로 이어 튼다(빈틈 동작이 따로 없는 너구리).
+        /// </summary>
+        private static List<(string state, float seconds, int hitFrame)> MutantStatesFor(EnemySpecies species, EnemyTuning tuning)
         {
-            var list = new List<(string state, float seconds)>();
+            var list = new List<(string state, float seconds, int hitFrame)>();
             switch (species)
             {
                 case EnemySpecies.Badger:
                 {
                     var t = (BadgerTuning)tuning;
-                    list.Add((EnemyAnim.AttackState, t.windupTime));
-                    list.Add((EnemyAnim.AttackRecoverState, t.recoverTime));
+                    list.Add((EnemyAnim.AttackState, t.windupTime, 0));
+                    list.Add((EnemyAnim.AttackRecoverState, t.recoverTime, 0));
                     break;
                 }
                 case EnemySpecies.Boar:
                 {
                     var t = (BoarTuning)tuning;
-                    list.Add((EnemyAnim.ChargeWindupState, t.windupTime));
-                    list.Add((EnemyAnim.ChargeState, 0f)); // 재생 빠르기는 돌진 빠르기에 맞춘다
-                    list.Add((EnemyAnim.StunState, 0f));
+                    list.Add((EnemyAnim.ChargeWindupState, t.windupTime, 0));
+                    list.Add((EnemyAnim.ChargeState, 0f, 0)); // 재생 빠르기는 돌진 빠르기에 맞춘다
+                    list.Add((EnemyAnim.StunState, 0f, 0));
                     break;
                 }
                 case EnemySpecies.Hare:
                 {
                     var t = (HareTuning)tuning;
-                    list.Add((EnemyAnim.CrouchState, t.crouchTime));
-                    list.Add((EnemyAnim.LeapState, t.leapTime));
-                    list.Add((EnemyAnim.LandState, t.recoverTime));
+                    list.Add((EnemyAnim.CrouchState, t.crouchTime, 0));
+                    list.Add((EnemyAnim.LeapState, t.leapTime, 0));
+                    list.Add((EnemyAnim.LandState, t.recoverTime, 0));
                     break;
                 }
                 case EnemySpecies.Toad:
                 {
                     var t = (ToadTuning)tuning;
-                    list.Add((EnemyAnim.SpitWindupState, t.windupTime));
-                    list.Add((EnemyAnim.SpitState, t.recoverTime));
+                    list.Add((EnemyAnim.SpitWindupState, t.windupTime, 0));
+                    list.Add((EnemyAnim.SpitState, t.recoverTime, 0));
+                    break;
+                }
+                case EnemySpecies.RaccoonDog:
+                {
+                    // Attack 24프레임 한 벌: 0~7 몸을 일으킴 → 8~11 앞으로 덮치며 무는 순간(11) → 12~24 제자리(빈틈 동안 이어 튼다)
+                    var t = (RaccoonDogTuning)tuning;
+                    list.Add((EnemyAnim.AttackState, t.windupTime, 11));
+                    break;
+                }
+                case EnemySpecies.Fox:
+                {
+                    // Attack 30프레임: 0~11 웅크림 → 11~15 달려들어 무는 순간(15, 턱을 닫음) / AttackRecover: 뒤로 뛰어 물러나기
+                    var t = (FoxTuning)tuning;
+                    list.Add((EnemyAnim.AttackState, t.windupTime + t.lungeTime, 15));
+                    list.Add((EnemyAnim.AttackRecoverState, t.retreatTime, 0));
                     break;
                 }
             }
-            list.Add((EnemyAnim.DeathState, tuning.evolvedCorpseTime * DeathFallShare));
+            list.Add((EnemyAnim.DeathState, tuning.evolvedCorpseTime * DeathFallShare, 0));;
             return list;
         }
 
@@ -644,10 +684,12 @@ namespace Game.EditorTools
         /// Body 아래에 네 발 리깅 모델({file}_Rigged.fbx)을 <c>Model</c>(크기 · 회전 · 위치 보정) → 모델 인스턴스(Animator)로 넣는다.
         /// 정적 모델과 같은 기준: 앞뒤 길이를 length에 맞추고 바닥 가운데를 발밑 피벗에. 리깅 파일 · 대기 클립이 없으면 false(EnemySetup이 정적 모델로 대신한다).
         /// </summary>
-        internal static bool TryBuildMutant(EnemySpecies species, string file, float length, float yaw, Vector3 offset, Material material, EnemyTuning tuning, Transform body, out Rig rig)
+        /// <param name="modelPath">리깅 모델 자리. null이면 Models/Rigged/{file}_Rigged.fbx</param>
+        /// <param name="footSpeed">발이 안 미끄러지는 걷기(x) · 달리기(y) 빠르기(m/s, 모델 길이 1 기준 — 모델 배율을 곱한다). 0이면 클립을 샘플해 잔다</param>
+        internal static bool TryBuildMutant(EnemySpecies species, string file, string modelPath, Vector2 footSpeed, float length, float yaw, Vector3 offset, Material material, EnemyTuning tuning, Transform body, out Rig rig)
         {
             rig = default;
-            string path = $"{RiggedFolder}/{file}_Rigged.fbx";
+            string path = string.IsNullOrEmpty(modelPath) ? $"{RiggedFolder}/{file}_Rigged.fbx" : modelPath;
             if (!(AssetImporter.GetAtPath(path) is ModelImporter importer) || material == null || tuning == null) return false;
             ConfigureMutantModel(importer);
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(path);
@@ -704,7 +746,7 @@ namespace Game.EditorTools
             {
                 if (asset is Avatar avatar && avatar.isValid) animator.avatar = avatar;
             }
-            animator.runtimeAnimatorController = BuildMutantController(species, file, tuning, model, scale);
+            animator.runtimeAnimatorController = BuildMutantController(species, file, tuning, model, scale, footSpeed);
             animator.applyRootMotion = false;
             animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
             animator.updateMode = AnimatorUpdateMode.Normal;
@@ -824,7 +866,7 @@ namespace Game.EditorTools
         /// Mutant 종 컨트롤러를 같은 에셋에 다시 만든다(E 개체와 같은 구조). Base: Locomotion(대기 ↔ 걷기 ↔ 달리기, Speed m/s) + 종 상태들 + Death. Hit 레이어: 더하기.
         /// 걷기 문턱 = 걷기 클립의 땅 빠르기 × 모델 배율, 달리기는 이동 빠르기에 맞춰 재생 빠르기를 바꾼다(발 미끄러짐 줄이기).
         /// </summary>
-        private static RuntimeAnimatorController BuildMutantController(EnemySpecies species, string file, EnemyTuning tuning, GameObject model, float scale)
+        private static RuntimeAnimatorController BuildMutantController(EnemySpecies species, string file, EnemyTuning tuning, GameObject model, float scale, Vector2 footSpeed)
         {
             if (!AssetDatabase.IsValidFolder(ControllerFolder)) AssetDatabase.CreateFolder(ClipFolder, "Controllers");
             string path = $"{ControllerFolder}/{species}_Mutant.controller";
@@ -843,8 +885,9 @@ namespace Game.EditorTools
             AnimationClip idle = MutantClip(file, MutantIdle);
             AnimationClip walk = MutantClip(file, MutantWalk);
             AnimationClip run = MutantClip(file, MutantRun);
-            float walkSpeed = GroundSpeed(model, walk) * scale;
-            float runNatural = GroundSpeed(model, run) * scale;
+            // 발 빠르기를 알고 있으면(Blender에서 잔 값) 그것, 아니면 샘플해 잔다
+            float walkSpeed = (footSpeed.x > 0f ? footSpeed.x : GroundSpeed(model, walk)) * scale;
+            float runNatural = (footSpeed.y > 0f ? footSpeed.y : GroundSpeed(model, run)) * scale;
             // 발을 디딘 채 뛰는(발이 뒤로 밀리지 않는) 깡충 동작은 땅 빠르기가 거의 0으로 나온다 → 못 잰 것으로 보고 원래 빠르기로 튼다
             bool measured = runNatural > tuning.moveSpeed * 0.25f;
             float runRate = measured ? Mathf.Clamp(tuning.moveSpeed / runNatural, MinMutantRunRate, MaxMutantRunRate) : 1f;
@@ -863,7 +906,7 @@ namespace Game.EditorTools
             machine.defaultState = locomotion;
 
             var report = new System.Text.StringBuilder();
-            foreach ((string name, float seconds) in MutantStatesFor(species, tuning))
+            foreach ((string name, float seconds, int hitFrame) in MutantStatesFor(species, tuning))
             {
                 AnimationClip clip = MutantClip(file, name);
                 if (clip == null) Debug.LogWarning($"[EnemyAnimationSetup] {file}: {name} 동작 클립이 없습니다");
@@ -872,7 +915,7 @@ namespace Game.EditorTools
                 state.iKOnFeet = false;
                 bool loop = System.Array.IndexOf(MutantLoops, name) >= 0;
                 float speed = 1f;
-                if (clip != null && seconds > 0.01f) speed = clip.length / seconds;
+                if (clip != null && seconds > 0.01f) speed = (hitFrame > 0 ? Mathf.Min(clip.length, hitFrame / clip.frameRate) : clip.length) / seconds;
                 else if (name == EnemyAnim.ChargeState && tuning is BoarTuning boar)
                 {
                     float natural = GroundSpeed(model, clip) * scale;

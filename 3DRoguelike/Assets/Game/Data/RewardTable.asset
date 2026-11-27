@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::Game.RewardTable
   entries:
   - id: beast_strength
-    displayName: "근력"
-    description: "맨손 공격이 묵직해진다"
+    displayName: "\uADFC\uB825"
+    description: "\uB9E8\uC190 \uACF5\uACA9\uC774 \uBB35\uC9C1\uD574\uC9C4\uB2E4"
     tendency: 0
     amount: 1
     rarity: 0
@@ -23,9 +23,13 @@ MonoBehaviour:
     - stat: 0
       percent: 20
     comingLater: 0
+    unlock: 0
+    guaranteed: 0
+    guaranteeFromDungeon: 0
+    metaLocked: 0
   - id: beast_move
-    displayName: "이동"
-    description: "더 빨리 움직인다"
+    displayName: "\uC774\uB3D9"
+    description: "\uB354 \uBE68\uB9AC \uC6C0\uC9C1\uC778\uB2E4"
     tendency: 0
     amount: 1
     rarity: 0
@@ -33,9 +37,13 @@ MonoBehaviour:
     - stat: 1
       percent: 10
     comingLater: 0
+    unlock: 0
+    guaranteed: 0
+    guaranteeFromDungeon: 0
+    metaLocked: 0
   - id: beast_regen
-    displayName: "재생"
-    description: "방을 깰 때마다 상처가 아문다"
+    displayName: "\uC7AC\uC0DD"
+    description: "\uBC29\uC744 \uAE70 \uB54C\uB9C8\uB2E4 \uC0C1\uCC98\uAC00 \uC544\uBB38\uB2E4"
     tendency: 0
     amount: 1
     rarity: 0
@@ -43,9 +51,13 @@ MonoBehaviour:
     - stat: 2
       percent: 20
     comingLater: 0
+    unlock: 0
+    guaranteed: 0
+    guaranteeFromDungeon: 0
+    metaLocked: 0
   - id: human_pistol
-    displayName: "권총 손질"
-    description: "권총이 더 세게 맞는다"
+    displayName: "\uAD8C\uCD1D \uC190\uC9C8"
+    description: "\uAD8C\uCD1D\uC774 \uB354 \uC138\uAC8C \uB9DE\uB294\uB2E4"
     tendency: 1
     amount: 1
     rarity: 0
@@ -53,9 +65,13 @@ MonoBehaviour:
     - stat: 3
       percent: 20
     comingLater: 0
+    unlock: 0
+    guaranteed: 0
+    guaranteeFromDungeon: 0
+    metaLocked: 0
   - id: human_magazine
-    displayName: "탄창"
-    description: "한 번에 더 많이 쏜다"
+    displayName: "\uD0C4\uCC3D"
+    description: "\uD55C \uBC88\uC5D0 \uB354 \uB9CE\uC774 \uC3DC\uB2E4"
     tendency: 1
     amount: 1
     rarity: 0
@@ -63,9 +79,13 @@ MonoBehaviour:
     - stat: 4
       percent: 20
     comingLater: 0
+    unlock: 0
+    guaranteed: 0
+    guaranteeFromDungeon: 0
+    metaLocked: 0
   - id: human_aim
-    displayName: "조준"
-    description: "조준이 빨라진다"
+    displayName: "\uC870\uC900"
+    description: "\uC870\uC900\uC774 \uBE68\uB77C\uC9C4\uB2E4"
     tendency: 1
     amount: 1
     rarity: 0
@@ -75,17 +95,25 @@ MonoBehaviour:
     - stat: 6
       percent: 20
     comingLater: 0
+    unlock: 0
+    guaranteed: 0
+    guaranteeFromDungeon: 0
+    metaLocked: 0
   - id: beast_charge
-    displayName: "돌진"
-    description: "적에게 몸을 던진다"
+    displayName: "\uB3CC\uC9C4"
+    description: "\uC801\uC5D0\uAC8C \uBAB8\uC744 \uB358\uC9C4\uB2E4"
     tendency: 0
     amount: 2
     rarity: 1
     effects: []
     comingLater: 1
+    unlock: 0
+    guaranteed: 0
+    guaranteeFromDungeon: 0
+    metaLocked: 0
   - id: beast_dodge
-    displayName: "회피"
-    description: "구르기가 길고 빨라진다"
+    displayName: "\uD68C\uD53C"
+    description: "\uAD6C\uB974\uAE30\uAC00 \uAE38\uACE0 \uBE68\uB77C\uC9C4\uB2E4"
     tendency: 0
     amount: 2
     rarity: 1
@@ -95,19 +123,73 @@ MonoBehaviour:
     - stat: 8
       percent: 40
     comingLater: 0
+    unlock: 0
+    guaranteed: 0
+    guaranteeFromDungeon: 0
+    metaLocked: 0
   - id: human_shotgun
-    displayName: "산탄총"
-    description: "가까운 적 여럿을 한 번에"
+    displayName: "\uC0B0\uD0C4\uCD1D"
+    description: "\uAC00\uAE4C\uC6B4 \uC801 \uC5EC\uB7FF\uC744 \uD55C \uBC88\uC5D0"
     tendency: 1
     amount: 2
     rarity: 1
     effects: []
     comingLater: 1
+    unlock: 0
+    guaranteed: 0
+    guaranteeFromDungeon: 0
+    metaLocked: 0
   - id: human_explosive
-    displayName: "폭발물"
-    description: "모여 있는 적을 날린다"
+    displayName: "\uD3ED\uBC1C\uBB3C"
+    description: "\uBAA8\uC5EC \uC788\uB294 \uC801\uC744 \uB0A0\uB9B0\uB2E4"
     tendency: 1
     amount: 2
     rarity: 1
     effects: []
     comingLater: 1
+    unlock: 0
+    guaranteed: 0
+    guaranteeFromDungeon: 0
+    metaLocked: 0
+  - id: weapon_pistol
+    displayName: "\uAD8C\uCD1D"
+    description: "\uC6B0\uD074\uB9AD\uC73C\uB85C \uC870\uC900\uD558\uACE0 \uC88C\uD074\uB9AD\uC73C\uB85C
+      \uC3DC\uB2E4"
+    tendency: 1
+    amount: 0
+    rarity: 0
+    effects: []
+    comingLater: 0
+    unlock: 1
+    guaranteed: 1
+    guaranteeFromDungeon: 0
+    metaLocked: 0
+  - id: beast_frenzy
+    displayName: "\uAD11\uD3ED"
+    description: "\uBCF8\uB2A5\uC774 \uD130\uC838 \uB9E8\uC190\uC774 \uD6E8\uC52C
+      \uC138\uC9C4\uB2E4"
+    tendency: 0
+    amount: 2
+    rarity: 1
+    effects:
+    - stat: 0
+      percent: 40
+    comingLater: 0
+    unlock: 0
+    guaranteed: 0
+    guaranteeFromDungeon: 0
+    metaLocked: 1
+  - id: human_hollowpoint
+    displayName: "\uD560\uB85C\uD3EC\uC778\uD2B8"
+    description: "\uAD8C\uCD1D \uD0C4\uC774 \uB9DE\uC73C\uBA74 \uD37C\uC9C4\uB2E4"
+    tendency: 1
+    amount: 2
+    rarity: 1
+    effects:
+    - stat: 3
+      percent: 40
+    comingLater: 0
+    unlock: 0
+    guaranteed: 0
+    guaranteeFromDungeon: 0
+    metaLocked: 1

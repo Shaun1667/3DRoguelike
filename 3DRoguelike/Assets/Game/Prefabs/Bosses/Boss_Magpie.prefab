@@ -45,7 +45,7 @@ GameObject:
   - component: {fileID: 6534245126887928640}
   - component: {fileID: 2626453797660508423}
   - component: {fileID: 1507543798224150454}
-  - component: {fileID: 6665318518716799633}
+  - component: {fileID: 1809449070377821549}
   m_Layer: 0
   m_Name: Boss_Magpie
   m_TagString: Untagged
@@ -145,7 +145,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d59d98b51f91bca4d9344c79bc920a31, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Game.Runtime::Game.HitFlash
---- !u!114 &6665318518716799633
+--- !u!114 &1809449070377821549
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -154,16 +154,17 @@ MonoBehaviour:
   m_GameObject: {fileID: 1815391731759582651}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3c0acd8b1b49837448d91f250a624b02, type: 3}
+  m_Script: {fileID: 11500000, guid: c9c6306a394653247a177bb7fa572a50, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Game.Runtime::Game.Boss
-  tuning: {fileID: 11400000, guid: 728e2a4c571811048b99df53e7539823, type: 2}
+  m_EditorClassIdentifier: Game.Runtime::Game.MagpieBoss
   health: {fileID: 2626453797660508423}
   flash: {fileID: 1507543798224150454}
   body: {fileID: 1453410645247189908}
+  animator: {fileID: 1981672718736183137}
+  impulse: {fileID: 0}
+  tuning: {fileID: 11400000, guid: 728e2a4c571811048b99df53e7539823, type: 2}
   laneWarning: {fileID: 2065028447765441732}
   slamWarning: {fileID: 2024669048356266190}
-  animator: {fileID: 1981672718736183137}
   wingAnimator: {fileID: 2947725015300241549}
 --- !u!1 &2024669048356266190
 GameObject:

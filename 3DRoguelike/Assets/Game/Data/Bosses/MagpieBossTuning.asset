@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Game.Runtime::Game.BossTuning
   displayName: "\uAE4C\uCE58"
   enragedLabel: "\uACA9\uB178"
-  prefab: {fileID: 6665318518716799633, guid: 36ed06bfe02fc874ca48060bee313370, type: 3}
+  prefab: {fileID: 1809449070377821549, guid: 36ed06bfe02fc874ca48060bee313370, type: 3}
   intro: {fileID: 11400000, guid: f4a179b3a5055174987c6cda4594b64f, type: 2}
-  maxHealth: 300
+  maxHealth: 500
   hitFlashTime: 0.08
   introTime: 2
   fightDelay: 1.5

@@ -16,7 +16,7 @@ namespace Game
     /// 층 씬을 바로 Play하면 던전 하나짜리 판으로, 보스 방을 깨거나 죽으면 결과 화면.
     /// </summary>
     [DefaultExecutionOrder(-100)] // 넘겨받은 체력을 HUD.Start보다 먼저 맞춘다
-    public sealed class FloorRun : MonoBehaviour, IRunRestart
+    public sealed class FloorRun : MonoBehaviour, IRunRestart, IRunSavePoint
     {
         /// <summary>"같은 층으로 다시"를 고르면 씬을 다시 불러오는 동안 시드를 여기에 맡겨 둔다.</summary>
         private static RunSeed? pendingSeed;
@@ -84,6 +84,11 @@ namespace Game
         private Vector3 bossIntroEntry;
 
         private int dungeon;
+        /// <summary>들어가 있는 던전의 판 상태(저장할 층 진행). 층 씬만 Play했으면 null.</summary>
+        private DungeonVisit visit;
+
+        /// <summary>저장한 층 진행에서 이어 하는 중인가(깬 방을 되살렸다).</summary>
+        public bool Resumed { get; private set; }
 
         public RunSeed Seed { get; private set; }
         public FloorLayout Layout { get; private set; }
@@ -95,7 +100,7 @@ namespace Game
         /// <summary>지금 놓여 있는 보상물 수.</summary>
         public int PickupCount => pickups.Count;
         public RunStats Stats { get; private set; }
-        /// <summary>이 던전의 안 모양 테마. 없으면(숲) null — 회색 층.</summary>
+        /// <summary>이 던전의 안 모양 테마. 없으면 null — 회색 층.</summary>
         public FloorTheme Theme { get; private set; }
         /// <summary>테마 장식 자리. 테마가 없으면 null.</summary>
         public FloorDressing Dressing { get; private set; }
@@ -136,6 +141,7 @@ namespace Game
             Time.timeScale = 1f;
             playerTransform = player.transform;
             session = CurrentRun.Session != null && CurrentRun.Session.InDungeon ? CurrentRun.Session : null;
+            if (session != null && world != null) MetaRun.Use(world.metaTree); // 판 밖 성장(3-7): 판이 끝나면 영구 재화를 더한다
             dungeon = session != null ? session.CurrentDungeon : 0;
             Seed = session != null ? session.Seed : ChooseSeed();
             // 던전마다 다른 층: 난수의 층 번호 = 길 위 던전 순서
@@ -143,16 +149,22 @@ namespace Game
             Layout = FloorGenerator.Generate(tuning.ToSettings(), random.Create(RandomPurpose.Map, dungeon));
             TreasureRoom = SpecialRoomPlanner.AssignTreasure(Layout, random.Create(RandomPurpose.Decor, dungeon));
             Encounters = EncounterPlanner.Plan(Layout, tuning.ToEncounterSettings(), roster.ToMix(), dungeon, random.Create(RandomPurpose.Enemy, dungeon));
-            Rewards = RewardPlanner.Plan(Layout, tuning.ToRewardSettings(), rewardTable.ToDefinitions(), random.Create(RandomPurpose.Reward, dungeon));
             Progress = new FloorProgress(Layout);
             int battleRooms = 0;
             foreach (FloorRoom room in Layout.Rooms) if (room.Kind == RoomKind.Battle || room.Kind == RoomKind.Boss) battleRooms++;
+            visit = session?.Visit;
             if (session != null)
             {
                 Stats = session.Stats;
-                Stats.AddBattleRooms(battleRooms);
+                // 이어 할 때는 이미 더했다(저장에 들어 있음)
+                if (visit == null || !visit.BattleRoomsCounted) Stats.AddBattleRooms(battleRooms);
+                if (visit != null) visit.BattleRoomsCounted = true;
             }
             else Stats = new RunStats(Seed, battleRooms);
+            // 보상은 가진 도구를 알아야 해서(권총 보장 · 중복 없음) 판 기록 뒤에 정한다 — 난수는 따로라 순서가 바뀌어도 값은 같다
+            Rewards = RewardPlanner.Plan(Layout, tuning.ToRewardSettings(), rewardTable.ToDefinitions(), random.Create(RandomPurpose.Reward, dungeon), dungeon,
+                                         visit != null ? visit.EntrySheet(Stats.Upgrades) : Stats.Upgrades); // 들어설 때 가진 도구 + 트리가 연 보상 후보 기준 — 이어 해도 같은 보상
+            ResumeProgress();
             player.GetComponent<PlayerUpgrades>().Use(Stats.Upgrades);
             Progress.RoomLocked += OnRoomLocked;
             Progress.RoomCleared += OnRoomCleared;
@@ -178,7 +190,10 @@ namespace Game
                 Theme.ApplyAtmosphere(sun);
             }
             navMesh.BuildNavMesh();
-            if (TreasureRoom >= 0) SpawnPickup(TreasureRoom);
+            if (TreasureRoom >= 0 && !RewardTaken(TreasureRoom)) SpawnPickup(TreasureRoom);
+            if (Rewards.GuaranteedRoom == Layout.StartRoom.Id && !RewardTaken(Layout.StartRoom.Id)) SpawnPickup(Layout.StartRoom.Id); // 보스 방이 시작 바로 옆인 층: 권총은 시작 방에
+            if (Resumed) PlaceResumedPickupsAndPlayer();
+            if (Rewards.Guaranteed != null) Debug.Log($"[FloorRun] 보장 보상 '{Rewards.Guaranteed.Name}' → 방 {Rewards.GuaranteedRoom}");
             Debug.Log($"[FloorRun] {DungeonName} · 시드 {Seed.ToCode()} · 방 {Layout.Rooms.Count}개 · 보스 방 {Layout.BossRoom.Id} · 보물방 {TreasureRoom}\n{Layout.ToAscii()}");
         }
 
@@ -188,7 +203,67 @@ namespace Game
             if (session == null) return;
             // PlayerVitals.Awake가 체력을 가득으로 만든 뒤, HUD.Start보다 먼저(실행 순서 -100)
             if (session.PlayerHealth != RunSession.FullHealth) player.Health.SetCurrent(session.PlayerHealth);
+            if (session.PlayerAmmo != RunSession.FullAmmo && player.Gun != null) player.Gun.SetAmmo(session.PlayerAmmo); // 이어 할 때만(던전에 들어오면 가득)
             player.GetComponent<PlayerForm>().UpdateForm(Stats.Beast, Stats.Human);
+        }
+
+        /// <summary>이어 하기(3-6): 저장해 둔 깬 방 · 가 본 방 · 선 방을 새로 만든 층에 덮는다. 층과 맞지 않으면 백업하고 층 처음부터.</summary>
+        private void ResumeProgress()
+        {
+            if (visit == null || !visit.HasProgress) return;
+            try
+            {
+                visit.ApplyTo(Progress);
+                Resumed = true;
+                Debug.Log($"[FloorRun] 이어 하기 · 방 {Progress.CurrentRoom} · 깬 방 {visit.ClearedRooms.Count} · 보상 받은 방 {visit.RewardsTakenRooms.Count}");
+            }
+            catch (ArgumentException exception)
+            {
+                Debug.LogWarning($"[FloorRun] 저장한 층 진행이 이 층과 맞지 않아 층 처음부터 합니다: {exception.Message}");
+                CurrentRun.ReportBrokenSave(exception.Message);
+                Progress = new FloorProgress(Layout);
+            }
+        }
+
+        private bool RewardTaken(int roomId) => visit != null && visit.IsRewardTaken(roomId);
+
+        /// <summary>
+        /// 이어 하기: 깬 방(시작 · 보스 방 빼고)에 아직 안 받은 보상물을 다시 놓고(방을 깬 때와 같은 자리),
+        /// 플레이어를 저장한 방 가운데에서 조금 비켜 세운다(보상물을 바로 줍지 않게).
+        /// </summary>
+        private void PlaceResumedPickupsAndPlayer()
+        {
+            foreach (FloorRoom room in Layout.Rooms)
+            {
+                if (room.Id == Layout.StartRoom.Id || room.Id == Layout.BossRoom.Id || room.Id == TreasureRoom) continue;
+                if (Progress.IsCleared(room.Id) && !RewardTaken(room.Id)) SpawnPickup(room.Id);
+            }
+            if (Progress.CurrentRoom == Layout.StartRoom.Id) return;
+            FloorRoom current = Layout.Rooms[Progress.CurrentRoom];
+            Vector3 center = FloorGeometry.RoomCenter(Layout, tuning, current);
+            Vector3 spot = center + new Vector3(0f, 0f, -Mathf.Min(4f, current.Height * tuning.cellSize * 0.25f));
+            if (UnityEngine.AI.NavMesh.SamplePosition(spot, out UnityEngine.AI.NavMeshHit hit, 4f, UnityEngine.AI.NavMesh.AllAreas)) spot = hit.position;
+            var body = player.GetComponent<CharacterController>();
+            if (body != null) body.enabled = false;
+            Vector3 look = center - spot;
+            look.y = 0f;
+            playerTransform.SetPositionAndRotation(spot + Vector3.up * 0.1f, Quaternion.LookRotation(look.sqrMagnitude > 0.01f ? look : Vector3.forward));
+            if (body != null) body.enabled = true;
+        }
+
+        /// <summary>
+        /// 저장 지점(3-6): 층 진행 · 체력 · 탄을 판 상태에 적는다. 문이 잠긴 동안(싸우는 중 · 보스 등장)은 false —
+        /// 그때 끄면 앞 저장에서 이어 그 방을 처음부터(GDD 저장). 던전을 깨고 나가는 중이면 판 상태 그대로.
+        /// </summary>
+        public bool SyncForSave(RunSession run)
+        {
+            if (run == null || run != session || Stats.Outcome != RunOutcome.Playing || player.Health.IsDead) return false;
+            if (!run.InDungeon) return true;
+            if (Progress.LockedRoom >= 0 || BossIntroPlaying) return false;
+            visit?.Record(Progress);
+            PlayerGun gun = player.Gun;
+            run.UpdatePlayer(player.Health.Current, gun == null || gun.Ammo >= gun.Magazine ? RunSession.FullAmmo : gun.Ammo);
+            return true;
         }
 
         /// <summary>보스 방을 깨면: 밖으로(다음 지역이 열림) · "{지역} 클리어"(다음 지역이 없는 마지막 던전) · 끝(층 씬만).</summary>
@@ -209,11 +284,13 @@ namespace Game
         private void OnEnable()
         {
             player.Health.Died += OnPlayerDied;
+            CurrentRun.UseSavePoint(this);
         }
 
         private void OnDisable()
         {
             player.Health.Died -= OnPlayerDied;
+            CurrentRun.ReleaseSavePoint(this);
         }
 
         private void Update()
@@ -337,8 +414,9 @@ private void SpawnBoss(int roomId)
             if (Stats.Outcome != RunOutcome.Playing || Boss == null || Boss.IsDead || BossIntroPlaying || rewardScreen.IsShown) return false;
             Boss.Hold();
             if (PlayBossIntro(Boss.Release)) return true;
+            if (bossBar != null) bossBar.Show(Boss, announce: true);
             Boss.Release();
-            return false;
+            return true;
         }
 
         private void OnRoomEnemyDied(Health enemy)
@@ -356,7 +434,11 @@ private void SpawnBoss(int roomId)
             if (heal > 0 && !player.Health.IsDead) player.Health.Heal(heal);
             UpdateDoors();
             if (roomId != Layout.BossRoom.Id) SpawnPickup(roomId);
-            if (roomId != Layout.BossRoom.Id || Stats.Outcome != RunOutcome.Playing) return;
+            if (roomId != Layout.BossRoom.Id || Stats.Outcome != RunOutcome.Playing)
+            {
+                if (roomId != Layout.BossRoom.Id && session != null) CurrentRun.Save("방 깸"); // 안전한 지점: 문이 열린 뒤
+                return;
+            }
 
             if (session == null)
             {
@@ -374,6 +456,8 @@ private void SpawnBoss(int roomId)
                 EndRun(resultDelayAfterClear); // 다음 지역이 없는 마지막 던전: 지역 클리어
                 return;
             }
+            visit = null;
+            CurrentRun.Save("던전 나옴", syncFromScene: false); // 돌아갈 입구 앞(체력은 FinishDungeon이 적음)
             StartCoroutine(ReturnToWorld());
         }
 
@@ -396,6 +480,7 @@ private void SpawnBoss(int roomId)
         {
             Debug.Log($"[FloorRun] 판 끝: {Stats.Outcome} · 시드 {Seed.ToCode()} · 방 {Stats.RoomsCleared}/{Stats.BattleRooms} · 처치 {Stats.Kills} · {RunStats.FormatTime(Stats.ElapsedSeconds)}" +
                       (Stats.DeathCause != null ? $" · 원인 {Stats.DeathCause}" : ""));
+            if (session != null) CurrentRun.RunEnded(); // 로그라이크: 판이 끝나면(사망 · 클리어) 저장을 지운다
             RunEnded?.Invoke(Stats);
             StartCoroutine(ShowResultAfter(delay));
         }
@@ -410,7 +495,7 @@ private void SpawnBoss(int roomId)
         /// <summary>그 방에 정해 둔 보상이 있으면 방 가운데에 보상물을 놓는다(희귀는 노란색 · 조금 크게).</summary>
         private void SpawnPickup(int roomId)
         {
-            IReadOnlyList<RewardDefinition> offers = Rewards.OffersFor(roomId);
+            IReadOnlyList<RewardDefinition> offers = AvailableOffers(roomId);
             if (offers.Count == 0) return;
             bool rare = offers[0].Rarity == RewardRarity.Rare;
             var pickup = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -442,14 +527,36 @@ private void SpawnBoss(int roomId)
         /// <summary>그 방의 보상 선택 화면을 연다(보상물을 주웠을 때 · 확인용).</summary>
         public void OpenRewardChoice(int roomId)
         {
-            IReadOnlyList<RewardDefinition> offers = Rewards.OffersFor(roomId);
+            IReadOnlyList<RewardDefinition> offers = AvailableOffers(roomId);
             if (offers.Count == 0) return;
             rewardScreen.Show(offers, Stats, offers[0].Rarity == RewardRarity.Rare, reward =>
             {
                 Stats.TakeReward(reward);
-                Debug.Log($"[FloorRun] 보상 '{reward.Name}' → Beast {Stats.Beast} · Human {Stats.Human}");
+                Debug.Log($"[FloorRun] 보상 '{reward.Name}' → Beast {Stats.Beast} · Human {Stats.Human}" +
+                          (reward.Unlock != RewardUnlock.None ? $" · {RewardUnlocks.Label(reward.Unlock)} 얻음" : ""));
                 player.GetComponent<PlayerForm>().UpdateForm(Stats.Beast, Stats.Human);
+                visit?.MarkRewardTaken(roomId);
+                if (session != null) CurrentRun.Save("보상 받음");
             });
+        }
+
+        /// <summary>그 방에 정해 둔 선택지에서 이미 가진 도구를 주는 보상을 뺀 것(층을 정한 뒤 디버그로 얻었을 때 중복 없게).</summary>
+        private IReadOnlyList<RewardDefinition> AvailableOffers(int roomId)
+        {
+            IReadOnlyList<RewardDefinition> offers = Rewards.OffersFor(roomId);
+            bool any = false;
+            foreach (RewardDefinition reward in offers) if (reward.Unlock != RewardUnlock.None && Stats.Upgrades.Has(reward.Unlock)) any = true;
+            if (!any) return offers;
+            var left = new List<RewardDefinition>(offers.Count);
+            foreach (RewardDefinition reward in offers) if (reward.Unlock == RewardUnlock.None || !Stats.Upgrades.Has(reward.Unlock)) left.Add(reward);
+            return left;
+        }
+
+        /// <summary>디버그 창: 그 방에 보상물이 놓여 있는가.</summary>
+        public bool HasPickup(int roomId)
+        {
+            foreach ((int id, GameObject _) in pickups) if (id == roomId) return true;
+            return false;
         }
 
         private void SpinPickups()

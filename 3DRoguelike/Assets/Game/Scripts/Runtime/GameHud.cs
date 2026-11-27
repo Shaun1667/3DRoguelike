@@ -44,6 +44,7 @@ namespace Game
             health.Damaged += OnDamaged;
             health.Healed += OnDamaged;
             gun.AmmoChanged += OnAmmoChanged;
+            gun.Upgrades.Changed += RefreshAmmo; // 권총을 얻으면 탄 표시가 나타난다
             RefreshHealth();
             RefreshAmmo();
 
@@ -62,7 +63,11 @@ namespace Game
                 health.Damaged -= OnDamaged;
                 health.Healed -= OnDamaged;
             }
-            if (gun != null) gun.AmmoChanged -= OnAmmoChanged;
+            if (gun != null)
+            {
+                gun.AmmoChanged -= OnAmmoChanged;
+                if (gun.Upgrades != null) gun.Upgrades.Changed -= RefreshAmmo;
+            }
             if (floor != null && floor.Progress != null)
             {
                 floor.Progress.RoomEntered -= OnRoomChanged;
@@ -90,6 +95,7 @@ namespace Game
         private void RefreshAmmo()
         {
             shownReloading = gun.IsReloading;
+            ammoText.gameObject.SetActive(gun.Owned); // 권총이 없으면(맨몸) 탄 표시를 숨긴다
             ammoText.text = shownReloading ? "재장전…" : $"{gun.Ammo} / {gun.Magazine}";
         }
 

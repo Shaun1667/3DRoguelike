@@ -2,15 +2,32 @@ using System;
 
 namespace Game.Rules
 {
-    /// <summary>보스 패턴. 새 패턴 = 끝에 한 줄(순서가 시드 결과를 정한다).</summary>
+    /// <summary>보스 패턴. 새 패턴 = 끝에 한 줄(값이 패턴 이름일 뿐, 고르는 순서는 보스마다 <see cref="BossPatternPlanner"/>에 넘기는 목록 순서).</summary>
     public enum BossPattern
     {
-        /// <summary>예고선 뒤 곧장 돌진.</summary>
+        /// <summary>까치: 예고선 뒤 곧장 돌진.</summary>
         Charge,
-        /// <summary>부채꼴로 깃털 날리기.</summary>
+        /// <summary>까치: 부채꼴로 깃털 날리기.</summary>
         FeatherVolley,
-        /// <summary>떠올라 플레이어 위를 따라다니다 고정 → 급강하 내려찍기.</summary>
+        /// <summary>까치: 떠올라 플레이어 위를 따라다니다 고정 → 급강하 내려찍기.</summary>
         Slam,
+        /// <summary>곰: 다가와 앞발 휘두르기(앞 부채꼴).</summary>
+        Swipe,
+        /// <summary>곰: 일어서서 앞발로 내려찍기(예고 원 · 충격 · 크게 밀림).</summary>
+        RearSlam,
+        /// <summary>곰: 땅을 긁고 돌진(예고 길, 벽에 박으면 기절).</summary>
+        GroundCharge,
+        /// <summary>곰: 하울링 — 바닥에 원 예고 뒤 포효, 곰 둘레 원 안이면 피해 + 밀림(격노 전환도 이것 한 번).</summary>
+        Howl,
+    }
+
+    /// <summary>보스마다 고르는 패턴 목록(순서가 시드 결과를 정한다 — 바꾸지 않는다).</summary>
+    public static class BossPatternSets
+    {
+        /// <summary>까치(예전 까치 보스전 순서).</summary>
+        public static readonly BossPattern[] Magpie = { BossPattern.Charge, BossPattern.FeatherVolley, BossPattern.Slam };
+        /// <summary>반달가슴곰.</summary>
+        public static readonly BossPattern[] Bear = { BossPattern.Swipe, BossPattern.RearSlam, BossPattern.GroundCharge, BossPattern.Howl };
     }
 
     /// <summary>보스 패턴을 고르는 값(BALANCE 15번). 강화 = 체력 비율 이하가 된 뒤.</summary>
@@ -55,25 +72,38 @@ namespace Game.Rules
 
     /// <summary>
     /// 보스가 다음에 무엇을 할지 정한다(예전 까치 보스전 규칙): "대기 → 패턴" 되풀이, 같은 패턴은 두 번 연달아 나오지 않는다.
-    /// 첫 패턴은 셋 중 하나, 그 뒤는 직전 패턴을 뺀 둘 중 하나. 체력이 비율 이하가 되면 강화(대기가 짧아짐 — 패턴 세기는 쓰는 쪽이 <see cref="Enraged"/>로).
+    /// 고를 패턴은 보스마다 목록으로 받는다(<see cref="BossPatternSets"/>). 첫 패턴은 목록 중 하나, 그 뒤는 직전 패턴을 뺀 나머지 중 하나.
+    /// 체력이 비율 이하가 되면 강화(대기가 짧아짐 — 패턴 세기는 쓰는 쪽이 <see cref="Enraged"/>로).
     /// 차례마다 난수를 늘 두 번(대기 1 · 패턴 1) 쓰므로, 강화가 언제 되든 같은 시드면 패턴 순서가 같다.
     /// </summary>
     public sealed class BossPatternPlanner
     {
-        public const int PatternCount = 3;
-
         readonly BossPatternSettings settings;
         readonly IRandom random;
+        readonly BossPattern[] patterns;
         int last = -1;
 
+        /// <summary>까치 패턴 목록으로(예전 생성자 — 결과 그대로).</summary>
         public BossPatternPlanner(BossPatternSettings settings, IRandom random)
+            : this(settings, BossPatternSets.Magpie, random)
+        {
+        }
+
+        public BossPatternPlanner(BossPatternSettings settings, BossPattern[] patterns, IRandom random)
         {
             settings.Validate();
+            if (patterns == null || patterns.Length < 2) throw new ArgumentException("patterns: two or more");
+            for (int i = 0; i < patterns.Length; i++)
+                for (int j = i + 1; j < patterns.Length; j++)
+                    if (patterns[i] == patterns[j]) throw new ArgumentException("patterns: duplicate " + patterns[i]);
             this.settings = settings;
+            this.patterns = (BossPattern[])patterns.Clone();
             this.random = random ?? throw new ArgumentNullException(nameof(random));
         }
 
         public bool Enraged { get; private set; }
+        /// <summary>고르는 패턴 수.</summary>
+        public int PatternCount => patterns.Length;
 
         /// <summary>체력이 바뀌었을 때. 이번에 강화가 됐으면 true(한 번만). 죽었으면(0) 강화하지 않는다.</summary>
         public bool UpdateHealth(int current, int max)
@@ -91,14 +121,14 @@ namespace Game.Rules
             float idle = min + (max - min) * random.NextFloat();
 
             int pattern;
-            if (last < 0) pattern = random.Next(PatternCount);
+            if (last < 0) pattern = random.Next(patterns.Length);
             else
             {
-                pattern = random.Next(PatternCount - 1);
+                pattern = random.Next(patterns.Length - 1);
                 if (pattern >= last) pattern++;
             }
             last = pattern;
-            return new BossStep(idle, (BossPattern)pattern);
+            return new BossStep(idle, patterns[pattern]);
         }
     }
 
@@ -134,6 +164,21 @@ namespace Game.Rules
             if (dz > 1e-6f) distance = Math.Min(distance, (halfZ - z) / dz);
             else if (dz < -1e-6f) distance = Math.Min(distance, (-halfZ - z) / dz);
             return Math.Max(0f, distance);
+        }
+
+        /// <summary>
+        /// 점(dx, dz — 부채꼴 꼭짓점에서의 수평 차)이 부채꼴 안인가: 꼭짓점에서 radius 안 + 앞(fx, fz 단위 벡터)과 이루는 각이 전체 angle의 절반 안.
+        /// 꼭짓점에 아주 가까운 점(nearRadius 안)은 방향과 상관없이 안으로 본다(몸에 붙은 플레이어). 곰의 앞발 휘두르기.
+        /// </summary>
+        public static bool InFan(float dx, float dz, float fx, float fz, float radius, float angle, float nearRadius = 0f)
+        {
+            float distanceSq = dx * dx + dz * dz;
+            if (distanceSq > radius * radius) return false;
+            if (distanceSq <= nearRadius * nearRadius) return true;
+            float distance = (float)Math.Sqrt(distanceSq);
+            if (distance < 1e-5f) return true;
+            float cos = (dx * fx + dz * fz) / distance;
+            return cos >= (float)Math.Cos(angle * 0.5f * Math.PI / 180.0) - 1e-6f;
         }
     }
 }
