@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 53f228b14159e2246b2d37e51b12b09b, type: 3}
+  m_Name: MagpieBossTuning
+  m_EditorClassIdentifier: Game.Runtime::Game.BossTuning
+  displayName: "\uAE4C\uCE58"
+  enragedLabel: "\uACA9\uB178"
+  prefab: {fileID: 6665318518716799633, guid: 36ed06bfe02fc874ca48060bee313370, type: 3}
+  intro: {fileID: 11400000, guid: f4a179b3a5055174987c6cda4594b64f, type: 2}
+  maxHealth: 300
+  hitFlashTime: 0.08
+  introTime: 2
+  fightDelay: 1.5
+  turnSpeed: 140
+  idleTime: {x: 1.2, y: 2}
+  enragedIdleTime: {x: 0.6, y: 1.1}
+  enrageHealthRatio: 0.5
+  bodyRadius: 1.1
+  contactDamage: 10
+  contactName: "\uBAB8\uD1B5 \uBC15\uCE58\uAE30"
+  modelScale: 2.9
+  corpseTime: 3
+  chargeWindup: 0.9
+  chargeSpeed: 10.9
+  chargeDistance: 14.5
+  chargeLaneWidth: 1.8
+  chargeDamage: 20
+  enragedChargeSpeedMultiplier: 1.25
+  chargeRecover: 0.4
+  chargeName: "\uB3CC\uC9C4"
+  featherWindup: 0.6
+  featherCount: 7
+  enragedFeatherCount: 11
+  featherSpread: 70
+  volleys: 1
+  enragedVolleys: 2
+  volleyInterval: 0.55
+  featherSpeed: 6.5
+  featherSpawnHeight: 1.45
+  featherDamage: 10
+  featherHitRadius: 0.5
+  playerCenterHeight: 0.9
+  featherLifetime: 4
+  featherRecover: 0.3
+  featherPrefab: {fileID: 4640461562282328157, guid: 934b0e5076d4c4e4e84c9e9e42516c38, type: 3}
+  featherName: "\uAE43\uD138 \uB0A0\uB9AC\uAE30"
+  slamRiseTime: 0.6
+  slamHeight: 4.4
+  slamTrackTime: 1
+  slamTrackSpeed: 5.1
+  slamLockTime: 0.45
+  slamFallTime: 0.22
+  slamRadius: 2.9
+  slamDamage: 30
+  slamJumpClearance: 0.4
+  slamRecover: 0.8
+  enragedSlamRecover: 0.5
+  slamName: "\uAE09\uAC15\uD558"

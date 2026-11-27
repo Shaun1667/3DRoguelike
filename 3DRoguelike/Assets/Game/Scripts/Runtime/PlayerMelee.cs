@@ -46,6 +46,12 @@ namespace Game
         /// <summary>강화(근력)를 반영한 한 대 피해.</summary>
         public int Damage => upgrades.ScaleInt(Rules.UpgradeStat.MeleeDamage, tuning.meleeDamage);
 
+        private void OnDisable()
+        {
+            hitPending = false; // 조작이 막히면(죽음 · 층 클리어 · 보스 등장 연출) 걸려 있던 한 대는 버린다
+        }
+
+
         private void Update()
         {
             if (attackAction.WasPressedThisFrame() && !gun.IsAiming) TryAttack();

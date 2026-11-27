@@ -26,6 +26,7 @@ namespace Game.EditorTools
 
             if (!AssetDatabase.IsValidFolder(MaterialFolder)) AssetDatabase.CreateFolder("Assets/Game/Art", "Floor");
             FloorThemeSetup.Run(); // 던전 안 모양 테마(도시 대피소) 재질 · 에셋 — 새 씬을 열기 전에
+            BossSetup.Run(); // 보스(까치) 프리팹 · 수치 에셋 — 새 씬을 열기 전에
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             // 새 씬을 연 뒤에 불러온다. 앞에서 새로 만든 에셋은 씬을 바꿀 때 참조가 끊겨 씬에 빈칸으로 저장됐다.
@@ -46,6 +47,9 @@ namespace Game.EditorTools
             RewardChoiceScreen rewardScreen = HudSetup.BuildRewardScreen(hud);
             RewardTable rewardTable = LoadOrCreateRewardTable();
             TMP_Text objective = HudSetup.BuildObjective(hud);
+            BossHealthBar bossBar = HudSetup.BuildBossBar(hud);
+            BossIntroCinematic bossIntro = BossIntroSetup.BuildScene(hud); // 보스 등장 연출(카메라 6대 · 검은 띠 · 이름 타이틀) — HUD가 다 만들어진 뒤에
+
 
             var fields = new SerializedObject(run);
             fields.FindProperty("tuning").objectReferenceValue = tuning;
@@ -65,6 +69,11 @@ namespace Game.EditorTools
             fields.FindProperty("bossFloorMaterial").objectReferenceValue = Lit("BossFloor", new Color(0.6f, 0.4f, 0.4f));
             fields.FindProperty("wallMaterial").objectReferenceValue = Lit("Wall", new Color(0.7f, 0.7f, 0.72f));
             fields.FindProperty("lockedDoorMaterial").objectReferenceValue = Lit("LockedDoor", new Color(0.75f, 0.2f, 0.15f));
+            fields.FindProperty("bossBar").objectReferenceValue = bossBar;
+            fields.FindProperty("bossIntro").objectReferenceValue = bossIntro;
+
+            // 층 씬만 Play = 숲 던전 1과 같은 보스(월드 판은 WorldTuning.dungeons[].boss)
+            fields.FindProperty("previewBoss").objectReferenceValue = AssetDatabase.LoadAssetAtPath<BossTuning>(BossSetup.TuningPath);
             fields.FindProperty("sun").objectReferenceValue = sun; // 테마가 조명 색 · 세기를 바꾼다(숲은 그대로)
             fields.ApplyModifiedPropertiesWithoutUndo();
 

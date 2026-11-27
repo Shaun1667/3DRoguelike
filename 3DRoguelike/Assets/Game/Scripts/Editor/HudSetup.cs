@@ -144,7 +144,89 @@ namespace Game.EditorTools
             return text;
         }
 
-        internal static TMP_FontAsset LoadOrCreateFontAsset()
+        /// <summary>화면 위 보스 체력 막대(안내 글 아래) · 이름, 등장할 때 가운데 큰 이름. 처음에는 숨음.</summary>
+        public static BossHealthBar BuildBossBar(Canvas canvas)
+        {
+            TMP_FontAsset font = LoadOrCreateFontAsset();
+            RectTransform root = Rect("BossBar", canvas.transform, new Vector2(0.5f, 1f), new Vector2(0f, -86f), new Vector2(720f, 58f), new Vector2(0.5f, 1f));
+            TMP_Text name = Text("BossName", root, font, 24f, TextAlignmentOptions.Bottom);
+            Place(name.rectTransform, new Vector2(0.5f, 1f), Vector2.zero, new Vector2(720f, 30f), new Vector2(0.5f, 1f));
+            name.outlineWidth = 0.2f;
+            name.outlineColor = new Color32(0, 0, 0, 200);
+            RectTransform bar = Rect("Bar", root, new Vector2(0.5f, 0f), Vector2.zero, new Vector2(720f, 22f), new Vector2(0.5f, 0f));
+            AddImage(bar, PanelColor);
+            RectTransform inner = Rect("Inner", bar, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            Stretch(inner);
+            inner.offsetMin = new Vector2(3f, 3f);
+            inner.offsetMax = new Vector2(-3f, -3f);
+            RectTransform fill = Rect("Fill", inner, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            Stretch(fill);
+            AddImage(fill, new Color(0.75f, 0.15f, 0.12f, 0.95f));
+
+            TMP_Text intro = Text("BossIntro", canvas.transform, font, 72f, TextAlignmentOptions.Center);
+            Place(intro.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 200f), new Vector2(1200f, 110f), new Vector2(0.5f, 0.5f));
+            intro.outlineWidth = 0.25f;
+            intro.outlineColor = new Color32(0, 0, 0, 220);
+
+            var bossBar = canvas.gameObject.AddComponent<BossHealthBar>();
+            var fields = new SerializedObject(bossBar);
+            fields.FindProperty("root").objectReferenceValue = root.gameObject;
+            fields.FindProperty("fill").objectReferenceValue = fill;
+            fields.FindProperty("nameText").objectReferenceValue = name;
+            fields.FindProperty("introText").objectReferenceValue = intro;
+            fields.ApplyModifiedPropertiesWithoutUndo();
+            root.gameObject.SetActive(false);
+            intro.gameObject.SetActive(false);
+            return bossBar;
+        }
+
+        /// <summary>보스 등장 연출: 화면 위아래 검은 띠(시네마틱 비율 느낌, 예전 까치 보스전 그대로 120). 처음에는 꺼짐 — 타임라인이 켠다.</summary>
+        public static GameObject BuildLetterbox(Canvas canvas)
+        {
+            RectTransform root = Rect("Cinematic_Letterbox", canvas.transform, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+            Stretch(root);
+            foreach (bool top in new[] { true, false })
+            {
+                RectTransform bar = Rect(top ? "Top" : "Bottom", root, Vector2.zero, Vector2.zero, Vector2.zero, Vector2.zero);
+                bar.anchorMin = new Vector2(0f, top ? 1f : 0f);
+                bar.anchorMax = new Vector2(1f, top ? 1f : 0f);
+                bar.pivot = new Vector2(0.5f, top ? 1f : 0f);
+                bar.anchoredPosition = Vector2.zero;
+                bar.sizeDelta = new Vector2(0f, 120f);
+                AddImage(bar, Color.black);
+            }
+            root.gameObject.SetActive(false);
+            return root.gameObject;
+        }
+
+        /// <summary>보스 등장 연출: 보스 이름 타이틀(화면 아래쪽 1/4, 큰 이름 + 작은 부제). 글은 재생할 때 연출 수치에서 채운다. 처음에는 꺼짐.</summary>
+        public static GameObject BuildBossTitle(Canvas canvas, out TMP_Text name, out TMP_Text subtitle)
+        {
+            TMP_FontAsset font = LoadOrCreateFontAsset();
+            RectTransform root = Rect("Cinematic_BossTitle", canvas.transform, new Vector2(0.5f, 0.24f), Vector2.zero, new Vector2(1200f, 220f), new Vector2(0.5f, 0.5f));
+
+            name = Text("Name", root, font, 110f, TextAlignmentOptions.Center);
+            Place(name.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 30f), new Vector2(1200f, 154f), new Vector2(0.5f, 0.5f));
+            name.color = new Color(1f, 0.85f, 0.3f);
+            name.textWrappingMode = TextWrappingModes.NoWrap;
+            name.overflowMode = TextOverflowModes.Overflow;
+            name.outlineWidth = 0.25f;
+            name.outlineColor = new Color32(0, 0, 0, 220);
+
+            subtitle = Text("Subtitle", root, font, 40f, TextAlignmentOptions.Center);
+            Place(subtitle.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, -55f), new Vector2(1200f, 56f), new Vector2(0.5f, 0.5f));
+            subtitle.color = new Color(1f, 1f, 1f, 0.9f);
+            subtitle.textWrappingMode = TextWrappingModes.NoWrap;
+            subtitle.overflowMode = TextOverflowModes.Overflow;
+            subtitle.outlineWidth = 0.2f;
+            subtitle.outlineColor = new Color32(0, 0, 0, 200);
+
+            root.gameObject.SetActive(false);
+            return root.gameObject;
+        }
+
+        
+internal static TMP_FontAsset LoadOrCreateFontAsset()
         {
             var existing = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(FontAssetPath);
             if (existing != null) return existing;

@@ -44,7 +44,13 @@ namespace Game
             if (flashing && Time.time >= endTime) SetFlash(false);
         }
 
-        private void OnDamaged(int amount)
+private void OnDamaged(int amount)
+        {
+            Flash();
+        }
+
+        /// <summary>피해 없이 한 번 번쩍인다(보스 등장 연출).</summary>
+        public void Flash()
         {
             endTime = Time.time + duration;
             SetFlash(true);

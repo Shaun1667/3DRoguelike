@@ -61,12 +61,28 @@ namespace Game
         [Tooltip("층 씬만 Play할 때 쓸 테마(비면 회색). 월드 판은 WorldTuning.dungeons의 interiorTheme")]
         [SerializeField] private FloorTheme previewTheme;
 
+        [Header("보스")]
+        [Tooltip("층 씬만 Play할 때 보스 방에 나올 보스(비면 일반 적). 월드 판은 WorldTuning.dungeons의 boss")]
+        [SerializeField] private BossTuning previewBoss;
+        [Tooltip("화면 위 보스 체력 막대 · 이름")]
+        [SerializeField] private BossHealthBar bossBar;
+        [Tooltip("보스 등장 연출(Timeline + Cinemachine). 보스 수치에 intro가 있을 때만 재생한다")]
+        [SerializeField] private BossIntroCinematic bossIntro;
+
+
         private readonly List<Health> roomEnemies = new List<Health>();
         private GameObject[] doorBarriers;
         private Transform playerTransform;
         private readonly List<(int roomId, GameObject pickup)> pickups = new List<(int, GameObject)>();
         /// <summary>월드에서 들어왔으면 그 판. 층 씬만 Play했으면 null.</summary>
         private RunSession session;
+        private Vector3 bossArenaCenter;
+        private Vector2 bossArenaHalf;
+        /// <summary>보스 방 가운데에서 벽 안쪽 면까지(등장 연출 카메라가 벽 밖으로 나가지 않게).</summary>
+        private Vector2 bossRoomHalf;
+        /// <summary>플레이어가 보스 방에 들어선 자리(등장 연출에서 여기서부터 걸어 들어온다).</summary>
+        private Vector3 bossIntroEntry;
+
         private int dungeon;
 
         public RunSeed Seed { get; private set; }
@@ -86,6 +102,15 @@ namespace Game
         /// <summary>잠긴 방에 아직 살아 있는 적 수.</summary>
         public int AliveEnemies => roomEnemies.Count;
         public EnemyRoster Roster => roster;
+        /// <summary>이 던전 보스 방의 보스. 없으면(null) 보스 방도 일반 적.</summary>
+        public BossTuning BossTuning { get; private set; }
+        /// <summary>보스 방에 나온 보스. 아직 안 나왔거나 없으면 null(죽은 뒤에도 몸이 남아 있는 동안은 그대로).</summary>
+        public Boss Boss { get; private set; }
+        public BossHealthBar BossBar => bossBar;
+        public BossIntroCinematic BossIntro => bossIntro;
+        /// <summary>보스 등장 연출이 재생 중인지(조작 · 보스 행동 · 피해가 막혀 있다).</summary>
+        public bool BossIntroPlaying => bossIntro != null && bossIntro.IsPlaying;
+
 
         /// <summary>판이 끝난 순간(죽음 · 층 클리어). 결과 화면은 잠시 뒤에 뜬다.</summary>
         public event Action<RunStats> RunEnded;
@@ -133,6 +158,7 @@ namespace Game
             Progress.RoomCleared += OnRoomCleared;
 
             Theme = session != null ? (world != null && dungeon < world.dungeons.Length ? world.dungeons[dungeon].interiorTheme : null) : previewTheme;
+            BossTuning = session != null ? (world != null && dungeon < world.dungeons.Length ? world.dungeons[dungeon].boss : null) : previewBoss;
             var materials = new FloorGeometry.Materials
             {
                 floor = floorMaterial,
@@ -239,6 +265,13 @@ namespace Game
         {
             UpdateDoors();
 
+            // 보스가 정해진 던전: 보스 방에는 보스 한 마리만(계획해 둔 일반 적 자리는 쓰지 않는다 — 계획은 그대로라 다른 방 · 장식이 바뀌지 않음)
+            if (roomId == Layout.BossRoom.Id && BossTuning != null && BossTuning.prefab != null)
+            {
+                SpawnBoss(roomId);
+                return;
+            }
+
             IReadOnlyList<SpawnPoint> spawns = Encounters.SpawnsFor(roomId);
             for (int i = 0; i < spawns.Count; i++)
             {
@@ -256,6 +289,56 @@ namespace Game
             }
 
             if (roomEnemies.Count == 0) Progress.ClearLockedRoom();
+        }
+
+        /// <summary>보스 방 가운데에 보스를 놓고 싸움을 시작한다. 패턴 난수는 boss 용도(같은 시드 = 같은 패턴 순서).</summary>
+private void SpawnBoss(int roomId)
+        {
+            FloorRoom room = Layout.Rooms[roomId];
+            Vector3 center = FloorGeometry.RoomCenter(Layout, tuning, room);
+            Vector3 toPlayer = playerTransform.position - center;
+            toPlayer.y = 0f;
+            Quaternion facing = toPlayer.sqrMagnitude > 0.01f ? Quaternion.LookRotation(toPlayer) : Quaternion.identity;
+            Boss = Instantiate(BossTuning.prefab, center, facing, transform);
+            Boss.name = $"{BossTuning.prefab.name}_Room{roomId}";
+            Health health = Boss.Health;
+            health.Died += () => OnRoomEnemyDied(health);
+            roomEnemies.Add(health);
+
+            float margin = tuning.wallThickness * 0.5f + BossTuning.bodyRadius + 0.5f;
+            bossArenaCenter = center;
+            bossArenaHalf = new Vector2(room.Width * tuning.cellSize * 0.5f - margin, room.Height * tuning.cellSize * 0.5f - margin);
+            bossRoomHalf = new Vector2(room.Width * tuning.cellSize * 0.5f - tuning.wallThickness * 0.5f, room.Height * tuning.cellSize * 0.5f - tuning.wallThickness * 0.5f);
+            bossIntroEntry = playerTransform.position;
+            Debug.Log($"[FloorRun] 보스 {BossTuning.displayName} 등장 · 방 {roomId} · 경기장 반폭 {bossArenaHalf.x:0.0} × {bossArenaHalf.y:0.0} m");
+
+            // 등장 연출이 있으면 끝난(건너뛴) 뒤에 싸움을 시작한다 — 그동안 조작 · 보스 행동 · 피해는 막힌다. 없으면 바로
+            if (!PlayBossIntro(() => BeginBossFight(announce: false))) BeginBossFight(announce: true);
+        }
+
+        /// <summary>보스 패턴을 시작하고 체력 막대를 띄운다. 패턴 난수는 boss 용도(같은 시드 = 같은 패턴 순서) — 연출은 난수를 쓰지 않는다.</summary>
+        private void BeginBossFight(bool announce)
+        {
+            if (Boss == null || Boss.IsDead) return;
+            Boss.Begin(player.Health, bossArenaCenter, bossArenaHalf, new RunRandom(Seed).Create(RandomPurpose.Boss, dungeon));
+            if (bossBar != null) bossBar.Show(Boss, announce);
+            Debug.Log($"[FloorRun] 보스 {BossTuning.displayName} 싸움 시작");
+        }
+
+        private bool PlayBossIntro(Action finished)
+        {
+            if (bossIntro == null || BossTuning == null || BossTuning.intro == null) return false;
+            return bossIntro.Play(BossTuning.intro, player, Boss, bossIntroEntry, bossArenaCenter, bossRoomHalf, finished);
+        }
+
+        /// <summary>디버그 창: 보스 등장 연출을 처음 들어선 자리에서 다시 본다. 보스는 하던 패턴을 멈추고, 끝나면 첫 대기부터 이어서 싸운다(체력 · 패턴 순서 그대로).</summary>
+        public bool DebugReplayBossIntro()
+        {
+            if (Stats.Outcome != RunOutcome.Playing || Boss == null || Boss.IsDead || BossIntroPlaying || rewardScreen.IsShown) return false;
+            Boss.Hold();
+            if (PlayBossIntro(Boss.Release)) return true;
+            Boss.Release();
+            return false;
         }
 
         private void OnRoomEnemyDied(Health enemy)
@@ -372,6 +455,39 @@ namespace Game
         private void SpinPickups()
         {
             foreach ((int _, GameObject pickup) in pickups) pickup.transform.Rotate(0f, 90f * Time.deltaTime, 0f, Space.World);
+        }
+
+        // --- 디버그 창(DebugPanel)이 쓴다 ---
+
+        /// <summary>보스 방 안(가장 가까운 문 쪽, 벽에서 4 m)으로 순간이동. 다른 방이 잠겨 있으면 그 방 적을 먼저 모두 처치해 연다.</summary>
+        public bool DebugGoToBossRoom()
+        {
+            if (Stats.Outcome != RunOutcome.Playing) return false;
+            int boss = Layout.BossRoom.Id;
+            if (Progress.LockedRoom >= 0 && Progress.LockedRoom != boss)
+            {
+                foreach (Health enemy in new List<Health>(roomEnemies)) if (!enemy.IsDead) enemy.TakeDamage(enemy.Current, "디버그");
+                if (Progress.LockedRoom >= 0) Progress.ClearLockedRoom();
+            }
+            FloorRoom room = Layout.BossRoom;
+            Vector3 center = FloorGeometry.RoomCenter(Layout, tuning, room);
+            Vector3 entry = center + new Vector3(0f, 0f, -(room.Height * tuning.cellSize * 0.5f - 4f));
+            foreach (FloorDoor door in Layout.Doors)
+            {
+                if (door.RoomA != boss && door.RoomB != boss) continue;
+                Vector3 doorPosition = FloorGeometry.CellCenter(Layout, tuning, (door.X + door.OtherX) * 0.5f, (door.Y + door.OtherY) * 0.5f); // 두 칸 사이 = 문
+                Vector3 toDoor = doorPosition - center;
+                toDoor.y = 0f;
+                float halfDepth = (Mathf.Abs(toDoor.x) > Mathf.Abs(toDoor.z) ? room.Width : room.Height) * tuning.cellSize * 0.5f;
+                entry = center + (Mathf.Abs(toDoor.x) > Mathf.Abs(toDoor.z) ? new Vector3(Mathf.Sign(toDoor.x), 0f, 0f) : new Vector3(0f, 0f, Mathf.Sign(toDoor.z))) * (halfDepth - 4f);
+                break;
+            }
+            var body = player.GetComponent<CharacterController>();
+            if (body != null) body.enabled = false;
+            Vector3 look = center - entry;
+            playerTransform.SetPositionAndRotation(entry + Vector3.up * 0.1f, Quaternion.LookRotation(look.sqrMagnitude > 0.01f ? look : Vector3.forward));
+            if (body != null) body.enabled = true;
+            return true;
         }
 
         private void UpdateDoors()

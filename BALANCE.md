@@ -7,6 +7,7 @@
 | 7 · 8 · 10 · 11 · 12 | `Assets/Game/Data/FloorTuning.asset` · `RewardTable.asset` | `FloorTuning` → `FloorLayoutSettings` · `EncounterSettings` · `RewardSettings`(Game.Rules), `RewardTable` |
 | 9 | `Assets/Game/Data/Enemies/{Badger,Boar,Hare,Toad}Tuning.asset` | `BadgerTuning` · `BoarTuning` · `HareTuning` · `ToadTuning` (공통 `EnemyTuning`) |
 | 13 | `Assets/Game/Data/WorldTuning.asset` | `WorldTuning` |
+| 15 | `Assets/Game/Data/Bosses/MagpieBossTuning.asset` | `BossTuning` |
 | 14 | `Assets/Game/Data/EnemyRoster.asset` | `EnemyRoster` → `EnemyMix`(Game.Rules) |
 | 8-1 | `Assets/Game/Data/FloorThemes/CityShelter.asset` | `FloorTheme` → `DressingSettings`(Game.Rules) |
 
@@ -277,3 +278,21 @@
 - 던전 1 비중 · 앞 방 거리 1은 정한 것 (Claude, 확인 필요) — 첫 방이 너무 세지 않게. 시드 200개 계획에서 먼 방 마릿수 오소리 1,747 · 멧토끼 1,328 · 멧돼지 322 · 두꺼비 610(층당 멧돼지 약 1.6 · 두꺼비 약 3), 앞 방은 오소리 1,027 · 멧토끼 960
 - 길 위 무리는 그 무리 다음 던전 단계의 길 위 비중(없으면 방 비중)을 쓰되 E 개체 없음. 층 씬만 Play하면 단계 1. 표보다 뒤 던전은 마지막 단계.
 - 도시 던전 단계 = 기존 단계 2 — 정한 것 (감독 · Claude, 확인 필요). 도시 적 종은 아직 없어 숲 4종. 시드 200개에서 도시 길 무리 판당 오소리 6.3 · 멧토끼 4.5 · 두꺼비 2.0 · 멧돼지 1.3마리, E 0
+
+## 15. 보스 (BossTuning, 던전마다 WorldTuning.dungeons[].boss)
+예전 까치 보스전(main) 값 — 거리 · 속도 ÷ 2.75(예전 캐릭터 배율), 시간 그대로, 피해는 플레이어 체력 5 → 100 기준. 값을 바꾸면 `BossTests.MagpieTuning_MatchesBalance`도 고친다. 정한 것 (Claude, 확인 필요, 2026-11-26).
+
+| 항목 | 값 | 예전 |
+|---|---|---|
+| 체력 · 강화 | 300 · 50% 이하 | 300 · 0.5 |
+| 대기 (강화 뒤) | 1.2~2.0초 (0.6~1.1초) | 같음 |
+| 회전 · 몸통 반지름 · 몸통 피해 | 140도/초 · 1.1 m · 10 | 140 · 3 · 1 |
+| 등장 이름 · 첫 패턴까지 | 2초 · 1.5초 | (긴 컷신) |
+| 돌진: 예고 · 속도 · 거리 · 길 폭 · 피해 · 빈틈 | 0.9초 · 10.9 m/s(강화 ×1.25) · 14.5 m · 1.8 m · 20 · 0.4초 | 0.9 · 30 · 40 · 5 · 1 · 0.4 |
+| 깃털: 준비 · 수(강화) · 부채꼴 · 연사(강화) · 간격 | 0.6초 · 7(11) · 70도 · 1(2) · 0.55초 | 같음 |
+| 깃털: 속도 · 높이 · 피해 · 맞는 반지름 · 수명 | 6.5 m/s · 1.45 m · 10 · 0.5 m · 4초 | 18 · 4 · 1 · 0.9 · 4 |
+| 급강하: 떠오름 · 높이 · 추적(속도) · 고정 · 낙하 | 0.6초 · 4.4 m · 1초(5.1 m/s) · 0.45초 · 0.22초 | 0.6 · 12 · 1.0(14) · 0.45 · 0.22 |
+| 급강하: 반지름 · 피해 · 점프 여유 · 착지 빈틈(강화) | 2.9 m · 30 · 0.4 m · 0.8초(0.5초) | 8 · 2 · — · 0.8(0.5) |
+| 모델 배율 | 2.9 (키 3.07 m) | 8 |
+- 이름 "까치", 강화 "격노", 공격 이름 "몸통 박치기" · "돌진" · "깃털 날리기" · "급강하"(사망 원인 "까치의 {공격}")
+- 등장 연출 수치는 `Data/Bosses/MagpieIntroTuning.asset`(BossIntroTuning). 시간 · 화각 · 흔들림 세기는 예전 값 그대로(길이 12.6초, 컷 4.5 / 6.0–7.0 / 8.6–8.9 / 11.2–12.4, 돌진 7.9–8.6, 밟기 +0.68, 할퀴기 10.5 · 10.75, 후퇴 10.9–11.9, 타이틀 11.0–12.3, 검은 띠 12.2까지). 거리는 예전 값 ÷ 2.75: 걷는 거리 6.5 m, 밟는 거리 0.95 m, 할퀴기 이펙트 0.36배, 흔들림 속도 0.22. 걸어 들어와 보스와 4.5 m(minBossDistance) 넘게 떨어진 곳에서 멈춘다. 건너뛰기: 아무 키 · 마우스 버튼(F1~F12 제외), 시작 후 1초는 받지 않음. 연출은 난수를 쓰지 않아 패턴 순서에 영향이 없다. `BossTuning.intro`가 비면 연출 없이 introTime 동안 이름만 뜨고 싸움 시작, fightDelay는 연출이 끝난 뒤부터 센다

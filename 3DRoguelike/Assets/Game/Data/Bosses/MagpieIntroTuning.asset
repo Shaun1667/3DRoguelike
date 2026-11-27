@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 436738c2e36faa041a3f5705b912a669, type: 3}
+  m_Name: MagpieIntroTuning
+  m_EditorClassIdentifier: Game.Runtime::Game.BossIntroTuning
+  timeline: {fileID: 11400000, guid: 93e91efe31bdb4846b8a1195eae85dd1, type: 2}
+  title: "\uAE4C\uCE58 \uB300\uC7A5"
+  subtitle: "\uBCF4\uBB3C \uB465\uC9C0\uC758 \uC218\uD638\uC790"
+  titleStart: 11
+  titleEnd: 12.3
+  letterboxEnd: 12.2
+  wideDriftStart: 0.3
+  wideDriftEnd: 3
+  thirdPersonCut: 4.5
+  firstPersonBlendStart: 6
+  firstPersonBlendEnd: 7
+  fallBlendEnd: 8.9
+  gameplayBlendStart: 11.2
+  gameplayBlendEnd: 12.4
+  end: 12.6
+  walkEnd: 7
+  walkStopTime: 0.4
+  hideBodyTime: 6.6
+  crouchTime: 7.3
+  chargeStart: 7.9
+  chargeEnd: 8.6
+  stompDelay: 0.68
+  claw1: 10.5
+  claw2: 10.75
+  recoilStart: 10.9
+  recoilEnd: 11.9
+  walkDistance: 6.5
+  minBossDistance: 4.5
+  stompDistance: 0.95
+  walkClipSpeed: 4
+  walkAnimScale: 1.07
+  wideA: {x: -7.27, y: 5.82, z: 4.36}
+  wideB: {x: -6.18, y: 4.73, z: 2.91}
+  wideLookHeight: 1.09
+  wideWallMargin: 0.5
+  wideFov: 50
+  shoulder: {x: 0.8, y: 2.36, z: -3.27}
+  shoulderFov: 55
+  firstPersonFov: 65
+  groundEye: {x: 0, y: 0.27, z: -0.44}
+  groundLookHeight: 2
+  groundFov: 70
+  groundDutch: 12
+  recoilLean: 14
+  clawEffect: {fileID: 6366276276271905385, guid: f5ae42b812239034b8eb862cb3c66e5a, type: 3}
+  clawScale: 0.36
+  shakeVelocity: 0.22
+  shakeDuration: 0.35
+  pounceShake: 0.7
+  stompShake: 1.6
+  clawShake: 0.5
+  allowSkip: 1
+  skipLockTime: 1

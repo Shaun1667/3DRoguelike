@@ -134,6 +134,20 @@ namespace Game
             return spawned.Count;
         }
 
+        /// <summary>보스 체력을 최대의 절반으로(이미 절반 아래면 지금의 절반으로). 강화 비율이 0.5면 강화가 된다.</summary>
+        public void HalveBoss(Boss boss)
+        {
+            int target = boss.Health.Current > boss.Health.Max / 2 ? boss.Health.Max / 2 : boss.Health.Current / 2;
+            boss.Health.TakeDamage(Mathf.Max(1, boss.Health.Current - Mathf.Max(1, target)), KillSource);
+            lastAction = $"보스 체력 {boss.Health.Current}/{boss.Health.Max}";
+        }
+
+        public void KillBoss(Boss boss)
+        {
+            boss.Health.TakeDamage(boss.Health.Current, KillSource);
+            lastAction = "보스 처치";
+        }
+
         private void OnPlayerHit(IDamageable target)
         {
             if (onePunch && target is Health health && health.GetComponent<Enemy>() != null) KillAll("원펀맨");
@@ -162,7 +176,7 @@ namespace Game
                 return;
             }
 
-            GUILayout.BeginArea(new Rect(10, 10, 340, 480), GUI.skin.box);
+            GUILayout.BeginArea(new Rect(10, 10, 340, 600), GUI.skin.box);
             GUILayout.Label("디버그 (F1 닫기)");
             if (floor != null && floor.Layout != null)
             {
@@ -180,6 +194,24 @@ namespace Game
                 summonEvolved = GUILayout.Toggle(summonEvolved, " E 개체");
                 if (GUILayout.Button("앞에 소환")) Summon((EnemySpecies)summonSpecies, summonEvolved ? EnemyGrade.Evolved : EnemyGrade.Mutant);
                 GUILayout.EndHorizontal();
+            }
+            if (floor != null && floor.BossTuning != null)
+            {
+                Boss boss = floor.Boss;
+                if (boss != null) GUILayout.Label($"보스 {boss.DisplayName} {boss.Health.Current}/{boss.Health.Max}{(boss.IsEnraged ? " · " + boss.Tuning.enragedLabel : "")} · {boss.Step}");
+                if (GUILayout.Button("보스 방으로 이동")) lastAction = floor.DebugGoToBossRoom() ? "보스 방 앞으로" : "판이 끝나 이동 못 함";
+                if (boss != null && !boss.IsDead && boss.Tuning.intro != null && !floor.BossIntroPlaying && GUILayout.Button("보스 연출 다시 보기"))
+                {
+                    lastAction = floor.DebugReplayBossIntro() ? "보스 등장 연출 다시 재생" : "연출을 재생하지 못함";
+                }
+
+                if (boss != null && !boss.IsDead)
+                {
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button("보스 체력 반으로")) HalveBoss(boss);
+                    if (GUILayout.Button("보스 처치")) KillBoss(boss);
+                    GUILayout.EndHorizontal();
+                }
             }
             if (form != null && !form.IsMutant && GUILayout.Button("Mutant 동작으로 (Beast 높을 때 모습)"))
             {

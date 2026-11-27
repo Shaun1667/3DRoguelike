@@ -277,6 +277,7 @@ MonoBehaviour:
     doorwayCenter: {x: 0, y: 0, z: 0}
     doorwaySize: {x: 0, y: 0}
     interiorTheme: {fileID: 0}
+    boss: {fileID: 11400000, guid: 728e2a4c571811048b99df53e7539823, type: 2}
   - displayName: "\uB3C4\uC2DC \uB358\uC804 \u2014 \uBB34\uB108\uC9C4 \uB300\uD53C\uC18C"
     routeDistance: 630
     sideOffset: 12.5
@@ -284,6 +285,7 @@ MonoBehaviour:
     doorwayCenter: {x: -0.3, y: 1.1, z: -1.17}
     doorwaySize: {x: 1.1, y: 2.2}
     interiorTheme: {fileID: 11400000, guid: 90dc63a7fa040c748af93221f420454c, type: 2}
+    boss: {fileID: 0}
   gateAfterEntrance: 70
   entranceRadius: 2.5
   nextRegionLabel: "\uB2E4\uC74C \uC9C0\uC5ED \u2014 \uC900\uBE44 \uC911"

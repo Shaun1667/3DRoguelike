@@ -21,6 +21,8 @@ namespace Game.Rules
         public static readonly RandomPurpose Road = new RandomPurpose("road");
         /// <summary>던전 테마 방 꾸미기(잔해 · 차 같은 장식 자리). 맵 · 적 · 보상과 수열이 겹치지 않게 따로 — 테마 없는 던전은 쓰지 않는다.</summary>
         public static readonly RandomPurpose Dressing = new RandomPurpose("dressing");
+        /// <summary>보스 패턴 순서 · 패턴 사이 대기 시간(층 번호 자리 = 던전 순서). 같은 시드면 같은 패턴 순서 — 전투(combat)와 따로.</summary>
+        public static readonly RandomPurpose Boss = new RandomPurpose("boss");
 
         RandomPurpose(string key)
         {

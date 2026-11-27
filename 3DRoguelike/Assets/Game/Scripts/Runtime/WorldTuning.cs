@@ -28,6 +28,8 @@ namespace Game
             public Vector2 doorwaySize;
             [Tooltip("던전 안 모양 테마(바닥 · 벽 재질 · 장식 · 조명). 비면 회색 층(숲)")]
             public FloorTheme interiorTheme;
+            [Tooltip("보스 방에 나오는 보스(BossTuning). 비면 보스 방도 일반 적(구성 표 그대로)")]
+            public BossTuning boss;
 
             public bool HasEntrancePrefab => !string.IsNullOrEmpty(entrancePrefab);
         }
